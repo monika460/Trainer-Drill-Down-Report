@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/redash.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/redash(.*)", "dest": "/api/redash.js" },
+    { "src": "/(.*)",           "dest": "/$1" }
+  ]
+}
