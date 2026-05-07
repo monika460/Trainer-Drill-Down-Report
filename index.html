@@ -150,19 +150,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div style="display:flex;align-items:center;gap:10px">
       <span style="font-size:22px">📊</span>
       <div>
-        <h1>Trainer DrillDown — Live Dashboard</h1>
-        <div class="header-sub">Auto-syncing every 5s · Redash Query #1468 · Account → Project → Module → Event → User</div>
+        <h1>Trainer DrillDown Dashboard</h1>
+        <div class="header-sub">Redash Query #1468 · Account → Project → Module → Event → User</div>
       </div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div class="last-sync" id="last-sync">Not yet synced</div>
     <div class="sync-bar">
       <div class="sync-dot" id="sync-dot"></div>
-      <span class="sync-label">Next sync</span>
-      <span class="countdown" id="countdown">5</span>
-      <span class="sync-label">s</span>
+      <span class="sync-label" id="sync-label">Ready</span>
     </div>
-    <div class="last-sync" id="last-sync">Never synced</div>
+    <button id="sync-btn" onclick="manualSync()" style="display:flex;align-items:center;gap:7px;padding:7px 16px;background:#4299e1;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">
+      🔄 Sync Now
+    </button>
     <div class="gstats" id="gstats"></div>
   </div>
 </div>
@@ -174,8 +175,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 // ─────────────────────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────────────────────
-const PARAMS      = { p_renewal_start: '2026-04-01', p_renewal_end: '2030-04-30' };
-const REFRESH_SEC = 5;
+const PARAMS = { p_renewal_start: '2026-04-01', p_renewal_end: '2030-04-30' };
 
 // ─────────────────────────────────────────────────────────────
 // COLUMN DETECTION (flexible — works even if Redash renames cols)
@@ -474,13 +474,13 @@ function renderPanel(tName, tData, tid) {
 // ─────────────────────────────────────────────────────────────
 // FETCH + RENDER
 // ─────────────────────────────────────────────────────────────
-let countdown = REFRESH_SEC;
 let currentTab = null;
 let initialized = false;
 
 async function fetchAndRender() {
   const dot = document.getElementById('sync-dot');
   dot.className = 'sync-dot loading';
+  document.getElementById('sync-label').textContent = 'Syncing...';
 
   try {
     const qs = new URLSearchParams(PARAMS).toString();
@@ -519,15 +519,16 @@ async function fetchAndRender() {
     }
 
     dot.className = 'sync-dot';
-    document.getElementById('last-sync').textContent = 'Synced: ' + new Date().toLocaleTimeString();
+    document.getElementById('sync-label').textContent = 'Live';
+    document.getElementById('last-sync').textContent = 'Last synced: ' + new Date().toLocaleTimeString();
 
   } catch (err) {
     dot.className = 'sync-dot error';
+    document.getElementById('sync-label').textContent = 'Error';
     if (!initialized) showError(err);
     console.error('[DrillDown] Fetch error:', err);
   }
 
-  countdown = REFRESH_SEC;
 }
 
 function showError(err) {
@@ -683,15 +684,21 @@ document.addEventListener('input', e => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// AUTO-REFRESH LOOP
+// MANUAL SYNC
 // ─────────────────────────────────────────────────────────────
-setInterval(() => {
-  countdown--;
-  document.getElementById('countdown').textContent = Math.max(0, countdown);
-  if (countdown <= 0) fetchAndRender();
-}, 1000);
+function manualSync() {
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Syncing...';
+  btn.style.background = '#2d6aa0';
+  fetchAndRender().finally(() => {
+    btn.disabled = false;
+    btn.innerHTML = '🔄 Sync Now';
+    btn.style.background = '#4299e1';
+  });
+}
 
-fetchAndRender(); // initial load
+fetchAndRender(); // load on first open
 </script>
 </body>
 </html>
