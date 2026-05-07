@@ -485,19 +485,30 @@ async function fetchAndRender() {
   try {
     const qs = new URLSearchParams(PARAMS).toString();
     const res = await fetch(`/api/redash?${qs}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-    const json = await res.json();
+    const rawText = await res.text();
 
-    if (json.error) throw new Error(json.error);
+    if (!res.ok) throw new Error(`HTTP ${res.status} — Raw: ${rawText.slice(0,300)}`);
 
+    let json;
+    try { json = JSON.parse(rawText); }
+    catch(e) { throw new Error('Proxy returned non-JSON: ' + rawText.slice(0,300)); }
+
+    if (json.error) throw new Error('Proxy error: ' + json.error + (json.hint ? ' | ' + json.hint : ''));
+
+    // Try all known Redash response shapes
     const qr   = json.query_result || json;
     const data  = qr.data || qr;
-    const cols  = detectCols(data.columns || []);
-    const rows  = data.rows || [];
+    const cols  = data.columns || [];
+    const rows  = data.rows   || [];
 
-    if (!data.columns?.length) throw new Error('No columns returned from Redash');
+    if (!cols.length) {
+      // Show raw for debugging
+      const preview = JSON.stringify(json, null, 2).slice(0, 600);
+      throw new Error('No columns in response. Raw preview:\n' + preview);
+    }
 
-    const trainers = processRows(rows, cols);
+    const detectedCols = detectCols(cols);
+    const trainers = processRows(rows, detectedCols);
 
     if (!initialized) {
       buildUI(trainers);
@@ -523,9 +534,9 @@ function showError(err) {
   document.getElementById('overlay').innerHTML = `
     <div class="err-box">
       <h3>⚠ Cannot connect to Redash</h3>
-      <p style="margin-bottom:10px">${err.message}</p>
-      <p>The serverless proxy at <code>/api/redash</code> could not reach Redash.<br>
-      Check that the Vercel deployment is live and the Redash host is reachable.</p>
+      <pre style="background:#0a0a0a;border:1px solid #3a1515;border-radius:6px;padding:10px;font-size:10px;color:#fc9090;text-align:left;max-height:200px;overflow:auto;margin:10px 0;white-space:pre-wrap;word-break:break-all">${err.message}</pre>
+      <p style="font-size:11px;color:#718096">Screenshot this error and share with your developer to diagnose.<br>
+      Also visit <code style="color:#4299e1">/api/debug</code> on your Vercel URL for full diagnostics.</p>
     </div>`;
 }
 
