@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/redash", "destination": "/api/redash.js" }
+  ]
+}

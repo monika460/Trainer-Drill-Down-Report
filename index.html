@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trainer DrillDown — Live Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh;font-size:13px}
+
+/* ── Header ── */
+.header{background:linear-gradient(135deg,#1a1f2e,#16213e);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2d3748;position:sticky;top:0;z-index:300;flex-wrap:wrap;gap:10px}
+.header h1{font-size:17px;font-weight:700;color:#fff}
+.header-sub{font-size:11px;color:#718096;margin-top:2px}
+.sync-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#48bb78;animation:pulse 1.5s infinite;flex-shrink:0}
+.sync-dot.error{background:#fc5353;animation:none}
+.sync-dot.loading{background:#ecc94b;animation:pulse .5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sync-label{font-size:11px;color:#718096}
+.countdown{font-size:13px;color:#4299e1;font-weight:700;min-width:18px;text-align:right}
+.last-sync{font-size:10px;color:#4a5568}
+.gstats{display:flex;gap:14px;flex-wrap:wrap}
+.gs{text-align:center}.gs .v{font-size:16px;font-weight:700}.gs .l{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.4px}
+
+/* ── Tabs ── */
+.tabs{display:flex;background:#1a1f2e;border-bottom:2px solid #2d3748;padding:0 24px;position:sticky;top:57px;z-index:200;overflow-x:auto}
+.tab{padding:11px 18px;cursor:pointer;font-size:13px;font-weight:500;color:#718096;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.tab:hover{color:#e2e8f0}.tab.active{color:#fff;border-bottom-color:#4299e1}
+.tab .cnt{background:#2d3748;border-radius:10px;padding:1px 7px;font-size:11px;color:#a0aec0}
+.tab.active .cnt{background:#4299e1;color:#fff}
+
+/* ── Controls ── */
+.controls{padding:10px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #1a2033;background:#12161f;position:sticky;top:103px;z-index:190}
+.pf-btn{padding:4px 11px;border-radius:20px;border:1px solid #2d3748;background:transparent;color:#a0aec0;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.pf-btn:hover{color:#fff;border-color:#4a5568}
+.pf-btn.active[data-p="ALL"]{background:#4299e1;border-color:#4299e1;color:#fff}
+.pf-btn.active[data-p="CRITICAL"]{background:#fc5353;border-color:#fc5353;color:#fff}
+.pf-btn.active[data-p="HIGH"]{background:#ed8936;border-color:#ed8936;color:#fff}
+.pf-btn.active[data-p="MEDIUM"]{background:#ecc94b;border-color:#ecc94b;color:#1a1a1a}
+.pf-btn.active[data-p="LOW"]{background:#4299e1;border-color:#4299e1;color:#fff}
+.pf-btn.active[data-p="STABLE_DROP"]{background:#ff6b6b;border-color:#ff6b6b;color:#fff}
+.pf-btn.active[data-p="STABLE"]{background:#48bb78;border-color:#48bb78;color:#1a1a1a}
+.pf-btn.active[data-p="INACTIVE"]{background:#718096;border-color:#718096;color:#fff}
+.search-wrap{margin-left:auto;position:relative}
+.search-wrap::before{content:"🔍";position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;pointer-events:none}
+.search-wrap input{background:#1a1f2e;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:5px 10px 5px 28px;font-size:12px;width:200px;outline:none}
+.search-wrap input:focus{border-color:#4299e1}
+
+/* ── Summary cards ── */
+.sumcards{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:12px 24px;background:#12161f;border-bottom:1px solid #1a2033}
+@media(max-width:900px){.sumcards{grid-template-columns:repeat(4,1fr)}}
+.sc{background:#1a1f2e;border:1px solid #2d3748;border-radius:8px;padding:8px 12px;text-align:center}
+.sc .sv{font-size:20px;font-weight:700}.sc .sl{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
+.sc.crit{border-color:#fc5353;background:#1e0c0c}.sc.crit .sv{color:#fc5353}
+.sc.high{border-color:#ed8936;background:#1e1208}.sc.high .sv{color:#ed8936}
+.sc.med{border-color:#ecc94b;background:#1c1900}.sc.med .sv{color:#ecc94b}
+.sc.low{border-color:#4299e1;background:#0a1420}.sc.low .sv{color:#4299e1}
+.sc.stbdrop{border-color:#ff6b6b;background:#1e0a0a}.sc.stbdrop .sv{color:#ff6b6b}
+.sc.stb{border-color:#48bb78;background:#0a1e12}.sc.stb .sv{color:#48bb78}
+.sc.inact .sv{color:#718096}
+
+/* ── Tree table ── */
+.tree-wrap{overflow-x:auto}
+.tree-table{width:100%;border-collapse:collapse;min-width:900px}
+.tree-table th{padding:8px 10px;text-align:left;color:#4a5568;font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1a2033;background:#10141c;white-space:nowrap}
+.tree-table th.r{text-align:right}
+
+/* section rows */
+.row-section td{background:#0d1218;color:#3a5070;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;padding:6px 12px;border-bottom:1px solid #1a2033}
+.row-section.sd td{background:#1e0c0c;color:#ff6b6b;border-left:3px solid #ff6b6b}
+
+/* account rows */
+.row-account{border-bottom:1px solid #1e2535;cursor:pointer;transition:background .1s}
+.row-account:hover{background:#1a2030}
+.row-account td{padding:8px 10px;vertical-align:middle}
+.row-account.hidden{display:none}
+.tog{border:none;border-radius:3px;color:#a0aec0;cursor:pointer;font-size:10px;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.acc-tog{width:18px;height:18px;background:#252d3d;margin-right:5px}.acc-tog:hover{background:#4299e1;color:#fff}
+.acc-name{font-weight:600;color:#e2e8f0}
+.acc-sub{font-size:10px;color:#4a5568;margin-left:5px}
+
+/* project rows */
+.row-project{display:none;border-bottom:1px solid #161d2a;cursor:pointer;transition:background .1s}
+.row-project:hover{background:#161d28}.row-project.vis{display:table-row}
+.row-project td{padding:6px 10px 6px 32px;vertical-align:middle;background:#0f1420}
+.row-project.sdp td{background:#1a0c0c}.row-project.sdp:hover td{background:#200e0e}
+.proj-tog{width:16px;height:16px;background:#1e2535;margin-right:4px}.proj-tog:hover{background:#2d6a9f;color:#fff}
+.proj-name{color:#c0cfe0;font-size:12px}
+.bdrop{background:#2d0f0f;color:#fc5353;border:1px solid #fc535355;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:5px;font-weight:600}
+.bstable{background:#0d2018;color:#48bb78;border:1px solid #48bb7855;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:5px}
+.bstabledrop{background:#2d0f0f;color:#ff6b6b;border:1px solid #ff6b6b55;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:5px;font-weight:700}
+
+/* module rows */
+.row-module{display:none;border-bottom:1px solid #131822}.row-module.vis{display:table-row}
+.row-module td{padding:5px 10px 5px 56px;vertical-align:middle;background:#0b1018}
+.mod-tog{width:14px;height:14px;background:#1a2030;margin-right:4px}.mod-tog:hover{background:#1a3a5a;color:#fff}
+.mod-name{color:#7a9ab0;font-size:11px}
+
+/* event/user rows */
+.row-event{display:none;border-bottom:1px solid #10151f}.row-event.vis{display:table-row}
+.row-event td{padding:5px 10px 5px 78px;vertical-align:middle;background:#080c14}
+.evt-name{color:#5a7090;font-size:11px;font-family:monospace}
+.ubox{margin-top:3px;display:inline-flex;align-items:center;gap:6px;background:#0f1828;border:1px solid #1e3050;border-radius:5px;padding:3px 8px;flex-wrap:wrap}
+.uname{color:#7eb8e0;font-size:12px;font-weight:600}
+.uphone{color:#4a9edd;font-size:12px;font-weight:700;letter-spacing:.4px}
+
+/* priority badge */
+.pb{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600}
+.pb.CRITICAL{background:#2d0f0f;color:#fc5353;border:1px solid #fc5353}
+.pb.HIGH{background:#2d1a0a;color:#ed8936;border:1px solid #ed8936}
+.pb.MEDIUM{background:#2d2800;color:#ecc94b;border:1px solid #ecc94b}
+.pb.LOW{background:#0a1a2d;color:#4299e1;border:1px solid #4299e1}
+.pb.STABLE{background:#0d2d18;color:#48bb78;border:1px solid #48bb78}
+.pb.STABLE_DROP{background:#2d0f0f;color:#ff6b6b;border:1px solid #ff6b6b}
+.pb.INACTIVE{background:#1a1a1a;color:#718096;border:1px solid #718096}
+
+/* numbers */
+.nr{text-align:right;font-variant-numeric:tabular-nums;font-size:12px;white-space:nowrap}
+.neg{color:#fc5353}.pos{color:#48bb78}.neu{color:#4a5568}.zred{color:#fc535355}
+.sm{font-size:11px}
+
+/* trend bars */
+.trend{display:flex;align-items:flex-end;gap:2px;height:18px;min-width:40px}
+.tbar{flex:1;border-radius:1px 1px 0 0;min-height:2px;min-width:5px}
+
+/* loading overlay */
+.overlay{position:fixed;inset:0;background:#0f1117ee;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid #2d3748;border-top-color:#4299e1;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err-box{background:#1e0c0c;border:1px solid #fc5353;border-radius:10px;padding:24px 32px;max-width:500px;text-align:center}
+.err-box h3{color:#fc5353;margin-bottom:10px;font-size:15px}
+.err-box p{color:#a0aec0;font-size:12px;line-height:1.7}
+.panel{display:none}.panel.active{display:block}
+.last-disp{font-size:10px;color:#4a6080;white-space:nowrap}
+.dispo{font-size:10px;color:#556070;font-style:italic;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <div style="color:#718096;font-size:13px">Connecting to Redash...</div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">📊</span>
+      <div>
+        <h1>Trainer DrillDown — Live Dashboard</h1>
+        <div class="header-sub">Auto-syncing every 5s · Redash Query #1468 · Account → Project → Module → Event → User</div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+    <div class="sync-bar">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span class="sync-label">Next sync</span>
+      <span class="countdown" id="countdown">5</span>
+      <span class="sync-label">s</span>
+    </div>
+    <div class="last-sync" id="last-sync">Never synced</div>
+    <div class="gstats" id="gstats"></div>
+  </div>
+</div>
+
+<div class="tabs" id="tabs"></div>
+<div id="app"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────────────────────
+const PARAMS      = { p_renewal_start: '2026-04-01', p_renewal_end: '2030-04-30' };
+const REFRESH_SEC = 5;
+
+// ─────────────────────────────────────────────────────────────
+// COLUMN DETECTION (flexible — works even if Redash renames cols)
+// ─────────────────────────────────────────────────────────────
+function detectCols(columns) {
+  const names = columns.map(c => c.name.toLowerCase());
+  const find = (...opts) => {
+    for (const o of opts) {
+      const i = names.findIndex(n => n === o || n.includes(o));
+      if (i >= 0) return columns[i].name;
+    }
+    return null;
+  };
+  return {
+    trainer    : find('trainer_email','trainer','trainer_name'),
+    org        : find('org_name','organisation_name','organization_name','account_name','org'),
+    project    : find('project_name','project'),
+    module     : find('module_name','module'),
+    event      : find('event_name','event','event_type'),
+    user       : find('user_name','username','user'),
+    mobile     : find('mobile_number','mobile','phone','phone_number'),
+    renewal    : find('renewal_date','renewal'),
+    last_disp  : find('last_disposition_date','last_disposition','last_disp'),
+    disposition: find('disposition','notes'),
+    wk0        : find('wk_0','wk0','week_0'),
+    wk1        : find('wk_1','wk1','week_1'),
+    wk2        : find('wk_2','wk2','week_2'),
+    wk3        : find('wk_3','wk3','week_3'),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// TRAINER NAME MAPPING
+// ─────────────────────────────────────────────────────────────
+const TRAINER_MAP = {
+  'digvijay': 'Digvijay',
+  'farid'   : 'S Farid',
+  'sfarid'  : 'S Farid',
+  's farid' : 'S Farid',
+  'divya'   : 'Divya',
+};
+function trainerDisplay(email) {
+  if (!email) return 'Unknown';
+  const low = email.toLowerCase();
+  for (const [k, v] of Object.entries(TRAINER_MAP)) {
+    if (low.includes(k)) return v;
+  }
+  return email.split('@')[0];
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRIORITY LOGIC
+// ─────────────────────────────────────────────────────────────
+const PRIO_ORDER = ['CRITICAL','HIGH','MEDIUM','LOW','STABLE_DROP','STABLE','INACTIVE'];
+
+function calcPriority(wk0, wk1) {
+  if (wk0 === 0 && wk1 > 0)  return 'CRITICAL';
+  const pct = wk1 > 0 ? ((wk0 - wk1) / wk1) * 100 : 0;
+  if (pct <= -75)             return 'HIGH';
+  if (pct <= -25)             return 'MEDIUM';
+  if (pct < 0)                return 'LOW';
+  if (wk0 === 0)              return 'INACTIVE';
+  return 'STABLE';
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROCESS RAW ROWS → TRAINER HIERARCHY
+// ─────────────────────────────────────────────────────────────
+function processRows(rows, cols) {
+  const trainerMap = {};
+
+  for (const row of rows) {
+    const trainer = trainerDisplay(row[cols.trainer] || '');
+    const org     = row[cols.org]     || 'Unknown';
+    const project = row[cols.project] || 'Unknown';
+    const module  = row[cols.module]  || 'Unknown';
+
+    if (!trainerMap[trainer]) trainerMap[trainer] = {};
+    if (!trainerMap[trainer][org]) trainerMap[trainer][org] = { renewal: row[cols.renewal] || '', projects: {} };
+    const orgObj = trainerMap[trainer][org];
+
+    if (!orgObj.projects[project]) orgObj.projects[project] = { modules: {} };
+    if (!orgObj.projects[project].modules[module]) orgObj.projects[project].modules[module] = { events: [] };
+
+    orgObj.projects[project].modules[module].events.push({
+      event   : row[cols.event]       || '',
+      user    : row[cols.user]        || '',
+      mobile  : row[cols.mobile]      || '',
+      lastDisp: row[cols.last_disp]   || '',
+      dispo   : row[cols.disposition] || '',
+      wk0: +row[cols.wk0] || 0,
+      wk1: +row[cols.wk1] || 0,
+      wk2: +row[cols.wk2] || 0,
+      wk3: +row[cols.wk3] || 0,
+    });
+  }
+
+  // Aggregate sums upward: event → module → project → account
+  const result = {};
+  let tIdx = 0;
+
+  for (const [tName, orgMap] of Object.entries(trainerMap)) {
+    const accounts = [];
+    let aIdx = 0;
+
+    for (const [orgName, orgData] of Object.entries(orgMap)) {
+      let aWk0=0, aWk1=0, aWk2=0, aWk3=0;
+      const projects = [];
+
+      for (const [projName, projData] of Object.entries(orgData.projects)) {
+        let pWk0=0, pWk1=0, pWk2=0, pWk3=0;
+        const modules = [];
+
+        for (const [modName, modData] of Object.entries(projData.modules)) {
+          let mWk0=0, mWk1=0, mWk2=0, mWk3=0;
+          for (const e of modData.events) { mWk0+=e.wk0; mWk1+=e.wk1; mWk2+=e.wk2; mWk3+=e.wk3; }
+          pWk0+=mWk0; pWk1+=mWk1; pWk2+=mWk2; pWk3+=mWk3;
+          modules.push({
+            name: modName, wk0:mWk0, wk1:mWk1, wk2:mWk2, wk3:mWk3,
+            diff: mWk0-mWk1,
+            pct: mWk1>0 ? ((mWk0-mWk1)/mWk1*100).toFixed(1)+'%' : '',
+            events: modData.events
+          });
+        }
+
+        aWk0+=pWk0; aWk1+=pWk1; aWk2+=pWk2; aWk3+=pWk3;
+        projects.push({
+          name: projName, wk0:pWk0, wk1:pWk1, wk2:pWk2, wk3:pWk3,
+          diff: pWk0-pWk1,
+          pct: pWk1>0 ? ((pWk0-pWk1)/pWk1*100).toFixed(1)+'%' : '',
+          isDrop: pWk0 < pWk1, modules
+        });
+      }
+
+      const basePrio = calcPriority(aWk0, aWk1);
+      const priority = (basePrio === 'STABLE' && aWk0 === 0) ? 'STABLE_DROP' : basePrio;
+      const diff = aWk0 - aWk1;
+      const pctStr = aWk1 > 0 ? (diff/aWk1*100).toFixed(1)+'%' : '';
+
+      accounts.push({
+        num: ++aIdx, name: orgName, renewal: orgData.renewal,
+        wk0:aWk0, wk1:aWk1, wk2:aWk2, wk3:aWk3,
+        diff, pct: pctStr, priority, projects
+      });
+    }
+
+    result[tName] = { accounts };
+  }
+
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────
+// RENDER HELPERS
+// ─────────────────────────────────────────────────────────────
+function pb(p){ return `<span class="pb ${p}">${p.replace('_',' ')}</span>`; }
+
+function trend(w0,w1,w2,w3){
+  const v=[w3,w2,w1,w0], mx=Math.max(...v,1);
+  const col = ['#3a4a5a','#4a5a6a','#8899aa', w0===0?'#fc5353':(w0>=w1?'#48bb78':'#ed8936')];
+  return `<div class="trend">${v.map((n,i)=>`<div class="tbar" style="height:${Math.max(2,Math.round(n/mx*18))}px;background:${col[i]}"></div>`).join('')}</div>`;
+}
+
+const nTD = (v,zr=false) => `<td class="nr ${zr&&v===0?'zred':''}">${v??'—'}</td>`;
+const dTD = v => (!v&&v!==0) ? `<td class="nr neu">—</td>` : `<td class="nr ${v<0?'neg':v>0?'pos':'neu'}">${v>0?'+':''}${v}</td>`;
+const pTD = v => !v ? `<td class="nr neu sm">—</td>` : `<td class="nr ${v.startsWith('-')?'neg':'pos'} sm">${v}</td>`;
+
+// ─────────────────────────────────────────────────────────────
+// RENDER TRAINER PANEL
+// ─────────────────────────────────────────────────────────────
+const SECT_LABELS = {
+  CRITICAL   : '🔴 CRITICAL — Immediate Action Required',
+  HIGH       : '🟠 HIGH — Act This Week',
+  MEDIUM     : '🟡 MEDIUM — Monitor Closely',
+  LOW        : '🔵 LOW DROP — Watch',
+  STABLE_DROP: '🔴 STABLE — Zero Activity This Week',
+  STABLE     : '✅ STABLE — Active This Week',
+  INACTIVE   : '⚫ INACTIVE ACCOUNTS',
+};
+
+function renderPanel(tName, tData, tid) {
+  const accs = tData.accounts;
+  const cnt = {};
+  PRIO_ORDER.forEach(p => cnt[p] = 0);
+  accs.forEach(a => cnt[a.priority] = (cnt[a.priority]||0)+1);
+
+  let html = `
+  <div class="sumcards">
+    <div class="sc crit"><div class="sv">${cnt.CRITICAL||0}</div><div class="sl">🔴 Critical</div></div>
+    <div class="sc high"><div class="sv">${cnt.HIGH||0}</div><div class="sl">🟠 High</div></div>
+    <div class="sc med"><div class="sv">${cnt.MEDIUM||0}</div><div class="sl">🟡 Medium</div></div>
+    <div class="sc low"><div class="sv">${cnt.LOW||0}</div><div class="sl">🔵 Low</div></div>
+    <div class="sc stbdrop"><div class="sv">${cnt.STABLE_DROP||0}</div><div class="sl">🔴 Stable Drop</div></div>
+    <div class="sc stb"><div class="sv">${cnt.STABLE||0}</div><div class="sl">✅ Stable</div></div>
+    <div class="sc inact"><div class="sv">${cnt.INACTIVE||0}</div><div class="sl">⚫ Inactive</div></div>
+  </div>
+  <div class="controls" id="ctrl-${tid}">
+    <button class="pf-btn active" data-t="${tid}" data-p="ALL">All (${accs.length})</button>
+    <button class="pf-btn" data-t="${tid}" data-p="CRITICAL">🔴 Critical</button>
+    <button class="pf-btn" data-t="${tid}" data-p="HIGH">🟠 High</button>
+    <button class="pf-btn" data-t="${tid}" data-p="MEDIUM">🟡 Medium</button>
+    <button class="pf-btn" data-t="${tid}" data-p="LOW">🔵 Low</button>
+    <button class="pf-btn" data-t="${tid}" data-p="STABLE_DROP">🔴 Stable Drop</button>
+    <button class="pf-btn" data-t="${tid}" data-p="STABLE">✅ Stable</button>
+    <button class="pf-btn" data-t="${tid}" data-p="INACTIVE">⚫ Inactive</button>
+    <div class="search-wrap"><input type="text" placeholder="Search account…" data-t="${tid}" class="acc-search"></div>
+  </div>
+  <div class="tree-wrap"><table class="tree-table">
+    <thead><tr>
+      <th style="width:22px"></th><th>#</th>
+      <th>Account / Project / Module / Event</th>
+      <th class="r">Wk 0</th><th class="r">Wk 1</th><th class="r">Wk 2</th><th class="r">Wk 3</th>
+      <th class="r">Diff</th><th class="r">%</th><th>Trend</th>
+      <th>Priority</th><th>Last Dispos.</th><th>Note</th>
+    </tr></thead><tbody id="tbody-${tid}">`;
+
+  const sorted = [...accs].sort((a,b) => PRIO_ORDER.indexOf(a.priority) - PRIO_ORDER.indexOf(b.priority));
+  let lastSect = null;
+
+  for (const [ai, acc] of sorted.entries()) {
+    const aId = `${tid}-a${ai}`;
+    if (acc.priority !== lastSect) {
+      const isSD = acc.priority === 'STABLE_DROP';
+      html += `<tr class="row-section${isSD?' sd':''}" data-sect="${acc.priority}"><td colspan="13">${SECT_LABELS[acc.priority]||acc.priority}</td></tr>`;
+      lastSect = acc.priority;
+    }
+
+    html += `<tr class="row-account" data-p="${acc.priority}" data-name="${acc.name.toLowerCase()}" data-aid="${aId}" onclick="toggleAcc('${aId}',event)">
+      <td><button class="tog acc-tog" id="btn-${aId}">${acc.projects.length?'+':'·'}</button></td>
+      <td style="color:#4a5568;font-size:11px">${acc.num}</td>
+      <td><span class="acc-name">${acc.name}</span><span class="acc-sub">${acc.projects.length}p</span>
+        ${acc.renewal?`<span style="font-size:10px;color:#4a5568;margin-left:5px">🗓 ${acc.renewal}</span>`:''}</td>
+      ${nTD(acc.wk0,true)}${nTD(acc.wk1)}${nTD(acc.wk2)}${nTD(acc.wk3)}
+      ${dTD(acc.diff)}${pTD(acc.pct)}
+      <td>${trend(acc.wk0,acc.wk1,acc.wk2,acc.wk3)}</td>
+      <td>${pb(acc.priority)}</td><td></td><td></td>
+    </tr>`;
+
+    for (const [pi, proj] of acc.projects.entries()) {
+      const pId = `${aId}-p${pi}`;
+      const isSD = !proj.isDrop && proj.wk0 === 0;
+      const sym  = proj.isDrop ? '⚠' : isSD ? '⚠' : '▲';
+      const symColor = proj.isDrop ? '#fc5353' : isSD ? '#ff6b6b' : '#48bb78';
+      const bdg  = proj.isDrop
+        ? `<span class="bdrop">DROP</span>`
+        : isSD
+        ? `<span class="bstabledrop">STABLE DROP</span>`
+        : `<span class="bstable">STABLE</span>`;
+
+      html += `<tr class="row-project${isSD?' sdp':''}" data-acc="${aId}" id="proj-${pId}" onclick="toggleProj('${pId}',event)">
+        <td><button class="tog proj-tog" id="btn-${pId}">${proj.modules.length?'+':'·'}</button></td>
+        <td></td>
+        <td><div style="display:flex;align-items:center;gap:4px"><span style="color:${symColor}">${sym}</span><span class="proj-name">${proj.name}</span>${bdg}</div></td>
+        ${nTD(proj.wk0,true)}${nTD(proj.wk1)}${nTD(proj.wk2)}${nTD(proj.wk3)}
+        ${dTD(proj.diff)}${pTD(proj.pct)}
+        <td>${trend(proj.wk0,proj.wk1,proj.wk2,proj.wk3)}</td>
+        <td></td><td></td><td></td>
+      </tr>`;
+
+      for (const [mi, mod] of proj.modules.entries()) {
+        const mId = `${pId}-m${mi}`;
+        html += `<tr class="row-module" data-proj="${pId}" id="mod-${mId}" onclick="toggleMod('${mId}',event)">
+          <td><button class="tog mod-tog" id="btn-${mId}">${mod.events.length?'+':'·'}</button></td>
+          <td></td>
+          <td><span class="mod-name">📦 ${mod.name}</span></td>
+          ${nTD(mod.wk0,true)}${nTD(mod.wk1)}${nTD(mod.wk2)}${nTD(mod.wk3)}
+          ${dTD(mod.diff)}${pTD(mod.pct)}
+          <td></td><td></td><td></td><td></td>
+        </tr>`;
+
+        for (const evt of mod.events) {
+          html += `<tr class="row-event" data-mod="${mId}">
+            <td></td><td></td>
+            <td>
+              <div class="evt-name">⚡ ${evt.event||'—'}</div>
+              <div class="ubox">
+                <span>👤</span><span class="uname">${evt.user||'—'}</span>
+                ${evt.mobile ? `<span style="color:#2d3f50">|</span><span>📞</span><span class="uphone">${evt.mobile}</span>` : ''}
+              </div>
+            </td>
+            ${nTD(evt.wk0,true)}${nTD(evt.wk1)}${nTD(evt.wk2)}${nTD(evt.wk3)}
+            ${dTD(evt.wk0-evt.wk1)}
+            <td></td><td></td>
+            <td class="last-disp">${(evt.lastDisp||'—').slice(0,10)}</td>
+            <td class="dispo" title="${(evt.dispo||'').replace(/"/g,"'")}">${evt.dispo||'—'}</td>
+          </tr>`;
+        }
+      }
+    }
+  }
+
+  html += `</tbody></table></div>`;
+  return html;
+}
+
+// ─────────────────────────────────────────────────────────────
+// FETCH + RENDER
+// ─────────────────────────────────────────────────────────────
+let countdown = REFRESH_SEC;
+let currentTab = null;
+let initialized = false;
+
+async function fetchAndRender() {
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot loading';
+
+  try {
+    const qs = new URLSearchParams(PARAMS).toString();
+    const res = await fetch(`/api/redash?${qs}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    const json = await res.json();
+
+    if (json.error) throw new Error(json.error);
+
+    const qr   = json.query_result || json;
+    const data  = qr.data || qr;
+    const cols  = detectCols(data.columns || []);
+    const rows  = data.rows || [];
+
+    if (!data.columns?.length) throw new Error('No columns returned from Redash');
+
+    const trainers = processRows(rows, cols);
+
+    if (!initialized) {
+      buildUI(trainers);
+      initialized = true;
+      document.getElementById('overlay').style.display = 'none';
+    } else {
+      updateUI(trainers);
+    }
+
+    dot.className = 'sync-dot';
+    document.getElementById('last-sync').textContent = 'Synced: ' + new Date().toLocaleTimeString();
+
+  } catch (err) {
+    dot.className = 'sync-dot error';
+    if (!initialized) showError(err);
+    console.error('[DrillDown] Fetch error:', err);
+  }
+
+  countdown = REFRESH_SEC;
+}
+
+function showError(err) {
+  document.getElementById('overlay').innerHTML = `
+    <div class="err-box">
+      <h3>⚠ Cannot connect to Redash</h3>
+      <p style="margin-bottom:10px">${err.message}</p>
+      <p>The serverless proxy at <code>/api/redash</code> could not reach Redash.<br>
+      Check that the Vercel deployment is live and the Redash host is reachable.</p>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// UI: BUILD + UPDATE
+// ─────────────────────────────────────────────────────────────
+function buildUI(trainers) {
+  const tabsEl = document.getElementById('tabs');
+  const appEl  = document.getElementById('app');
+  tabsEl.innerHTML = ''; appEl.innerHTML = '';
+  currentTab = null;
+
+  Object.entries(trainers).forEach(([tName, tData], i) => {
+    const tid  = tName.replace(/[^a-z0-9]/gi,'_');
+    const crit = tData.accounts.filter(a => a.priority==='CRITICAL').length;
+    const high = tData.accounts.filter(a => a.priority==='HIGH').length;
+    const sd   = tData.accounts.filter(a => a.priority==='STABLE_DROP').length;
+    const urg  = crit>0 ? `<span style="color:#fc5353;font-weight:700"> ${crit}🔴</span>`
+               : high>0 ? `<span style="color:#ed8936"> ${high}🟠</span>` : '';
+    const sdB  = sd>0 ? `<span style="color:#ff6b6b;font-size:10px"> ${sd}⚠</span>` : '';
+
+    const tab = document.createElement('div');
+    tab.className = 'tab' + (i===0 ? ' active' : '');
+    tab.dataset.tid = tid;
+    tab.innerHTML = `${tName} <span class="cnt">${tData.accounts.length}</span>${urg}${sdB}`;
+    tab.addEventListener('click', () => switchTab(tid));
+    tabsEl.appendChild(tab);
+
+    const panel = document.createElement('div');
+    panel.className = 'panel' + (i===0 ? ' active' : '');
+    panel.id = 'panel-' + tid;
+    panel.innerHTML = renderPanel(tName, tData, tid);
+    appEl.appendChild(panel);
+
+    if (i===0) currentTab = tid;
+  });
+
+  updateGlobalStats(trainers);
+}
+
+function updateUI(trainers) {
+  const prev = currentTab;
+  buildUI(trainers);
+  if (prev && document.querySelector(`[data-tid="${prev}"]`)) switchTab(prev);
+}
+
+function updateGlobalStats(trainers) {
+  const gc = {};
+  Object.values(trainers).forEach(t => t.accounts.forEach(a => gc[a.priority] = (gc[a.priority]||0)+1));
+  const total = Object.values(gc).reduce((s,v)=>s+v,0);
+  document.getElementById('gstats').innerHTML = `
+    <div class="gs"><div class="v" style="color:#fc5353">${gc.CRITICAL||0}</div><div class="l">Critical</div></div>
+    <div class="gs"><div class="v" style="color:#ed8936">${gc.HIGH||0}</div><div class="l">High</div></div>
+    <div class="gs"><div class="v" style="color:#ff6b6b">${gc.STABLE_DROP||0}</div><div class="l">Stable Drop</div></div>
+    <div class="gs"><div class="v" style="color:#48bb78">${gc.STABLE||0}</div><div class="l">Stable</div></div>
+    <div class="gs"><div class="v" style="color:#a0aec0">${total}</div><div class="l">Total</div></div>`;
+}
+
+function switchTab(tid) {
+  currentTab = tid;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tid===tid));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id==='panel-'+tid));
+}
+
+// ─────────────────────────────────────────────────────────────
+// TREE TOGGLES
+// ─────────────────────────────────────────────────────────────
+function toggleAcc(aId, e) {
+  e.stopPropagation();
+  const btn = document.getElementById('btn-'+aId);
+  if (!btn || btn.textContent==='·') return;
+  const open = btn.textContent==='+';
+  btn.textContent = open ? '−' : '+';
+  document.querySelectorAll(`[data-acc="${aId}"]`).forEach(r => {
+    r.classList.toggle('vis', open);
+    if (!open) {
+      const pb = r.querySelector('.proj-tog');
+      if (pb && pb.textContent!=='·') pb.textContent = '+';
+      const pid = r.id?.replace('proj-','');
+      if (pid) {
+        document.querySelectorAll(`[data-proj="${pid}"]`).forEach(m => {
+          m.classList.remove('vis');
+          const mb = m.querySelector('.mod-tog');
+          if (mb && mb.textContent!=='·') mb.textContent = '+';
+          const mid = m.id?.replace('mod-','');
+          if (mid) document.querySelectorAll(`[data-mod="${mid}"]`).forEach(ev => ev.classList.remove('vis'));
+        });
+      }
+    }
+  });
+}
+
+function toggleProj(pId, e) {
+  e.stopPropagation();
+  const btn = document.getElementById('btn-'+pId);
+  if (!btn || btn.textContent==='·') return;
+  const open = btn.textContent==='+';
+  btn.textContent = open ? '−' : '+';
+  document.querySelectorAll(`[data-proj="${pId}"]`).forEach(r => {
+    r.classList.toggle('vis', open);
+    if (!open) {
+      const mb = r.querySelector('.mod-tog');
+      if (mb && mb.textContent!=='·') mb.textContent = '+';
+      const mid = r.id?.replace('mod-','');
+      if (mid) document.querySelectorAll(`[data-mod="${mid}"]`).forEach(ev => ev.classList.remove('vis'));
+    }
+  });
+}
+
+function toggleMod(mId, e) {
+  e.stopPropagation();
+  const btn = document.getElementById('btn-'+mId);
+  if (!btn || btn.textContent==='·') return;
+  const open = btn.textContent==='+';
+  btn.textContent = open ? '−' : '+';
+  document.querySelectorAll(`[data-mod="${mId}"]`).forEach(r => r.classList.toggle('vis', open));
+}
+
+// ─────────────────────────────────────────────────────────────
+// FILTER + SEARCH (event delegation)
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+  if (!e.target.classList.contains('pf-btn')) return;
+  const tid  = e.target.dataset.t;
+  const prio = e.target.dataset.p;
+  const panel = document.getElementById('panel-'+tid);
+  panel.querySelectorAll('.pf-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  // Collapse all
+  panel.querySelectorAll('.acc-tog').forEach(b => { if(b.textContent!=='·') b.textContent='+'; });
+  panel.querySelectorAll('.row-project,.row-module,.row-event').forEach(r => r.classList.remove('vis'));
+  // Show/hide accounts and section headers
+  panel.querySelectorAll('.row-account').forEach(r => r.classList.toggle('hidden', prio!=='ALL' && r.dataset.p!==prio));
+  panel.querySelectorAll('.row-section').forEach(s => s.style.display = (prio==='ALL' || s.dataset.sect===prio) ? '' : 'none');
+});
+
+document.addEventListener('input', e => {
+  if (!e.target.classList.contains('acc-search')) return;
+  const tid = e.target.dataset.t;
+  const q   = e.target.value.toLowerCase();
+  document.getElementById('panel-'+tid).querySelectorAll('.row-account').forEach(r => {
+    r.classList.toggle('hidden', !!q && !r.dataset.name.includes(q));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// AUTO-REFRESH LOOP
+// ─────────────────────────────────────────────────────────────
+setInterval(() => {
+  countdown--;
+  document.getElementById('countdown').textContent = Math.max(0, countdown);
+  if (countdown <= 0) fetchAndRender();
+}, 1000);
+
+fetchAndRender(); // initial load
+</script>
+</body>
+</html>
