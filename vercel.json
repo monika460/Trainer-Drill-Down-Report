@@ -1,10 +1,10 @@
 {
   "rewrites": [
-    { "source": "/api/redash", "destination": "/api/redash.js" }
+    { "source": "/api/redash", "destination": "/api/redash.js" },
+    { "source": "/api/debug",  "destination": "/api/debug.js"  }
   ],
   "functions": {
-    "api/redash.js": {
-      "maxDuration": 60
-    }
+    "api/redash.js": { "maxDuration": 60 },
+    "api/debug.js":  { "maxDuration": 30 }
   }
 }
