@@ -301,13 +301,18 @@ function processRows(rows, cols) {
           let mWk0=0, mWk1=0, mWk2=0, mWk3=0;
           for (const e of modData.events) { mWk0+=e.wk0; mWk1+=e.wk1; mWk2+=e.wk2; mWk3+=e.wk3; }
           pWk0+=mWk0; pWk1+=mWk1; pWk2+=mWk2; pWk3+=mWk3;
+          // Sort events within a module by wk0 DESC (busiest events first)
+          const sortedEvents = [...modData.events].sort((a,b) => (b.wk0 - a.wk0) || (b.wk1 - a.wk1));
           modules.push({
             name: modName, wk0:mWk0, wk1:mWk1, wk2:mWk2, wk3:mWk3,
             diff: mWk0-mWk1,
             pct: mWk1>0 ? ((mWk0-mWk1)/mWk1*100).toFixed(1)+'%' : '',
-            events: modData.events
+            events: sortedEvents
           });
         }
+
+        // Sort modules within a project by wk0 ASC (deadest modules first)
+        modules.sort((a,b) => (a.wk0 - b.wk0) || a.name.localeCompare(b.name));
 
         aWk0+=pWk0; aWk1+=pWk1; aWk2+=pWk2; aWk3+=pWk3;
         const _isDrop = pWk0 < pWk1;
@@ -321,13 +326,12 @@ function processRows(rows, cols) {
       }
 
       // ── Sort projects within account: DROP → STABLE_DROP → STABLE
-      // (worst-first inside each group, so action items surface to the top)
+      // Inside each status group, sort by wk0 ASC (deadest projects first).
       const PSTAT_ORDER = { DROP:0, STABLE_DROP:1, STABLE:2 };
       projects.sort((a,b) => {
         const ord = PSTAT_ORDER[a.pStatus] - PSTAT_ORDER[b.pStatus];
         if (ord !== 0) return ord;
-        if (a.pStatus === 'STABLE') return (b.wk0 - a.wk0) || a.name.localeCompare(b.name);
-        return a.diff - b.diff; // most negative diff first
+        return (a.wk0 - b.wk0) || a.name.localeCompare(b.name); // wk0 low → high
       });
 
       const basePrio = calcPriority(aWk0, aWk1);
