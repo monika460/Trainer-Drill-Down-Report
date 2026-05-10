@@ -70,6 +70,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .row-section td{background:#0d1218;color:#3a5070;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;padding:6px 12px;border-bottom:1px solid #1a2033}
 .row-section.sd td{background:#1e0c0c;color:#ff6b6b;border-left:3px solid #ff6b6b}
 
+/* project-status sub-divider (within an expanded account) */
+.row-pstat{display:none}
+.row-pstat.vis{display:table-row}
+.row-pstat td{padding:4px 12px 4px 32px;font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;background:#0c1018;border-top:1px solid #1a2033;border-bottom:1px solid #1a2033}
+.row-pstat.drop td{color:#fc5353;border-left:2px solid #fc5353}
+.row-pstat.sdrop td{color:#ff6b6b;border-left:2px solid #ff6b6b}
+.row-pstat.stable td{color:#48bb78;border-left:2px solid #48bb78}
+
 /* account rows */
 .row-account{border-bottom:1px solid #1e2535;cursor:pointer;transition:background .1s}
 .row-account:hover{background:#1a2030}
@@ -302,13 +310,25 @@ function processRows(rows, cols) {
         }
 
         aWk0+=pWk0; aWk1+=pWk1; aWk2+=pWk2; aWk3+=pWk3;
+        const _isDrop = pWk0 < pWk1;
+        const _pStatus = _isDrop ? 'DROP' : (pWk0 === 0 ? 'STABLE_DROP' : 'STABLE');
         projects.push({
           name: projName, wk0:pWk0, wk1:pWk1, wk2:pWk2, wk3:pWk3,
           diff: pWk0-pWk1,
           pct: pWk1>0 ? ((pWk0-pWk1)/pWk1*100).toFixed(1)+'%' : '',
-          isDrop: pWk0 < pWk1, modules
+          isDrop: _isDrop, pStatus: _pStatus, modules
         });
       }
+
+      // ── Sort projects within account: DROP → STABLE_DROP → STABLE
+      // (worst-first inside each group, so action items surface to the top)
+      const PSTAT_ORDER = { DROP:0, STABLE_DROP:1, STABLE:2 };
+      projects.sort((a,b) => {
+        const ord = PSTAT_ORDER[a.pStatus] - PSTAT_ORDER[b.pStatus];
+        if (ord !== 0) return ord;
+        if (a.pStatus === 'STABLE') return (b.wk0 - a.wk0) || a.name.localeCompare(b.name);
+        return a.diff - b.diff; // most negative diff first
+      });
 
       const basePrio = calcPriority(aWk0, aWk1);
       const priority = (basePrio === 'STABLE' && aWk0 === 0) ? 'STABLE_DROP' : basePrio;
@@ -414,6 +434,12 @@ function renderPanel(tName, tData, tid) {
       <td>${pb(acc.priority)}</td><td></td><td></td>
     </tr>`;
 
+    let lastPStat = null;
+    const PSTAT_LABELS = {
+      DROP        : { cls:'drop',   text:'⚠ DROP — projects actively losing activity' },
+      STABLE_DROP : { cls:'sdrop',  text:'⚠ STABLE DROP — zero activity this week' },
+      STABLE      : { cls:'stable', text:'✓ STABLE — active this week' }
+    };
     for (const [pi, proj] of acc.projects.entries()) {
       const pId = `${aId}-p${pi}`;
       const isSD = !proj.isDrop && proj.wk0 === 0;
@@ -424,6 +450,13 @@ function renderPanel(tName, tData, tid) {
         : isSD
         ? `<span class="bstabledrop">STABLE DROP</span>`
         : `<span class="bstable">STABLE</span>`;
+
+      // Sub-divider when project status changes within the account
+      if (proj.pStatus !== lastPStat) {
+        const lbl = PSTAT_LABELS[proj.pStatus] || { cls:'', text:proj.pStatus };
+        html += `<tr class="row-pstat ${lbl.cls}" data-acc="${aId}"><td colspan="13">${lbl.text}</td></tr>`;
+        lastPStat = proj.pStatus;
+      }
 
       html += `<tr class="row-project${isSD?' sdp':''}" data-acc="${aId}" id="proj-${pId}" onclick="toggleProj('${pId}',event)">
         <td><button class="tog proj-tog" id="btn-${pId}">${proj.modules.length?'+':'·'}</button></td>
@@ -668,7 +701,7 @@ document.addEventListener('click', e => {
   e.target.classList.add('active');
   // Collapse all
   panel.querySelectorAll('.acc-tog').forEach(b => { if(b.textContent!=='·') b.textContent='+'; });
-  panel.querySelectorAll('.row-project,.row-module,.row-event').forEach(r => r.classList.remove('vis'));
+  panel.querySelectorAll('.row-project,.row-module,.row-event,.row-pstat').forEach(r => r.classList.remove('vis'));
   // Show/hide accounts and section headers
   panel.querySelectorAll('.row-account').forEach(r => r.classList.toggle('hidden', prio!=='ALL' && r.dataset.p!==prio));
   panel.querySelectorAll('.row-section').forEach(s => s.style.display = (prio==='ALL' || s.dataset.sect===prio) ? '' : 'none');
