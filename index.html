@@ -431,14 +431,19 @@ function processRows(rows, cols) {
 
       // Compute metrics — use raw query columns if present, else compute from user sets
       const activeW0 = hasRawMetrics ? rawActiveW0 : usersActiveWk0.size;
-      const droppedUsers = [...usersActiveWk1].filter(u => !usersActiveWk0.has(u)).length;
+      const droppedUsersCount = [...usersActiveWk1].filter(u => !usersActiveWk0.has(u)).length;
       const wasActiveUsers = usersActiveWk1.size;
-      const dropW0 = wasActiveUsers > 0 ? `${droppedUsers}/${wasActiveUsers}` : '—';
-      const dropW0IsAlert = droppedUsers > 0;
+      const dropW0 = wasActiveUsers > 0 ? `${droppedUsersCount}/${wasActiveUsers}` : '—';
+      const dropW0IsAlert = droppedUsersCount > 0;
       const connW0 = hasRawMetrics ? rawConnW0 : [...usersActiveWk0].filter(u => !usersActiveWk1.has(u)).length;
       const totalUsers = usersAll.size;
       const covPct = totalUsers > 0 ? Math.round(activeW0 / totalUsers * 100) : 0;
       const covW0 = totalUsers > 0 ? covPct + '%' : '—';
+
+      // Build dropped users list (active wk1, silent wk0) with names+mobiles
+      const droppedUsersList = [...usersActiveWk1]
+        .filter(u => !usersActiveWk0.has(u))
+        .map(u => ({ user: u.split('|')[0], mobile: u.split('|')[1] }));
 
       accounts.push({
         num: ++aIdx, name: orgName, renewal: orgData.renewal,
@@ -449,7 +454,8 @@ function processRows(rows, cols) {
         obNotes: accountObNotes,
         modSummary,
         // user-level metrics
-        activeW0, dropW0, dropW0IsAlert, connW0, covW0, covPct, totalUsers
+        activeW0, dropW0, dropW0IsAlert, connW0, covW0, covPct, totalUsers,
+        droppedUsersList
       });
     }
 
@@ -544,7 +550,7 @@ function renderPanel(tName, tData, tid) {
 
     const dropCell = acc.dropW0 === '—'
       ? `<td class="nr neu sm">—</td>`
-      : `<td class="nr sm" style="color:${acc.dropW0IsAlert?'#ed8936':'#48bb78'}">${acc.dropW0}</td>`;
+      : `<td class="nr sm drop-cell" style="color:${acc.dropW0IsAlert?'#ed8936':'#48bb78'};cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();showDropPopup('${aId}',event)">${acc.dropW0}</td>`;
     const covCell = acc.covW0 === '—'
       ? `<td class="nr neu sm">—</td>`
       : `<td><span class="cvbadge ${acc.covPct===0?'cv0':acc.covPct<50?'cv50':'cvok'}">(${acc.covW0})</span></td>`;
@@ -1418,125 +1424,339 @@ function closeSendModal() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// SNAP REPORT MODAL
+// SNAP REPORT MODAL — Powerplay branded card with download
 // ─────────────────────────────────────────────────────────────
 let snapAcc = null;
 let snapTrainer = null;
+
+// Module colors (matching screenshot exactly)
+const MOD_COLORS = {
+  'attendance' : '#22c55e',
+  'staff'      : '#a855f7',
+  'task'       : '#3b82f6',
+  'material'   : '#f97316',
+  'petty_cash' : '#ec4899',
+};
+function modColor(name) {
+  const n = (name||'').toLowerCase().replace(/[\s_]+/g,'');
+  for (const [k,v] of Object.entries(MOD_COLORS)) {
+    if (n === k.replace(/_/g,'') || n.includes(k.replace(/_/g,''))) return v;
+  }
+  return '#6b7280';
+}
+
+// Week-ending string (next Sunday from today)
+function getWeekEndingStr() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = day === 0 ? 0 : 7 - day;
+  const sun = new Date(d.getTime() + diff * 86400000);
+  return sun.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+}
+
+// Compute rich per-project/module/user snap data from acc.projects
+function computeSnapData(acc) {
+  const snapProjects = [];
+  const silentProjects = [], stoppedModules = [], biggestDrops = [];
+  let topMover = null, topMoverScore = -Infinity;
+  let watchOut = null, watchOutScore = 0;
+
+  for (const proj of (acc.projects || [])) {
+    const snapModules = [];
+
+    for (const mod of (proj.modules || [])) {
+      // aggregate per user
+      const userMap = {};
+      for (const evt of (mod.events || [])) {
+        const uk = evt.user || 'Unknown';
+        if (!userMap[uk]) userMap[uk] = { user: evt.user||'', mobile: evt.mobile||'', wk0:0, wk1:0 };
+        userMap[uk].wk0 += evt.wk0;
+        userMap[uk].wk1 += evt.wk1;
+      }
+      const users = Object.values(userMap)
+        .filter(u => u.wk0>0 || u.wk1>0)
+        .sort((a,b) => b.wk0 - a.wk0);
+
+      const modWk0 = users.reduce((s,u)=>s+u.wk0,0);
+      const modWk1 = users.reduce((s,u)=>s+u.wk1,0);
+      const isStopped = modWk0===0 && modWk1>0;
+      const isNewMod  = modWk0>0  && modWk1===0;
+      const modPct    = modWk1>0 ? Math.round((modWk0-modWk1)/modWk1*100) : null;
+
+      users.forEach(u => {
+        u.isNew = u.wk0>0 && u.wk1===0;
+        u.diff  = u.wk0 - u.wk1;
+      });
+
+      if (isStopped) {
+        const byWho = users.filter(u=>u.wk1>0).map(u=>`${u.user} ${u.wk1}`).join(', ');
+        stoppedModules.push({ module:mod.name, project:proj.name, was:modWk1, byWho });
+      }
+
+      // biggest drops per user+module
+      users.filter(u=>u.diff<0).forEach(u => {
+        biggestDrops.push({ user:u.user, drop:Math.abs(u.diff), module:mod.name, project:proj.name });
+      });
+
+      // top mover (biggest absolute gain)
+      users.filter(u=>u.wk1>0 && u.diff>0).forEach(u => {
+        if (u.diff > topMoverScore) {
+          topMoverScore = u.diff;
+          topMover = { user:u.user, diff:u.diff, pct:Math.round(u.diff/u.wk1*100), module:mod.name, project:proj.name };
+        }
+      });
+
+      snapModules.push({ name:mod.name, wk0:modWk0, wk1:modWk1, pct:modPct, isStopped, isNewMod, users });
+    }
+
+    if (proj.wk0===0 && proj.wk1>0) silentProjects.push({ name:proj.name, was:proj.wk1 });
+
+    if (Math.abs(proj.diff||0) > watchOutScore && (proj.wk0<proj.wk1 || proj.wk0===0)) {
+      watchOutScore = Math.abs(proj.diff||0);
+      watchOut = { project:proj.name, issue: proj.wk0===0 ? 'material stopped' : `activity dropped` };
+    }
+
+    snapProjects.push({ name:proj.name, wk0:proj.wk0, wk1:proj.wk1, diff:proj.diff, isDrop:proj.isDrop, modules:snapModules });
+  }
+
+  biggestDrops.sort((a,b)=>b.drop-a.drop);
+  return { snapProjects, silentProjects, stoppedModules, biggestDrops:biggestDrops.slice(0,5), topMover, watchOut };
+}
+
+// Build the branded snap card HTML
+function buildSnapCard(acc, trainer) {
+  const { snapProjects, silentProjects, stoppedModules, biggestDrops, topMover, watchOut } = computeSnapData(acc);
+  const pctChange = acc.wk1>0 ? Math.round((acc.wk0-acc.wk1)/acc.wk1*100) : null;
+  const isDown = pctChange!==null && pctChange<0;
+  const isUp   = pctChange!==null && pctChange>0;
+  const weekStr = getWeekEndingStr();
+  const hasAttention = silentProjects.length>0 || stoppedModules.length>0 || biggestDrops.length>0;
+
+  // NEEDS ATTENTION block
+  let attHtml = '';
+  if (hasAttention) {
+    const silentStr = silentProjects.map(p=>`<b>${p.name}</b> (was ${p.was})`).join(', ');
+    const stopStr   = stoppedModules.slice(0,3).map(m=>`<b>${m.module}</b> on ${m.project} (was ${m.was} by ${m.byWho})`).join(' · ')
+                    + (stoppedModules.length>3 ? ` +${stoppedModules.length-3} more` : '');
+    const dropStr   = biggestDrops.slice(0,3).map(d=>`<b>${d.user}</b> ↓${d.drop} (${d.module} on ${d.project})`).join(' · ');
+    attHtml = `<div style="border:1.5px solid #fbbf24;border-radius:8px;background:#fffbeb;padding:12px 14px;margin:10px 0">
+      <div style="font-weight:700;color:#d97706;font-size:12px;margin-bottom:7px">⚠ NEEDS ATTENTION</div>
+      ${silentProjects.length  ? `<div style="font-size:11.5px;color:#374151;margin-bottom:5px"><b>Silent projects:</b> ${silentStr}</div>` : ''}
+      ${stoppedModules.length  ? `<div style="font-size:11.5px;color:#374151;margin-bottom:5px"><b>Modules stopped:</b> ${stopStr}</div>` : ''}
+      ${biggestDrops.length    ? `<div style="font-size:11.5px;color:#374151"><b>Biggest drops:</b> ${dropStr}</div>` : ''}
+    </div>`;
+  }
+
+  // Legend
+  const legendHtml = `<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 8px;font-size:11px;color:#6b7280">
+    ${Object.entries(MOD_COLORS).map(([k,v])=>`<span><span style="display:inline-block;width:10px;height:10px;background:${v};border-radius:2px;margin-right:3px;vertical-align:middle"></span>${k}</span>`).join('')}
+  </div>`;
+
+  // Per-project sections
+  let projsHtml = '';
+  for (const proj of snapProjects) {
+    const pNum = proj.wk1>0 ? Math.round((proj.wk0-proj.wk1)/proj.wk1*100) : null;
+    const pStr = pNum!==null ? `${pNum>=0?'↑':'↓'}${Math.abs(pNum)}%` : '—';
+    const pCol = pNum===null ? '#9ca3af' : pNum>=0 ? '#16a34a' : '#dc2626';
+    const isSilent = proj.wk0===0 && proj.wk1>0;
+
+    // Proportional bar
+    const barMods = proj.modules.filter(m=>m.wk0>0);
+    const barHtml = barMods.length>0
+      ? `<div style="display:flex;height:14px;border-radius:4px;overflow:hidden;flex:1">${barMods.map(m=>`<div style="flex:${m.wk0};background:${modColor(m.name)};min-width:3px" title="${m.name}:${m.wk0}"></div>`).join('')}</div>`
+      : `<div style="flex:1;height:14px;border-radius:4px;background:#e5e7eb"></div>`;
+
+    // Top module count badges next to bar
+    const topBadges = [...proj.modules].filter(m=>m.wk0>0).sort((a,b)=>b.wk0-a.wk0).slice(0,4)
+      .map(m=>`<span style="background:${modColor(m.name)};color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:2px">${m.wk0}</span>`).join('');
+
+    // Module rows
+    let modRowsHtml = '';
+    for (const mod of proj.modules) {
+      if (mod.wk0===0 && mod.wk1===0) continue;
+      const mPct = mod.wk1>0 ? Math.round((mod.wk0-mod.wk1)/mod.wk1*100) : null;
+      const mPctHtml = mPct!==null ? `<span style="color:${mPct>=0?'#16a34a':'#dc2626'};font-weight:600"> ${mPct>=0?'↑':'↓'}${Math.abs(mPct)}%</span>` : '';
+      const newModBadge = mod.isNewMod ? `<span style="background:#dbeafe;color:#1d4ed8;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:600">new module</span>` : '';
+      const stoppedNote = mod.isStopped ? `<span style="color:#dc2626;font-size:10px;margin-left:4px;font-weight:600">stopped</span>` : '';
+
+      const userParts = mod.users.slice(0,4).map(u=>{
+        const dHtml = u.diff!==0 ? `<span style="color:${u.diff>0?'#16a34a':'#dc2626'};font-size:10px"> ${u.diff>0?'↑':'↓'}${Math.abs(u.diff)}</span>` : '';
+        const newBadge = u.isNew ? `<span style="background:#dbeafe;color:#1d4ed8;font-size:9px;padding:0 4px;border-radius:8px;margin-left:2px">new</span>` : '';
+        return `<span style="color:#374151">${u.user} <b>${u.wk0}</b>${dHtml}${newBadge}</span>`;
+      }).join('<span style="color:#d1d5db;margin:0 3px">,</span> ');
+
+      const stoppedWho = mod.isStopped && mod.users.filter(u=>u.wk1>0).length
+        ? `<div style="font-size:10px;color:#dc2626;margin-top:3px">⚠ Stopped this week: ${mod.name} (was ${mod.wk1} by ${mod.users.filter(u=>u.wk1>0).map(u=>`${u.user} ${u.wk1}`).join(', ')})</div>` : '';
+
+      modRowsHtml += `<div style="display:flex;align-items:flex-start;gap:6px;padding:4px 0;border-bottom:1px solid #f3f4f6;font-size:11.5px">
+        <span style="display:inline-block;width:10px;height:10px;background:${modColor(mod.name)};border-radius:2px;margin-top:2px;flex-shrink:0"></span>
+        <div style="flex:1;min-width:0">
+          <b style="color:#111827">${mod.name}</b>
+          <span style="color:#374151;margin-left:4px">${mod.wk0||0}</span>${mPctHtml}${newModBadge}${stoppedNote}
+          ${mod.users.length>0 ? `<span style="color:#9ca3af;margin:0 5px">—</span>${userParts}` : ''}${stoppedWho}
+        </div>
+      </div>`;
+    }
+
+    projsHtml += `<div style="background:#fff;border:1px solid ${isSilent?'#fca5a5':'#e5e7eb'};border-radius:10px;padding:12px 14px;margin-bottom:10px${isSilent?';background:#fff5f5':''}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <b style="color:#111827;font-size:13px">${isSilent?'⚠ ':''}${proj.name}</b>
+        <span style="font-size:11px;color:#6b7280">${proj.wk1} → <b style="color:${pNum!==null&&pNum<0?'#dc2626':'#111827'}">${proj.wk0}</b> <b style="color:${pCol}">${pStr}</b></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">${barHtml}<span style="white-space:nowrap">${topBadges}</span></div>
+      ${modRowsHtml ? `<div>${modRowsHtml}</div>` : ''}
+    </div>`;
+  }
+
+  // Highlights
+  let hlHtml = '';
+  if (topMover || watchOut) {
+    hlHtml = `<div style="background:#f8fafc;border-radius:8px;padding:10px 12px;margin-top:4px">
+      <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">THIS WEEK'S HIGHLIGHTS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${topMover ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
+          <div style="font-size:10px;font-weight:700;color:#15803d;margin-bottom:4px">🏆 TOP MOVER</div>
+          <b style="font-size:12px;color:#111827">${topMover.user}</b>
+          <div style="font-size:11px;color:#374151;margin-top:2px">${topMover.project} · ${topMover.module} ↑${topMover.pct}%</div>
+        </div>` : '<div></div>'}
+        ${watchOut ? `<div style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:10px">
+          <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px">⚠ WATCH OUT</div>
+          <b style="font-size:12px;color:#111827">${watchOut.project}</b>
+          <div style="font-size:11px;color:#374151;margin-top:2px">${watchOut.issue}</div>
+        </div>` : '<div></div>'}
+      </div>
+    </div>`;
+  }
+
+  // WhatsApp message
+  const wpMsg = `Hi ${acc.name} Sir, sharing this week's snap — ${acc.wk0} activities logged${pctChange!==null?`, ${isDown?'slight dip':'increase'} of ${Math.abs(pctChange)}% vs last week`:''}.${topMover ? ` ${topMover.user} still active on ${topMover.project}.` : ''}${watchOut ? ` Note: ${watchOut.project} ${watchOut.issue}.` : ''} Want me to do a quick check-in with the team?`;
+
+  return `<div id="snap-card" style="background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:20px 22px;width:500px;border-radius:12px;color:#111827">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;color:#4299e1;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">POWERPLAY · WEEKLY SNAP</div>
+      <div style="font-size:21px;font-weight:800;color:#111827;margin-bottom:4px">${acc.name}</div>
+      <div style="font-size:11px;color:#6b7280">Week ending ${weekStr} · vs prior week · ${acc.activeW0} user${acc.activeW0!==1?'s':''} active this week${acc.renewal?` · 🗓 Renewal: ${acc.renewal}`:''}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 36px 1fr;gap:8px;align-items:center;margin-bottom:4px">
+      <div style="text-align:center;background:#f1f5f9;border-radius:8px;padding:10px 6px">
+        <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">LAST WEEK</div>
+        <div style="font-size:30px;font-weight:800;color:#374151">${acc.wk1}</div>
+      </div>
+      <div style="text-align:center;font-size:22px;color:#9ca3af">→</div>
+      <div style="text-align:center;background:${isDown?'#fff5f5':isUp?'#f0fdf4':'#f1f5f9'};border-radius:8px;padding:10px 6px;border:1.5px solid ${isDown?'#fca5a5':isUp?'#bbf7d0':'#e5e7eb'}">
+        <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">THIS WEEK</div>
+        <div style="font-size:30px;font-weight:800;color:${isDown?'#dc2626':isUp?'#16a34a':'#374151'}">${acc.wk0}</div>
+      </div>
+    </div>
+    ${pctChange!==null?`<div style="text-align:center;margin:8px 0 12px"><span style="display:inline-block;background:${isDown?'#fee2e2':isUp?'#dcfce7':'#f1f5f9'};color:${isDown?'#dc2626':isUp?'#16a34a':'#374151'};font-weight:700;font-size:13px;padding:4px 18px;border-radius:20px">${isDown?'↓':'↑'} ${Math.abs(pctChange)}% activity</span></div>`:''}
+    ${attHtml}
+    ${legendHtml}
+    ${projsHtml}
+    ${hlHtml}
+    <div style="background:#e8f5e9;border-radius:8px;padding:12px 14px;margin-top:12px;border:1px solid #a5d6a7">
+      <div style="font-size:10px;font-weight:600;color:#388e3c;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">💬 Ready-to-send message</div>
+      <div style="font-size:12px;color:#1b5e20;line-height:1.7">${wpMsg}</div>
+    </div>
+  </div>`;
+}
 
 function openSnapModal(aId) {
   const entry = window.accRegistry[aId];
   if (!entry) return;
   snapAcc = entry.acc;
   snapTrainer = entry.trainer;
-
-  const acc = snapAcc;
-  document.getElementById('snap-modal-title').textContent = '📸 Snap — ' + acc.name;
-
-  // Build project breakdown
-  const projRows = (acc.projects || []).map(p => {
-    const st = p.isDrop ? '⬇ DROP' : (p.wk0 === 0 ? '⚫ SILENT' : (p.wk0 >= p.wk1 ? '✅ UP' : '🟡 DIP'));
-    const stColor = p.isDrop ? '#fc5353' : p.wk0 === 0 ? '#718096' : p.wk0 >= p.wk1 ? '#48bb78' : '#ecc94b';
-    const d = p.wk0 - p.wk1;
-    return `<div class="snap-proj-row">
-      <span class="snap-proj-name">${p.name}</span>
-      <span style="color:${stColor};font-size:11px;margin-right:12px">${st}</span>
-      <span style="color:#4a5568;font-size:11px;min-width:80px;text-align:right">Wk0: <b style="color:#e2e8f0">${p.wk0}</b> | Δ${d > 0 ? '+' : ''}${d}</span>
-    </div>`;
-  }).join('');
-
-  // Priority colour
-  const pcMap = { CRITICAL:'#fc5353', HIGH:'#ed8936', MEDIUM:'#ecc94b', LOW:'#4299e1', STABLE_DROP:'#ff6b6b', STABLE:'#48bb78', INACTIVE:'#718096' };
-  const pc = pcMap[acc.priority] || '#a0aec0';
-
-  // Coverage badge
-  const covBadge = acc.covW0 === '—' ? '—'
-    : `<span class="cvbadge ${acc.covPct===0?'cv0':acc.covPct<50?'cv50':'cvok'}">(${acc.covW0})</span>`;
-
-  document.getElementById('snap-modal-body').innerHTML = `
-    <div class="snap-metric-row">
-      <div class="snap-metric">
-        <div class="sm-val" style="color:${acc.wk0===0?'#fc5353':'#e2e8f0'}">${acc.wk0}</div>
-        <div class="sm-lbl">Wk0 Events</div>
-      </div>
-      <div class="snap-metric">
-        <div class="sm-val" style="color:${acc.diff<0?'#fc5353':acc.diff>0?'#48bb78':'#718096'}">${acc.diff>0?'+':''}${acc.diff}</div>
-        <div class="sm-lbl">Diff vs Wk1</div>
-      </div>
-      <div class="snap-metric">
-        <div class="sm-val" style="color:#4a9edd">${acc.activeW0}</div>
-        <div class="sm-lbl">Active Users</div>
-      </div>
-      <div class="snap-metric">
-        <div class="sm-val" style="color:${acc.dropW0IsAlert?'#ed8936':'#48bb78'}">${acc.dropW0}</div>
-        <div class="sm-lbl">Drop W0</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:12px;margin-bottom:14px;font-size:12px;align-items:center">
-      <span>Priority: <span class="pb ${acc.priority}">${(acc.priority||'').replace('_',' ')}</span></span>
-      <span style="color:#4a5568">|</span>
-      <span>Renewal: <b style="color:#7eb8e0">${acc.renewal||'N/A'}</b></span>
-      <span style="color:#4a5568">|</span>
-      <span>Conn. W0: <b style="color:#e2e8f0">${acc.connW0}</b></span>
-      <span style="color:#4a5568">|</span>
-      <span>Coverage: ${covBadge}</span>
-    </div>
-    <div style="background:#0a1020;border:1px solid #1e2535;border-radius:8px;overflow:hidden;margin-bottom:14px">
-      <div style="padding:8px 12px;background:#101828;border-bottom:1px solid #1e2535;font-size:11px;color:#4a6080;text-transform:uppercase;letter-spacing:.5px">
-        Projects (${(acc.projects||[]).length})
-      </div>
-      ${projRows || '<div style="padding:10px 12px;color:#4a5568;font-size:12px">No projects</div>'}
-    </div>
-    ${acc.lastDispDate ? `<div style="font-size:11px;color:#4a6080;margin-bottom:10px">Last call: ${acc.lastDispDate} — <span style="font-style:italic">${acc.lastDispo||'—'}</span></div>` : ''}
-    <div style="font-size:10px;color:#2d4a60;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Snap text (paste into email Snap field)</div>
-    <pre id="snap-text-preview" style="background:#080e18;border:1px solid #1e2535;border-radius:6px;padding:10px;font-size:11.5px;color:#a0c0e0;white-space:pre-wrap;line-height:1.7;font-family:inherit;margin:0">${buildSnapText(acc)}</pre>
-  `;
-
+  document.getElementById('snap-modal-title').textContent = '📸 Snap — ' + snapAcc.name;
+  document.getElementById('snap-modal-body').innerHTML =
+    `<div style="overflow-x:auto;padding-bottom:4px">${buildSnapCard(snapAcc, snapTrainer)}</div>`;
   document.getElementById('snap-modal').classList.add('open');
 }
 
-function buildSnapText(acc) {
-  const lines = [];
-  const dropParts = acc.dropW0 !== '—' ? acc.dropW0.split('/') : [];
-  const droppedCount = dropParts.length === 2 ? +dropParts[0] : 0;
-
-  if (acc.wk0 === 0) {
-    lines.push(`${acc.name} — SILENT this week (was ${acc.wk1} last week)`);
-  } else if (droppedCount > 0) {
-    lines.push(`${acc.name} — ${acc.activeW0} active, ${droppedCount} user(s) dropped (${acc.dropW0})`);
-  } else {
-    lines.push(`${acc.name} — ${acc.activeW0} active user(s), Wk0: ${acc.wk0} events`);
-  }
-
-  const drops = (acc.projects || []).filter(p => p.isDrop || p.wk0 === 0);
-  const active = (acc.projects || []).filter(p => !p.isDrop && p.wk0 > 0);
-
-  if (drops.length) {
-    drops.forEach(p => lines.push(`  ⬇ ${p.name}: silent/drop (was ${p.wk1})`));
-  }
-  if (active.length && acc.projects.length > drops.length) {
-    const topActive = active.slice(0, 3);
-    topActive.forEach(p => lines.push(`  ✅ ${p.name}: ${p.wk0} events`));
-  }
-  if (acc.renewal) lines.push(`  Renewal: ${acc.renewal}`);
-  return lines.join('\n');
+// ── Lazy-load external script ────────────────────────────────
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
 }
 
-function copySnapToClipboard() {
-  if (!snapAcc) return;
-  const text = buildSnapText(snapAcc);
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.querySelector('#snap-modal .modal-foot .btn-primary');
-    if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => btn.textContent = '📋 Copy Snap Text', 1500); }
-  }).catch(() => {
-    // fallback
-    const el = document.getElementById('snap-text-preview');
-    if (el) { const range = document.createRange(); range.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(range); }
-  });
+// ── Download snap as PNG image ────────────────────────────────
+async function downloadSnapImage() {
+  const card = document.getElementById('snap-card');
+  if (!card || !snapAcc) return;
+  const btn = document.getElementById('snap-img-btn');
+  if (btn) btn.textContent = '⏳ Generating...';
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    const canvas = await html2canvas(card, { scale:2, backgroundColor:'#f9fafb', useCORS:true, logging:false });
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `snap_${snapAcc.name.replace(/[^a-z0-9]/gi,'_')}.png`;
+    a.click();
+  } finally {
+    if (btn) btn.textContent = '📷 Image';
+  }
+}
+
+// ── Download snap as PDF ──────────────────────────────────────
+async function downloadSnapPDF() {
+  const card = document.getElementById('snap-card');
+  if (!card || !snapAcc) return;
+  const btn = document.getElementById('snap-pdf-btn');
+  if (btn) btn.textContent = '⏳ Generating...';
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const canvas = await html2canvas(card, { scale:2, backgroundColor:'#f9fafb', useCORS:true, logging:false });
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const w = canvas.width/2, h = canvas.height/2;
+    const pdf = new jsPDF({ orientation: h>w?'portrait':'landscape', unit:'px', format:[w, h] });
+    pdf.addImage(imgData, 'PNG', 0, 0, w, h);
+    pdf.save(`snap_${snapAcc.name.replace(/[^a-z0-9]/gi,'_')}.pdf`);
+  } finally {
+    if (btn) btn.textContent = '📄 PDF';
+  }
 }
 
 function closeSnapModal() {
   document.getElementById('snap-modal').classList.remove('open');
   snapAcc = null;
+}
+
+// ── Drop W0 popup — show dropped users with names + mobiles ──
+let _dropPopup = null;
+function showDropPopup(aId, evt) {
+  const entry = window.accRegistry[aId];
+  closeDropPopup();
+  if (!entry) return;
+  const users = entry.acc.droppedUsersList || [];
+  if (!users.length) return;
+
+  const html = `<div id="drop-popup" style="position:fixed;z-index:2000;background:#1a2035;border:1px solid #2d4060;border-radius:10px;padding:12px 16px;min-width:240px;max-width:320px;box-shadow:0 8px 30px #000a;font-size:12px">
+    <div style="font-size:10px;color:#4a6080;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Dropped users (active wk1 → silent wk0)</div>
+    ${users.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:5px 0;border-bottom:1px solid #1e2a40">
+      <span style="color:#e2e8f0">👤 ${u.user||'—'}</span>
+      <span style="color:#4a9edd;font-family:monospace">${u.mobile||''}</span>
+    </div>`).join('')}
+    <div style="margin-top:8px;font-size:10px;color:#4a5568;text-align:right">${users.length} user${users.length!==1?'s':''} dropped this week</div>
+  </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+  _dropPopup = document.getElementById('drop-popup');
+
+  const r = evt.target.getBoundingClientRect();
+  const pw = 260;
+  const left = Math.min(r.left, window.innerWidth - pw - 10);
+  _dropPopup.style.left = Math.max(10, left) + 'px';
+  _dropPopup.style.top  = (r.bottom + 6) + 'px';
+
+  setTimeout(() => document.addEventListener('click', closeDropPopup, { once:true }), 50);
+}
+function closeDropPopup() {
+  if (_dropPopup) { _dropPopup.remove(); _dropPopup = null; }
+  document.removeEventListener('click', closeDropPopup);
 }
 </script>
 
@@ -1565,7 +1785,8 @@ function closeSnapModal() {
     <div class="modal-body" id="snap-modal-body"></div>
     <div class="modal-foot">
       <button class="btn-secondary" onclick="closeSnapModal()">Close</button>
-      <button class="btn-primary" onclick="copySnapToClipboard()">📋 Copy Snap Text</button>
+      <button id="snap-img-btn" class="btn-secondary" onclick="downloadSnapImage()" style="background:#1a3050;border-color:#2d5080;color:#7eb8f0">📷 Image</button>
+      <button id="snap-pdf-btn" class="btn-primary" onclick="downloadSnapPDF()">📄 PDF</button>
     </div>
   </div>
 </div>
