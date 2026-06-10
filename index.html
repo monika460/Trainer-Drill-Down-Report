@@ -138,6 +138,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 /* ── Email feature ── */
 .send-btn{background:transparent;border:1px solid #2d4a6a;border-radius:5px;color:#4a8ab0;cursor:pointer;font-size:11px;padding:2px 6px;margin-left:6px;transition:all .15s;vertical-align:middle}
 .send-btn:hover{background:#1a3a5a;color:#7eb8e0;border-color:#4a8ab0}
+/* Snap button */
+.snap-btn{background:#1a3050;border:1px solid #2d5080;border-radius:6px;color:#4a90d0;cursor:pointer;font-size:11px;padding:3px 9px;transition:all .15s;white-space:nowrap}
+.snap-btn:hover{background:#1e4a7a;color:#7eb8f0;border-color:#4a90d0}
+/* Coverage badge */
+.cvbadge{display:inline-block;padding:2px 6px;border-radius:8px;font-size:10px;font-weight:600}
+.cvbadge.cv0{background:#2d0f0f;color:#fc5353;border:1px solid #fc5353}
+.cvbadge.cv50{background:#2d1a00;color:#ed8936;border:1px solid #ed8936}
+.cvbadge.cvok{background:#0a2818;color:#48bb78;border:1px solid #48bb78}
+/* Snap modal */
+#snap-modal .modal{width:680px}
+.snap-metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.snap-metric{background:#0f1828;border:1px solid #1e2a3a;border-radius:8px;padding:10px;text-align:center}
+.snap-metric .sm-val{font-size:22px;font-weight:700;color:#e2e8f0}
+.snap-metric .sm-lbl{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.snap-proj-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid #1a2035;font-size:12px}
+.snap-proj-row:last-child{border-bottom:none}
+.snap-proj-name{color:#c0cfe0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.snap-copy-btn{background:#1a2535;border:1px solid #2d3f55;border-radius:5px;color:#a0aec0;cursor:pointer;font-size:10px;padding:2px 8px;transition:all .15s}
+.snap-copy-btn:hover{background:#223050;color:#e2e8f0}
 .tmpl-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#1a2535;border:1px solid #2d3f55;border-radius:8px;color:#a0aec0;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
 .tmpl-btn:hover{background:#1e2e45;color:#e2e8f0;border-color:#4299e1}
 
@@ -199,7 +218,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <span style="font-size:22px">📊</span>
       <div>
         <h1>Trainer DrillDown Dashboard</h1>
-        <div class="header-sub">Redash Query #1454 · Account → Project → Module → Event → User</div>
+        <div class="header-sub">Redash Query #1454 · Account → Project → Module → Event → User · 📸 Snap per account</div>
       </div>
     </div>
   </div>
@@ -254,6 +273,11 @@ function detectCols(columns) {
     wk1        : find('wk_1','wk1','week_1'),
     wk2        : find('wk_2','wk2','week_2'),
     wk3        : find('wk_3','wk3','week_3'),
+    // Extra metric columns (present in some query versions)
+    active_w0  : find('active_w0','active_users_w0','active_users_wk0','active_wk0'),
+    drop_w0    : find('drop_w0','dropped_w0','drop_users_w0','dropped_wk0'),
+    conn_w0    : find('conn_w0','connected_w0','connections_w0','new_w0','connected_wk0'),
+    cov_w0     : find('cov_w0','coverage_w0','coverage_pct_w0','cov_pct_wk0'),
   };
 }
 
@@ -321,6 +345,11 @@ function processRows(rows, cols) {
       wk1: +row[cols.wk1] || 0,
       wk2: +row[cols.wk2] || 0,
       wk3: +row[cols.wk3] || 0,
+      // store raw metric columns if present (used for account-level rollup)
+      raw_active_w0: cols.active_w0 ? (+row[cols.active_w0] || 0) : null,
+      raw_drop_w0  : cols.drop_w0   ? (+row[cols.drop_w0]   || 0) : null,
+      raw_conn_w0  : cols.conn_w0   ? (+row[cols.conn_w0]   || 0) : null,
+      raw_cov_w0   : cols.cov_w0    ? (+row[cols.cov_w0]    || 0) : null,
     });
   }
 
@@ -366,9 +395,16 @@ function processRows(rows, cols) {
       const diff = aWk0 - aWk1;
       const pctStr = aWk1 > 0 ? (diff/aWk1*100).toFixed(1)+'%' : '';
 
-      // Aggregate last disposition, OB notes, and module summary across all events
+      // Aggregate last disposition, OB notes, module summary, and user-level metrics
       let bestDispDate = '', bestDispo = '', accountObNotes = '';
       const modSummary = {};
+      // User-level sets for computing ACTIVE/DROP/CONN/COV
+      const usersActiveWk0 = new Set();
+      const usersActiveWk1 = new Set();
+      const usersAll       = new Set();
+      let hasRawMetrics = false;
+      let rawActiveW0 = 0, rawDropW0Num = 0, rawDropW0Den = 0, rawConnW0 = 0, rawCovW0 = null;
+
       for (const proj of projects) {
         for (const mod of proj.modules) {
           if (!modSummary[mod.name]) modSummary[mod.name] = { wk0: 0, wk1: 0 };
@@ -378,9 +414,31 @@ function processRows(rows, cols) {
             if (!accountObNotes && evt.obNotes) accountObNotes = evt.obNotes;
             const ld = (evt.lastDisp || '').slice(0, 10);
             if (ld && ld > bestDispDate) { bestDispDate = ld; bestDispo = evt.dispo || ''; }
+            // Track per-user activity for metrics
+            const uKey = (evt.user || '') + '|' + (evt.mobile || '');
+            if (uKey !== '|') {
+              usersAll.add(uKey);
+              if (evt.wk0 > 0) usersActiveWk0.add(uKey);
+              if (evt.wk1 > 0) usersActiveWk1.add(uKey);
+            }
+            // If query provides raw metric columns directly, accumulate max (not sum)
+            if (evt.raw_active_w0 !== null) { hasRawMetrics = true; rawActiveW0 = Math.max(rawActiveW0, evt.raw_active_w0); }
+            if (evt.raw_conn_w0   !== null) rawConnW0 = Math.max(rawConnW0, evt.raw_conn_w0);
+            if (evt.raw_cov_w0    !== null) rawCovW0  = Math.max(rawCovW0 ?? 0, evt.raw_cov_w0);
           }
         }
       }
+
+      // Compute metrics — use raw query columns if present, else compute from user sets
+      const activeW0 = hasRawMetrics ? rawActiveW0 : usersActiveWk0.size;
+      const droppedUsers = [...usersActiveWk1].filter(u => !usersActiveWk0.has(u)).length;
+      const wasActiveUsers = usersActiveWk1.size;
+      const dropW0 = wasActiveUsers > 0 ? `${droppedUsers}/${wasActiveUsers}` : '—';
+      const dropW0IsAlert = droppedUsers > 0;
+      const connW0 = hasRawMetrics ? rawConnW0 : [...usersActiveWk0].filter(u => !usersActiveWk1.has(u)).length;
+      const totalUsers = usersAll.size;
+      const covPct = totalUsers > 0 ? Math.round(activeW0 / totalUsers * 100) : 0;
+      const covW0 = totalUsers > 0 ? covPct + '%' : '—';
 
       accounts.push({
         num: ++aIdx, name: orgName, renewal: orgData.renewal,
@@ -389,7 +447,9 @@ function processRows(rows, cols) {
         lastDispDate: bestDispDate,
         lastDispo: bestDispo,
         obNotes: accountObNotes,
-        modSummary
+        modSummary,
+        // user-level metrics
+        activeW0, dropW0, dropW0IsAlert, connW0, covW0, covPct, totalUsers
       });
     }
 
@@ -460,7 +520,13 @@ function renderPanel(tName, tData, tid) {
       <th>Account / Project / Module / Event</th>
       <th class="r">Wk 0</th><th class="r">Wk 1</th><th class="r">Wk 2</th><th class="r">Wk 3</th>
       <th class="r">Diff</th><th class="r">%</th><th>Trend</th>
-      <th>Priority</th><th>Last Dispos.</th><th>Note</th>
+      <th>Priority</th>
+      <th class="r" title="Active users in Wk0">Active W0</th>
+      <th class="r" title="Dropped users / was-active users (Wk1→Wk0)">Drop W0</th>
+      <th class="r" title="New connected users in Wk0 (active now, not last week)">Conn. W0</th>
+      <th class="r" title="Coverage: active users / total users">Cov. W0</th>
+      <th style="text-align:center">Snap</th>
+      <th>Last Dispos.</th><th>Note</th>
     </tr></thead><tbody id="tbody-${tid}">`;
 
   const sorted = [...accs].sort((a,b) => PRIO_ORDER.indexOf(a.priority) - PRIO_ORDER.indexOf(b.priority));
@@ -472,9 +538,16 @@ function renderPanel(tName, tData, tid) {
     window.accRegistry[aId] = { acc, trainer: tName };
     if (acc.priority !== lastSect) {
       const isSD = acc.priority === 'STABLE_DROP';
-      html += `<tr class="row-section${isSD?' sd':''}" data-sect="${acc.priority}"><td colspan="13">${SECT_LABELS[acc.priority]||acc.priority}</td></tr>`;
+      html += `<tr class="row-section${isSD?' sd':''}" data-sect="${acc.priority}"><td colspan="18">${SECT_LABELS[acc.priority]||acc.priority}</td></tr>`;
       lastSect = acc.priority;
     }
+
+    const dropCell = acc.dropW0 === '—'
+      ? `<td class="nr neu sm">—</td>`
+      : `<td class="nr sm" style="color:${acc.dropW0IsAlert?'#ed8936':'#48bb78'}">${acc.dropW0}</td>`;
+    const covCell = acc.covW0 === '—'
+      ? `<td class="nr neu sm">—</td>`
+      : `<td><span class="cvbadge ${acc.covPct===0?'cv0':acc.covPct<50?'cv50':'cvok'}">(${acc.covW0})</span></td>`;
 
     html += `<tr class="row-account" data-p="${acc.priority}" data-name="${acc.name.toLowerCase()}" data-aid="${aId}" onclick="toggleAcc('${aId}',event)">
       <td><button class="tog acc-tog" id="btn-${aId}">${acc.projects.length?'+':'·'}</button></td>
@@ -484,7 +557,13 @@ function renderPanel(tName, tData, tid) {
       ${nTD(acc.wk0,true)}${nTD(acc.wk1)}${nTD(acc.wk2)}${nTD(acc.wk3)}
       ${dTD(acc.diff)}${pTD(acc.pct)}
       <td>${trend(acc.wk0,acc.wk1,acc.wk2,acc.wk3)}</td>
-      <td>${pb(acc.priority)} <button class="send-btn" onclick="event.stopPropagation();openSendModal('${aId}')" title="Send email to account owner">✉</button></td><td></td><td></td>
+      <td>${pb(acc.priority)} <button class="send-btn" onclick="event.stopPropagation();openSendModal('${aId}')" title="Send email to account owner">✉</button></td>
+      ${nTD(acc.activeW0)}
+      ${dropCell}
+      ${nTD(acc.connW0)}
+      ${covCell}
+      <td style="text-align:center"><button class="snap-btn" onclick="event.stopPropagation();openSnapModal('${aId}')" title="View snap report">📸 Snap</button></td>
+      <td></td><td></td>
     </tr>`;
 
     // Sort projects: DROP first → STABLE DROP → STABLE (same status sorted by name)
@@ -512,7 +591,7 @@ function renderPanel(tName, tData, tid) {
         ${nTD(proj.wk0,true)}${nTD(proj.wk1)}${nTD(proj.wk2)}${nTD(proj.wk3)}
         ${dTD(proj.diff)}${pTD(proj.pct)}
         <td>${trend(proj.wk0,proj.wk1,proj.wk2,proj.wk3)}</td>
-        <td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
       </tr>`;
 
       for (const [mi, mod] of proj.modules.entries()) {
@@ -523,7 +602,7 @@ function renderPanel(tName, tData, tid) {
           <td><span class="mod-name">📦 ${mod.name}</span></td>
           ${nTD(mod.wk0,true)}${nTD(mod.wk1)}${nTD(mod.wk2)}${nTD(mod.wk3)}
           ${dTD(mod.diff)}${pTD(mod.pct)}
-          <td></td><td></td><td></td><td></td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
         </tr>`;
 
         for (const evt of mod.events) {
@@ -538,7 +617,7 @@ function renderPanel(tName, tData, tid) {
             </td>
             ${nTD(evt.wk0,true)}${nTD(evt.wk1)}${nTD(evt.wk2)}${nTD(evt.wk3)}
             ${dTD(evt.wk0-evt.wk1)}
-            <td></td><td></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td>
             <td class="last-disp">${(evt.lastDisp||'—').slice(0,10)}</td>
             <td class="dispo" title="${(evt.dispo||'').replace(/"/g,"'")}">${evt.dispo||'—'}</td>
           </tr>`;
@@ -1337,6 +1416,128 @@ function closeSendModal() {
   document.getElementById('send-modal').classList.remove('open');
   pendingAcc = null;
 }
+
+// ─────────────────────────────────────────────────────────────
+// SNAP REPORT MODAL
+// ─────────────────────────────────────────────────────────────
+let snapAcc = null;
+let snapTrainer = null;
+
+function openSnapModal(aId) {
+  const entry = window.accRegistry[aId];
+  if (!entry) return;
+  snapAcc = entry.acc;
+  snapTrainer = entry.trainer;
+
+  const acc = snapAcc;
+  document.getElementById('snap-modal-title').textContent = '📸 Snap — ' + acc.name;
+
+  // Build project breakdown
+  const projRows = (acc.projects || []).map(p => {
+    const st = p.isDrop ? '⬇ DROP' : (p.wk0 === 0 ? '⚫ SILENT' : (p.wk0 >= p.wk1 ? '✅ UP' : '🟡 DIP'));
+    const stColor = p.isDrop ? '#fc5353' : p.wk0 === 0 ? '#718096' : p.wk0 >= p.wk1 ? '#48bb78' : '#ecc94b';
+    const d = p.wk0 - p.wk1;
+    return `<div class="snap-proj-row">
+      <span class="snap-proj-name">${p.name}</span>
+      <span style="color:${stColor};font-size:11px;margin-right:12px">${st}</span>
+      <span style="color:#4a5568;font-size:11px;min-width:80px;text-align:right">Wk0: <b style="color:#e2e8f0">${p.wk0}</b> | Δ${d > 0 ? '+' : ''}${d}</span>
+    </div>`;
+  }).join('');
+
+  // Priority colour
+  const pcMap = { CRITICAL:'#fc5353', HIGH:'#ed8936', MEDIUM:'#ecc94b', LOW:'#4299e1', STABLE_DROP:'#ff6b6b', STABLE:'#48bb78', INACTIVE:'#718096' };
+  const pc = pcMap[acc.priority] || '#a0aec0';
+
+  // Coverage badge
+  const covBadge = acc.covW0 === '—' ? '—'
+    : `<span class="cvbadge ${acc.covPct===0?'cv0':acc.covPct<50?'cv50':'cvok'}">(${acc.covW0})</span>`;
+
+  document.getElementById('snap-modal-body').innerHTML = `
+    <div class="snap-metric-row">
+      <div class="snap-metric">
+        <div class="sm-val" style="color:${acc.wk0===0?'#fc5353':'#e2e8f0'}">${acc.wk0}</div>
+        <div class="sm-lbl">Wk0 Events</div>
+      </div>
+      <div class="snap-metric">
+        <div class="sm-val" style="color:${acc.diff<0?'#fc5353':acc.diff>0?'#48bb78':'#718096'}">${acc.diff>0?'+':''}${acc.diff}</div>
+        <div class="sm-lbl">Diff vs Wk1</div>
+      </div>
+      <div class="snap-metric">
+        <div class="sm-val" style="color:#4a9edd">${acc.activeW0}</div>
+        <div class="sm-lbl">Active Users</div>
+      </div>
+      <div class="snap-metric">
+        <div class="sm-val" style="color:${acc.dropW0IsAlert?'#ed8936':'#48bb78'}">${acc.dropW0}</div>
+        <div class="sm-lbl">Drop W0</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:14px;font-size:12px;align-items:center">
+      <span>Priority: <span class="pb ${acc.priority}">${(acc.priority||'').replace('_',' ')}</span></span>
+      <span style="color:#4a5568">|</span>
+      <span>Renewal: <b style="color:#7eb8e0">${acc.renewal||'N/A'}</b></span>
+      <span style="color:#4a5568">|</span>
+      <span>Conn. W0: <b style="color:#e2e8f0">${acc.connW0}</b></span>
+      <span style="color:#4a5568">|</span>
+      <span>Coverage: ${covBadge}</span>
+    </div>
+    <div style="background:#0a1020;border:1px solid #1e2535;border-radius:8px;overflow:hidden;margin-bottom:14px">
+      <div style="padding:8px 12px;background:#101828;border-bottom:1px solid #1e2535;font-size:11px;color:#4a6080;text-transform:uppercase;letter-spacing:.5px">
+        Projects (${(acc.projects||[]).length})
+      </div>
+      ${projRows || '<div style="padding:10px 12px;color:#4a5568;font-size:12px">No projects</div>'}
+    </div>
+    ${acc.lastDispDate ? `<div style="font-size:11px;color:#4a6080;margin-bottom:10px">Last call: ${acc.lastDispDate} — <span style="font-style:italic">${acc.lastDispo||'—'}</span></div>` : ''}
+    <div style="font-size:10px;color:#2d4a60;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Snap text (paste into email Snap field)</div>
+    <pre id="snap-text-preview" style="background:#080e18;border:1px solid #1e2535;border-radius:6px;padding:10px;font-size:11.5px;color:#a0c0e0;white-space:pre-wrap;line-height:1.7;font-family:inherit;margin:0">${buildSnapText(acc)}</pre>
+  `;
+
+  document.getElementById('snap-modal').classList.add('open');
+}
+
+function buildSnapText(acc) {
+  const lines = [];
+  const dropParts = acc.dropW0 !== '—' ? acc.dropW0.split('/') : [];
+  const droppedCount = dropParts.length === 2 ? +dropParts[0] : 0;
+
+  if (acc.wk0 === 0) {
+    lines.push(`${acc.name} — SILENT this week (was ${acc.wk1} last week)`);
+  } else if (droppedCount > 0) {
+    lines.push(`${acc.name} — ${acc.activeW0} active, ${droppedCount} user(s) dropped (${acc.dropW0})`);
+  } else {
+    lines.push(`${acc.name} — ${acc.activeW0} active user(s), Wk0: ${acc.wk0} events`);
+  }
+
+  const drops = (acc.projects || []).filter(p => p.isDrop || p.wk0 === 0);
+  const active = (acc.projects || []).filter(p => !p.isDrop && p.wk0 > 0);
+
+  if (drops.length) {
+    drops.forEach(p => lines.push(`  ⬇ ${p.name}: silent/drop (was ${p.wk1})`));
+  }
+  if (active.length && acc.projects.length > drops.length) {
+    const topActive = active.slice(0, 3);
+    topActive.forEach(p => lines.push(`  ✅ ${p.name}: ${p.wk0} events`));
+  }
+  if (acc.renewal) lines.push(`  Renewal: ${acc.renewal}`);
+  return lines.join('\n');
+}
+
+function copySnapToClipboard() {
+  if (!snapAcc) return;
+  const text = buildSnapText(snapAcc);
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('#snap-modal .modal-foot .btn-primary');
+    if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => btn.textContent = '📋 Copy Snap Text', 1500); }
+  }).catch(() => {
+    // fallback
+    const el = document.getElementById('snap-text-preview');
+    if (el) { const range = document.createRange(); range.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(range); }
+  });
+}
+
+function closeSnapModal() {
+  document.getElementById('snap-modal').classList.remove('open');
+  snapAcc = null;
+}
 </script>
 
 <!-- ── Template Settings Modal ── -->
@@ -1350,6 +1551,21 @@ function closeSendModal() {
     <div class="modal-foot">
       <button class="btn-secondary" onclick="resetTmpl()">Reset to Default</button>
       <button class="btn-primary" id="tmpl-save-btn" onclick="saveTmplCurrent()">Save Template</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Snap Report Modal ── -->
+<div class="modal-bg" id="snap-modal" onclick="if(event.target===this)closeSnapModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="snap-modal-title">📸 Snap Report</h2>
+      <button class="modal-close" onclick="closeSnapModal()">✕</button>
+    </div>
+    <div class="modal-body" id="snap-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="closeSnapModal()">Close</button>
+      <button class="btn-primary" onclick="copySnapToClipboard()">📋 Copy Snap Text</button>
     </div>
   </div>
 </div>
