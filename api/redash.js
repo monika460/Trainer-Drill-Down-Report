@@ -4,9 +4,9 @@
 
 const https = require('https');
 
-const API_KEY     = 'agg6zbjrdhjdp9RdxTmUmSpDx3DnXGclCljsUGSq';  // hardcoded — bypasses any stale Vercel env var
+const API_KEY     = '9tkymr5wfXUsAhU79SBoxmbPb8s35nCEfomHWAyi';  // hardcoded
 const REDASH_HOST = 'redashv3.getpowerplay.in';
-const QUERY_ID    = '1468';
+const QUERY_ID    = '1454';
 
 // Query parameters (match what you use in Redash UI)
 const DEFAULT_PARAMS = {
@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
     // Redash expects parameters WITHOUT the "p_" prefix in the POST body
     const postBody = JSON.stringify({
       parameters: DEFAULT_PARAMS,
-      max_age: 1800  // use cached result if less than 30 min old, else re-run
+      max_age: 2592000  // use ANY cached result (up to 30 days old) — avoids re-running broken query
     });
 
     const postRaw  = await redashRequest('POST', `/api/queries/${QUERY_ID}/results`, postBody);
