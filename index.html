@@ -147,13 +147,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cvbadge.cv50{background:#2d1a00;color:#ed8936;border:1px solid #ed8936}
 .cvbadge.cvok{background:#0a2818;color:#48bb78;border:1px solid #48bb78}
 /* Snap modal — light themed to match card design */
-#snap-modal .modal{width:580px;background:#f9fafb;border:1px solid #e5e7eb}
-#snap-modal .modal-head{background:#f9fafb;border-bottom:1px solid #e5e7eb}
+#snap-modal .modal{width:780px;background:#f3f4f6;border:1px solid #e5e7eb}
+#snap-modal .modal-head{background:#f3f4f6;border-bottom:1px solid #e5e7eb}
 #snap-modal .modal-head h2{color:#111827;font-size:14px}
 #snap-modal .modal-close{color:#6b7280}
 #snap-modal .modal-close:hover{color:#111827;background:#e5e7eb}
-#snap-modal .modal-body{background:#f9fafb;padding:0 0 4px}
-#snap-modal .modal-foot{background:#f9fafb;border-top:1px solid #e5e7eb}
+#snap-modal .modal-body{background:#f3f4f6;padding:16px 20px 4px;overflow-x:auto}
+#snap-modal .modal-foot{background:#f3f4f6;border-top:1px solid #e5e7eb}
 .tmpl-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#1a2535;border:1px solid #2d3f55;border-radius:8px;color:#a0aec0;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
 .tmpl-btn:hover{background:#1e2e45;color:#e2e8f0;border-color:#4299e1}
 
@@ -401,9 +401,12 @@ function processRows(rows, cols) {
       // User-level sets for computing ACTIVE/DROP/CONN/COV
       const usersActiveWk0 = new Set();
       const usersActiveWk1 = new Set();
-      const usersAll       = new Set();
+      const usersActiveWk2 = new Set();
+      const usersActiveWk3 = new Set();
+      const usersWithRecentDisp = new Set();
       let hasRawMetrics = false;
-      let rawActiveW0 = 0, rawDropW0Num = 0, rawDropW0Den = 0, rawConnW0 = 0, rawCovW0 = null;
+      let rawActiveW0 = 0, rawConnW0 = 0, rawCovW0 = null;
+      const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
 
       for (const proj of projects) {
         for (const mod of proj.modules) {
@@ -418,9 +421,12 @@ function processRows(rows, cols) {
             // Track per-user activity for metrics
             const uKey = (evt.user || '') + '|' + (evt.mobile || '');
             if (uKey !== '|') {
-              usersAll.add(uKey);
               if (evt.wk0 > 0) usersActiveWk0.add(uKey);
               if (evt.wk1 > 0) usersActiveWk1.add(uKey);
+              if (evt.wk2 > 0) usersActiveWk2.add(uKey);
+              if (evt.wk3 > 0) usersActiveWk3.add(uKey);
+              const ld2 = (evt.lastDisp || '').slice(0, 10);
+              if (ld2 && ld2 >= sevenDaysAgo) usersWithRecentDisp.add(uKey);
             }
             // If query provides raw metric columns directly, accumulate max (not sum)
             if (evt.raw_active_w0 !== null) { hasRawMetrics = true; rawActiveW0 = Math.max(rawActiveW0, evt.raw_active_w0); }
@@ -430,21 +436,36 @@ function processRows(rows, cols) {
         }
       }
 
-      // Compute metrics — use raw query columns if present, else compute from user sets
+      // ── Compute metrics ──────────────────────────────────────
       const activeW0 = hasRawMetrics ? rawActiveW0 : usersActiveWk0.size;
-      const droppedUsersCount = [...usersActiveWk1].filter(u => !usersActiveWk0.has(u)).length;
-      const wasActiveUsers = usersActiveWk1.size;
-      const dropW0 = wasActiveUsers > 0 ? `${droppedUsersCount}/${wasActiveUsers}` : '—';
-      const dropW0IsAlert = droppedUsersCount > 0;
-      const connW0 = hasRawMetrics ? rawConnW0 : [...usersActiveWk0].filter(u => !usersActiveWk1.has(u)).length;
-      const totalUsers = usersAll.size;
-      const covPct = totalUsers > 0 ? Math.round(activeW0 / totalUsers * 100) : 0;
-      const covW0 = totalUsers > 0 ? covPct + '%' : '—';
 
-      // Build dropped users list (active wk1, silent wk0) with names+mobiles
-      const droppedUsersList = [...usersActiveWk1]
+      // Cold pool: users active in ANY prior week (W1/W2/W3) but silent this week (W0)
+      const coldPool = new Set();
+      for (const u of [...usersActiveWk1, ...usersActiveWk2, ...usersActiveWk3]) {
+        if (!usersActiveWk0.has(u)) coldPool.add(u);
+      }
+
+      // X = newly dropped this week (active W1 → silent W0)
+      const droppedXList = [...usersActiveWk1]
         .filter(u => !usersActiveWk0.has(u))
         .map(u => ({ user: u.split('|')[0], mobile: u.split('|')[1] }));
+
+      // Y = full cold pool list (active any W1/W2/W3, silent W0)
+      const coldPoolList = [...coldPool]
+        .map(u => ({ user: u.split('|')[0], mobile: u.split('|')[1] }));
+
+      const dropX = droppedXList.length;
+      const dropY = coldPool.size;
+      const dropW0 = dropY > 0 ? `${dropX}/${dropY}` : '—';
+      const dropW0IsAlert = dropX > 0;
+
+      // Conn W0 = cold pool users who had a disposition logged in the last 7 days
+      const connW0 = [...coldPool].filter(u => usersWithRecentDisp.has(u)).length;
+
+      // Cov W0 = Connected ÷ Cold Pool × 100
+      // Red <30%, Amber 30–60%, Green 60%+, Dash if no cold pool
+      const covPct = dropY > 0 ? Math.round(connW0 / dropY * 100) : -1;
+      const covW0  = dropY > 0 ? covPct + '%' : '—';
 
       accounts.push({
         num: ++aIdx, name: orgName, renewal: orgData.renewal,
@@ -455,8 +476,8 @@ function processRows(rows, cols) {
         obNotes: accountObNotes,
         modSummary,
         // user-level metrics
-        activeW0, dropW0, dropW0IsAlert, connW0, covW0, covPct, totalUsers,
-        droppedUsersList,
+        activeW0, dropW0, dropW0IsAlert, dropX, dropY, connW0, covW0, covPct,
+        droppedXList, coldPoolList,
         // financial / renewal
         arr: accountArr
       });
@@ -555,10 +576,10 @@ function renderPanel(tName, tData, tid) {
 
     const dropCell = acc.dropW0 === '—'
       ? `<td class="nr neu sm">—</td>`
-      : `<td class="nr sm drop-cell" style="color:${acc.dropW0IsAlert?'#ed8936':'#48bb78'};cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();showDropPopup('${aId}',event)">${acc.dropW0}</td>`;
+      : `<td class="nr sm" style="white-space:nowrap"><span style="color:${acc.dropX>0?'#ed8936':'#48bb78'};cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();showDropPopup('${aId}','x',event)" title="Newly dropped (W1→W0 silent)">${acc.dropX}</span><span style="color:#4a5568">/</span><span style="color:#4a9edd;cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();showDropPopup('${aId}','y',event)" title="Full cold pool (any W1/W2/W3 silent in W0)">${acc.dropY}</span></td>`;
     const covCell = acc.covW0 === '—'
       ? `<td class="nr neu sm">—</td>`
-      : `<td><span class="cvbadge ${acc.covPct===0?'cv0':acc.covPct<50?'cv50':'cvok'}">(${acc.covW0})</span></td>`;
+      : `<td><span class="cvbadge ${acc.covPct<30?'cv0':acc.covPct<60?'cv50':'cvok'}">${acc.covW0}</span></td>`;
 
     html += `<tr class="row-account" data-p="${acc.priority}" data-name="${acc.name.toLowerCase()}" data-aid="${aId}" onclick="toggleAcc('${aId}',event)">
       <td><button class="tog acc-tog" id="btn-${aId}">${acc.projects.length?'+':'·'}</button></td>
@@ -1530,7 +1551,7 @@ function computeSnapData(acc) {
   return { snapProjects, silentProjects, stoppedModules, biggestDrops:biggestDrops.slice(0,5), topMover, watchOut };
 }
 
-// Build the branded snap card HTML
+// Build the branded snap card HTML — matches exact PDF design
 function buildSnapCard(acc, trainer) {
   const { snapProjects, silentProjects, stoppedModules, biggestDrops, topMover, watchOut } = computeSnapData(acc);
   const pctChange = acc.wk1>0 ? Math.round((acc.wk0-acc.wk1)/acc.wk1*100) : null;
@@ -1539,131 +1560,163 @@ function buildSnapCard(acc, trainer) {
   const weekStr = getWeekEndingStr();
   const hasAttention = silentProjects.length>0 || stoppedModules.length>0 || biggestDrops.length>0;
 
-  // NEEDS ATTENTION block
+  // ── NEEDS ATTENTION block ────────────────────────────────────
   let attHtml = '';
   if (hasAttention) {
     const silentStr = silentProjects.map(p=>`<b>${p.name}</b> (was ${p.was})`).join(', ');
-    const stopStr   = stoppedModules.slice(0,3).map(m=>`<b>${m.module}</b> on ${m.project} (was ${m.was} by ${m.byWho})`).join(' · ')
-                    + (stoppedModules.length>3 ? ` +${stoppedModules.length-3} more` : '');
+    const stopStr   = stoppedModules.slice(0,5).map(m=>`<b>${m.module}</b> on ${m.project} (was ${m.was} by ${m.byWho})`).join(' · ')
+                    + (stoppedModules.length>5 ? ` +${stoppedModules.length-5} more` : '');
     const dropStr   = biggestDrops.slice(0,3).map(d=>`<b>${d.user}</b> ↓${d.drop} (${d.module} on ${d.project})`).join(' · ');
-    attHtml = `<div style="border:1.5px solid #fbbf24;border-radius:8px;background:#fffbeb;padding:12px 14px;margin:10px 0">
-      <div style="font-weight:700;color:#d97706;font-size:12px;margin-bottom:7px">⚠ NEEDS ATTENTION</div>
-      ${silentProjects.length  ? `<div style="font-size:11.5px;color:#374151;margin-bottom:5px"><b>Silent projects:</b> ${silentStr}</div>` : ''}
-      ${stoppedModules.length  ? `<div style="font-size:11.5px;color:#374151;margin-bottom:5px"><b>Modules stopped:</b> ${stopStr}</div>` : ''}
-      ${biggestDrops.length    ? `<div style="font-size:11.5px;color:#374151"><b>Biggest drops:</b> ${dropStr}</div>` : ''}
+    attHtml = `<div style="border-left:3px solid #ef4444;border-radius:0 8px 8px 0;background:#fff7ed;padding:12px 14px;margin:10px 0">
+      <div style="font-weight:700;color:#b45309;font-size:11px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">⚠ NEEDS ATTENTION</div>
+      ${silentProjects.length ? `<div style="font-size:11.5px;color:#374151;margin-bottom:5px"><b style="color:#92400e">Silent projects:</b> ${silentStr}</div>` : ''}
+      ${stoppedModules.length ? `<div style="font-size:11.5px;color:#374151;margin-bottom:5px"><b style="color:#92400e">Modules stopped:</b> ${stopStr}</div>` : ''}
+      ${biggestDrops.length   ? `<div style="font-size:11.5px;color:#374151"><b style="color:#92400e">Biggest drops:</b> ${dropStr}</div>` : ''}
     </div>`;
+  } else {
+    attHtml = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 14px;margin:10px 0;text-align:center;font-size:11.5px;color:#15803d;font-weight:600">✅ ALL CLEAR — No significant drops this week</div>`;
   }
 
-  // Legend
-  const legendHtml = `<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 8px;font-size:11px;color:#6b7280">
-    ${Object.entries(MOD_COLORS).map(([k,v])=>`<span><span style="display:inline-block;width:10px;height:10px;background:${v};border-radius:2px;margin-right:3px;vertical-align:middle"></span>${k}</span>`).join('')}
+  // ── Module legend ────────────────────────────────────────────
+  const legendHtml = `<div style="display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 12px;font-size:11px;color:#374151;align-items:center">
+    ${Object.entries(MOD_COLORS).map(([k,v])=>`<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:${v};border-radius:2px;flex-shrink:0"></span>${k}</span>`).join('')}
   </div>`;
 
-  // Per-project sections
+  // ── Per-project sections ─────────────────────────────────────
   let projsHtml = '';
   for (const proj of snapProjects) {
     const pNum = proj.wk1>0 ? Math.round((proj.wk0-proj.wk1)/proj.wk1*100) : null;
-    const pStr = pNum!==null ? `${pNum>=0?'↑':'↓'}${Math.abs(pNum)}%` : '—';
-    const pCol = pNum===null ? '#9ca3af' : pNum>=0 ? '#16a34a' : '#dc2626';
+    const pStr = pNum!==null ? (pNum>=0 ? `↑ ${pNum}%` : `↓ ${Math.abs(pNum)}%`) : (proj.wk0>0 ? 'new' : '—');
+    const pCol = pNum===null ? '#6b7280' : pNum>=0 ? '#16a34a' : '#dc2626';
     const isSilent = proj.wk0===0 && proj.wk1>0;
 
-    // Proportional bar
-    const barMods = proj.modules.filter(m=>m.wk0>0);
+    // Proportional bar with counts INSIDE each segment (matches PDF exactly)
+    const barMods = proj.modules.filter(m=>m.wk0>0).sort((a,b)=>b.wk0-a.wk0);
+    const totalBarCount = barMods.reduce((s,m)=>s+m.wk0,0);
     const barHtml = barMods.length>0
-      ? `<div style="display:flex;height:14px;border-radius:4px;overflow:hidden;flex:1">${barMods.map(m=>`<div style="flex:${m.wk0};background:${modColor(m.name)};min-width:3px" title="${m.name}:${m.wk0}"></div>`).join('')}</div>`
-      : `<div style="flex:1;height:14px;border-radius:4px;background:#e5e7eb"></div>`;
+      ? `<div style="display:flex;height:28px;border-radius:5px;overflow:hidden;width:100%;margin-bottom:10px">${
+          barMods.map(m => {
+            const pct = totalBarCount>0 ? m.wk0/totalBarCount*100 : 0;
+            return `<div style="flex:${m.wk0};background:${modColor(m.name)};display:flex;align-items:center;justify-content:center;min-width:3px;overflow:hidden;font-size:11px;font-weight:700;color:#fff" title="${m.name}: ${m.wk0}">${pct>=10?m.wk0:''}</div>`;
+          }).join('')
+        }</div>`
+      : `<div style="height:28px;border-radius:5px;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:11px;color:#dc2626;margin-bottom:10px;font-weight:500">Silent this week</div>`;
 
-    // Top module count badges next to bar
-    const topBadges = [...proj.modules].filter(m=>m.wk0>0).sort((a,b)=>b.wk0-a.wk0).slice(0,4)
-      .map(m=>`<span style="background:${modColor(m.name)};color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:2px">${m.wk0}</span>`).join('');
-
-    // Module rows
+    // Module rows + collect stopped modules for chip at bottom
     let modRowsHtml = '';
+    const stoppedChips = [];
     for (const mod of proj.modules) {
       if (mod.wk0===0 && mod.wk1===0) continue;
+      if (mod.isStopped) {
+        // Goes into "Stopped this week" chip, not a regular row
+        const who = mod.users.filter(u=>u.wk1>0).map(u=>`${u.user} ${u.wk1}`).join(', ');
+        stoppedChips.push(`${mod.name} (was ${mod.wk1} by ${who})`);
+        continue;
+      }
       const mPct = mod.wk1>0 ? Math.round((mod.wk0-mod.wk1)/mod.wk1*100) : null;
-      const mPctHtml = mPct!==null ? `<span style="color:${mPct>=0?'#16a34a':'#dc2626'};font-weight:600"> ${mPct>=0?'↑':'↓'}${Math.abs(mPct)}%</span>` : '';
+      const mPctHtml = mPct!==null
+        ? `<span style="background:${mPct>=0?'#dcfce7':'#fee2e2'};color:${mPct>=0?'#15803d':'#dc2626'};font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:4px">${mPct>=0?'↑':'↓'}${Math.abs(mPct)}%</span>`
+        : '';
       const newModBadge = mod.isNewMod ? `<span style="background:#dbeafe;color:#1d4ed8;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:600">new module</span>` : '';
-      const stoppedNote = mod.isStopped ? `<span style="color:#dc2626;font-size:10px;margin-left:4px;font-weight:600">stopped</span>` : '';
 
-      const userParts = mod.users.slice(0,4).map(u=>{
-        const dHtml = u.diff!==0 ? `<span style="color:${u.diff>0?'#16a34a':'#dc2626'};font-size:10px"> ${u.diff>0?'↑':'↓'}${Math.abs(u.diff)}</span>` : '';
-        const newBadge = u.isNew ? `<span style="background:#dbeafe;color:#1d4ed8;font-size:9px;padding:0 4px;border-radius:8px;margin-left:2px">new</span>` : '';
-        return `<span style="color:#374151">${u.user} <b>${u.wk0}</b>${dHtml}${newBadge}</span>`;
-      }).join('<span style="color:#d1d5db;margin:0 3px">,</span> ');
+      const topUsers = mod.users.filter(u=>u.wk0>0 || u.wk1>0).slice(0,3);
+      let userStr = '';
+      if (topUsers.length>0) {
+        const parts = topUsers.map(u => {
+          const isUnassigned = !u.user || u.user.toLowerCase()==='unassigned' || u.user==='Unknown';
+          const dHtml = u.diff!==0 ? ` <span style="color:${u.diff>0?'#15803d':'#dc2626'};font-size:10px">${u.diff>0?'↑':'↓'}${Math.abs(u.diff)}</span>` : '';
+          const newBadge = u.isNew ? ` <span style="background:#dbeafe;color:#1d4ed8;font-size:9px;padding:0 4px;border-radius:8px">new</span>` : '';
+          const procBadge = isUnassigned ? ` <span style="background:#f3f4f6;color:#6b7280;font-size:9px;padding:0 4px;border-radius:8px">${u.user||'unassigned'}</span>` : '';
+          if (isUnassigned) return procBadge || `<span style="color:#9ca3af;font-style:italic">unassigned</span>`;
+          return `<b style="color:#374151">${u.user}</b> ${u.wk0}${dHtml}${newBadge}`;
+        });
+        userStr = `<span style="color:#9ca3af;margin:0 5px">—</span>` + parts.join(`<span style="color:#d1d5db;margin:0 3px"> · </span>`);
+        if (mod.users.filter(u=>u.wk0>0||u.wk1>0).length>3) userStr += ` <span style="color:#9ca3af;font-size:10px">+${mod.users.filter(u=>u.wk0>0||u.wk1>0).length-3} more</span>`;
+      }
 
-      const stoppedWho = mod.isStopped && mod.users.filter(u=>u.wk1>0).length
-        ? `<div style="font-size:10px;color:#dc2626;margin-top:3px">⚠ Stopped this week: ${mod.name} (was ${mod.wk1} by ${mod.users.filter(u=>u.wk1>0).map(u=>`${u.user} ${u.wk1}`).join(', ')})</div>` : '';
-
-      modRowsHtml += `<div style="display:flex;align-items:flex-start;gap:6px;padding:4px 0;border-bottom:1px solid #f3f4f6;font-size:11.5px">
-        <span style="display:inline-block;width:10px;height:10px;background:${modColor(mod.name)};border-radius:2px;margin-top:2px;flex-shrink:0"></span>
-        <div style="flex:1;min-width:0">
-          <b style="color:#111827">${mod.name}</b>
-          <span style="color:#374151;margin-left:4px">${mod.wk0||0}</span>${mPctHtml}${newModBadge}${stoppedNote}
-          ${mod.users.length>0 ? `<span style="color:#9ca3af;margin:0 5px">—</span>${userParts}` : ''}${stoppedWho}
-        </div>
+      modRowsHtml += `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:3px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:11.5px">
+        <span style="display:inline-block;width:10px;height:10px;background:${modColor(mod.name)};border-radius:2px;flex-shrink:0;margin-right:2px"></span>
+        <b style="color:#111827">${mod.name}</b>
+        <span style="color:#374151;font-weight:600;margin-left:2px">${mod.wk0}</span>${mPctHtml}${newModBadge}${userStr}
       </div>`;
     }
 
-    projsHtml += `<div style="background:#fff;border:1px solid ${isSilent?'#fca5a5':'#e5e7eb'};border-radius:10px;padding:12px 14px;margin-bottom:10px${isSilent?';background:#fff5f5':''}">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-        <b style="color:#111827;font-size:13px">${isSilent?'⚠ ':''}${proj.name}</b>
-        <span style="font-size:11px;color:#6b7280">${proj.wk1} → <b style="color:${pNum!==null&&pNum<0?'#dc2626':'#111827'}">${proj.wk0}</b> <b style="color:${pCol}">${pStr}</b></span>
+    // Stopped-this-week chip
+    const stoppedHtml = stoppedChips.length
+      ? `<div style="margin-top:7px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:10.5px">
+          <span style="color:#92400e;font-weight:600">⚠ Stopped this week:</span>
+          ${stoppedChips.map(s=>`<span style="background:#fef3c7;border:1px solid #fde68a;color:#78350f;padding:2px 7px;border-radius:12px">${s}</span>`).join('')}
+         </div>`
+      : '';
+
+    projsHtml += `<div style="background:${isSilent?'#fff5f5':'#fff'};border:1px solid ${isSilent?'#fca5a5':'#e5e7eb'};border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+        <b style="color:${isSilent?'#dc2626':'#111827'};font-size:13px">${isSilent?'⚠ ':''}${proj.name}</b>
+        <span style="font-size:12px;white-space:nowrap;margin-left:10px">${proj.wk1} → <b style="color:${pNum!==null&&pNum<0?'#dc2626':'#111827'}">${proj.wk0}</b> <b style="color:${pCol};margin-left:4px">${pStr}</b></span>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">${barHtml}<span style="white-space:nowrap">${topBadges}</span></div>
-      ${modRowsHtml ? `<div>${modRowsHtml}</div>` : ''}
+      ${barHtml}
+      ${modRowsHtml ? `<div style="border-top:1px solid #f3f4f6">${modRowsHtml}</div>` : ''}
+      ${stoppedHtml}
     </div>`;
   }
 
-  // Highlights
+  // ── Highlights ───────────────────────────────────────────────
   let hlHtml = '';
   if (topMover || watchOut) {
-    hlHtml = `<div style="background:#f8fafc;border-radius:8px;padding:10px 12px;margin-top:4px">
-      <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">THIS WEEK'S HIGHLIGHTS</div>
+    hlHtml = `<div style="margin:12px 0 8px">
+      <div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">✨ THIS WEEK'S HIGHLIGHTS</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         ${topMover ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
-          <div style="font-size:10px;font-weight:700;color:#15803d;margin-bottom:4px">🏆 TOP MOVER</div>
+          <div style="font-size:9px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">🏆 TOP MOVER</div>
           <b style="font-size:12px;color:#111827">${topMover.user}</b>
-          <div style="font-size:11px;color:#374151;margin-top:2px">${topMover.project} · ${topMover.module} ↑${topMover.pct}%</div>
+          <div style="font-size:10.5px;color:#374151;margin-top:2px">${topMover.project} · ${topMover.module} ↑${topMover.pct}%</div>
         </div>` : '<div></div>'}
         ${watchOut ? `<div style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:10px">
-          <div style="font-size:10px;font-weight:700;color:#dc2626;margin-bottom:4px">⚠ WATCH OUT</div>
+          <div style="font-size:9px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">⚠ WATCH OUT</div>
           <b style="font-size:12px;color:#111827">${watchOut.project}</b>
-          <div style="font-size:11px;color:#374151;margin-top:2px">${watchOut.issue}</div>
+          <div style="font-size:10.5px;color:#374151;margin-top:2px">${watchOut.issue}</div>
         </div>` : '<div></div>'}
       </div>
     </div>`;
   }
 
-  // WhatsApp message
-  const wpMsg = `Hi ${acc.name} Sir, sharing this week's snap — ${acc.wk0} activities logged${pctChange!==null?`, ${isDown?'slight dip':'increase'} of ${Math.abs(pctChange)}% vs last week`:''}.${topMover ? ` ${topMover.user} still active on ${topMover.project}.` : ''}${watchOut ? ` Note: ${watchOut.project} ${watchOut.issue}.` : ''} Want me to do a quick check-in with the team?`;
+  // ── WhatsApp message ─────────────────────────────────────────
+  const wpMsg = `Hi ${acc.name} Sir, sharing this week's snap — ${acc.wk0} activities logged${pctChange!==null?`, ${isDown?'slight dip':'increase'} of ${Math.abs(pctChange)}% vs last week`:''}.${topMover ? ` ${topMover.user} still active on ${topMover.project}.` : ''}${watchOut ? ` Note: ${watchOut.project} needs attention.` : ''} Want me to do a quick check-in with the team?`;
 
-  return `<div id="snap-card" style="background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:20px 22px;width:500px;border-radius:12px;color:#111827">
-    <div style="text-align:center;margin-bottom:16px">
-      <div style="font-size:10px;font-weight:700;color:#4299e1;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">POWERPLAY · WEEKLY SNAP</div>
-      <div style="font-size:21px;font-weight:800;color:#111827;margin-bottom:4px">${acc.name}</div>
-      <div style="font-size:11px;color:#6b7280">Week ending ${weekStr} · vs prior week · ${acc.activeW0} user${acc.activeW0!==1?'s':''} active this week${acc.renewal?` · 🗓 Renewal: ${acc.renewal}`:''}</div>
+  return `<div id="snap-card" style="background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:24px 26px;width:700px;max-width:100%;border-radius:12px;color:#111827">
+
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:9px;font-weight:700;color:#3b82f6;letter-spacing:3px;text-transform:uppercase;margin-bottom:6px">POWERPLAY · WEEKLY SNAP</div>
+      <div style="font-size:24px;font-weight:800;color:#111827;letter-spacing:-0.3px;margin-bottom:4px">${acc.name}</div>
+      <div style="font-size:11px;color:#6b7280">Week ending ${weekStr} · vs prior week · ${acc.activeW0} user${acc.activeW0!==1?'s':''} active this week${acc.renewal ? ` · 🗓 Renewal: ${acc.renewal}` : ''}</div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 36px 1fr;gap:8px;align-items:center;margin-bottom:4px">
-      <div style="text-align:center;background:#f1f5f9;border-radius:8px;padding:10px 6px">
-        <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">LAST WEEK</div>
-        <div style="font-size:30px;font-weight:800;color:#374151">${acc.wk1}</div>
+
+    <div style="display:grid;grid-template-columns:1fr 44px 1fr;gap:12px;align-items:center;margin-bottom:10px">
+      <div style="text-align:center;padding:14px 8px">
+        <div style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">LAST WEEK</div>
+        <div style="font-size:48px;font-weight:800;color:#374151;line-height:1">${acc.wk1}</div>
       </div>
-      <div style="text-align:center;font-size:22px;color:#9ca3af">→</div>
-      <div style="text-align:center;background:${isDown?'#fff5f5':isUp?'#f0fdf4':'#f1f5f9'};border-radius:8px;padding:10px 6px;border:1.5px solid ${isDown?'#fca5a5':isUp?'#bbf7d0':'#e5e7eb'}">
-        <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">THIS WEEK</div>
-        <div style="font-size:30px;font-weight:800;color:${isDown?'#dc2626':isUp?'#16a34a':'#374151'}">${acc.wk0}</div>
+      <div style="text-align:center;font-size:30px;color:#9ca3af;line-height:1">→</div>
+      <div style="text-align:center;padding:14px 8px">
+        <div style="font-size:9px;font-weight:600;color:${isDown?'#dc2626':isUp?'#16a34a':'#9ca3af'};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">THIS WEEK</div>
+        <div style="font-size:48px;font-weight:800;color:${isDown?'#dc2626':isUp?'#16a34a':'#374151'};line-height:1">${acc.wk0}</div>
       </div>
     </div>
-    ${pctChange!==null?`<div style="text-align:center;margin:8px 0 12px"><span style="display:inline-block;background:${isDown?'#fee2e2':isUp?'#dcfce7':'#f1f5f9'};color:${isDown?'#dc2626':isUp?'#16a34a':'#374151'};font-weight:700;font-size:13px;padding:4px 18px;border-radius:20px">${isDown?'↓':'↑'} ${Math.abs(pctChange)}% activity</span></div>`:''}
+
+    ${pctChange!==null
+      ? `<div style="text-align:center;margin:0 0 14px"><span style="display:inline-block;background:${isDown?'#fee2e2':isUp?'#dcfce7':'#f1f5f9'};color:${isDown?'#dc2626':isUp?'#16a34a':'#374151'};font-weight:700;font-size:13px;padding:5px 22px;border-radius:20px">${isDown?'↓':'↑'} ${Math.abs(pctChange)}% activity</span></div>`
+      : '<div style="height:6px"></div>'}
+
     ${attHtml}
     ${legendHtml}
     ${projsHtml}
     ${hlHtml}
-    <div style="background:#e8f5e9;border-radius:8px;padding:12px 14px;margin-top:12px;border:1px solid #a5d6a7">
-      <div style="font-size:10px;font-weight:600;color:#388e3c;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">💬 Ready-to-send message</div>
-      <div style="font-size:12px;color:#1b5e20;line-height:1.7">${wpMsg}</div>
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;margin-top:12px">
+      <div style="font-size:9px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">💬 READY-TO-SEND MESSAGE</div>
+      <div style="font-size:11.5px;color:#14532d;line-height:1.7">${wpMsg}</div>
     </div>
+
   </div>`;
 }
 
@@ -1673,8 +1726,7 @@ function openSnapModal(aId) {
   snapAcc = entry.acc;
   snapTrainer = entry.trainer;
   document.getElementById('snap-modal-title').textContent = '📸 Snap — ' + snapAcc.name;
-  document.getElementById('snap-modal-body').innerHTML =
-    `<div style="overflow-x:auto;padding-bottom:4px">${buildSnapCard(snapAcc, snapTrainer)}</div>`;
+  document.getElementById('snap-modal-body').innerHTML = buildSnapCard(snapAcc, snapTrainer);
   document.getElementById('snap-modal').classList.add('open');
 }
 
@@ -1732,29 +1784,41 @@ function closeSnapModal() {
   snapAcc = null;
 }
 
-// ── Drop W0 popup — show dropped users with names + mobiles ──
+// ── Drop W0 popup — X = newly dropped, Y = full cold pool ────
 let _dropPopup = null;
-function showDropPopup(aId, evt) {
+function showDropPopup(aId, type, evt) {
   const entry = window.accRegistry[aId];
   closeDropPopup();
   if (!entry) return;
-  const users = entry.acc.droppedUsersList || [];
-  if (!users.length) return;
 
-  const html = `<div id="drop-popup" style="position:fixed;z-index:2000;background:#1a2035;border:1px solid #2d4060;border-radius:10px;padding:12px 16px;min-width:240px;max-width:320px;box-shadow:0 8px 30px #000a;font-size:12px">
-    <div style="font-size:10px;color:#4a6080;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Dropped users (active wk1 → silent wk0)</div>
-    ${users.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:5px 0;border-bottom:1px solid #1e2a40">
-      <span style="color:#e2e8f0">👤 ${u.user||'—'}</span>
-      <span style="color:#4a9edd;font-family:monospace">${u.mobile||''}</span>
-    </div>`).join('')}
-    <div style="margin-top:8px;font-size:10px;color:#4a5568;text-align:right">${users.length} user${users.length!==1?'s':''} dropped this week</div>
+  const isX = type === 'x';
+  const users = isX ? (entry.acc.droppedXList || []) : (entry.acc.coldPoolList || []);
+
+  const titleStr = isX
+    ? 'Newly dropped this week (W1 active → W0 silent)'
+    : 'Full cold pool (active any W1/W2/W3, silent W0)';
+  const footStr = isX
+    ? `${users.length} user${users.length!==1?'s':''} newly dropped`
+    : `${users.length} user${users.length!==1?'s':''} in cold pool`;
+
+  const rowsHtml = users.length
+    ? users.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:5px 0;border-bottom:1px solid #1e2a40">
+        <span style="color:#e2e8f0">👤 ${u.user||'—'}</span>
+        <span style="color:#4a9edd;font-family:monospace">${u.mobile||''}</span>
+      </div>`).join('')
+    : `<div style="color:#718096;font-style:italic;padding:6px 0">No users in this list</div>`;
+
+  const html = `<div id="drop-popup" style="position:fixed;z-index:2000;background:#1a2035;border:1px solid ${isX?'#3d5a2a':'#2d4060'};border-radius:10px;padding:12px 16px;min-width:260px;max-width:340px;box-shadow:0 8px 30px #000a;font-size:12px">
+    <div style="font-size:10px;color:${isX?'#ed8936':'#4a9edd'};text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:700">${isX?'↓ ':'❄ '}${titleStr}</div>
+    ${rowsHtml}
+    <div style="margin-top:8px;font-size:10px;color:#4a5568;text-align:right">${footStr}</div>
   </div>`;
 
   document.body.insertAdjacentHTML('beforeend', html);
   _dropPopup = document.getElementById('drop-popup');
 
   const r = evt.target.getBoundingClientRect();
-  const pw = 260;
+  const pw = 280;
   const left = Math.min(r.left, window.innerWidth - pw - 10);
   _dropPopup.style.left = Math.max(10, left) + 'px';
   _dropPopup.style.top  = (r.bottom + 6) + 'px';
