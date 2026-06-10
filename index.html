@@ -146,17 +146,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cvbadge.cv0{background:#2d0f0f;color:#fc5353;border:1px solid #fc5353}
 .cvbadge.cv50{background:#2d1a00;color:#ed8936;border:1px solid #ed8936}
 .cvbadge.cvok{background:#0a2818;color:#48bb78;border:1px solid #48bb78}
-/* Snap modal */
-#snap-modal .modal{width:680px}
-.snap-metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
-.snap-metric{background:#0f1828;border:1px solid #1e2a3a;border-radius:8px;padding:10px;text-align:center}
-.snap-metric .sm-val{font-size:22px;font-weight:700;color:#e2e8f0}
-.snap-metric .sm-lbl{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
-.snap-proj-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid #1a2035;font-size:12px}
-.snap-proj-row:last-child{border-bottom:none}
-.snap-proj-name{color:#c0cfe0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.snap-copy-btn{background:#1a2535;border:1px solid #2d3f55;border-radius:5px;color:#a0aec0;cursor:pointer;font-size:10px;padding:2px 8px;transition:all .15s}
-.snap-copy-btn:hover{background:#223050;color:#e2e8f0}
+/* Snap modal — light themed to match card design */
+#snap-modal .modal{width:580px;background:#f9fafb;border:1px solid #e5e7eb}
+#snap-modal .modal-head{background:#f9fafb;border-bottom:1px solid #e5e7eb}
+#snap-modal .modal-head h2{color:#111827;font-size:14px}
+#snap-modal .modal-close{color:#6b7280}
+#snap-modal .modal-close:hover{color:#111827;background:#e5e7eb}
+#snap-modal .modal-body{background:#f9fafb;padding:0 0 4px}
+#snap-modal .modal-foot{background:#f9fafb;border-top:1px solid #e5e7eb}
 .tmpl-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#1a2535;border:1px solid #2d3f55;border-radius:8px;color:#a0aec0;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
 .tmpl-btn:hover{background:#1e2e45;color:#e2e8f0;border-color:#4299e1}
 
@@ -278,6 +275,8 @@ function detectCols(columns) {
     drop_w0    : find('drop_w0','dropped_w0','drop_users_w0','dropped_wk0'),
     conn_w0    : find('conn_w0','connected_w0','connections_w0','new_w0','connected_wk0'),
     cov_w0     : find('cov_w0','coverage_w0','coverage_pct_w0','cov_pct_wk0'),
+    // Financial / renewal columns
+    arr        : find('arr','annual_recurring_revenue','arr_value','contract_value','total_arr','arr_inr'),
   };
 }
 
@@ -341,6 +340,7 @@ function processRows(rows, cols) {
       lastDisp: row[cols.last_disp]   || '',
       dispo   : row[cols.disposition] || '',
       obNotes : cols.ob_notes ? (row[cols.ob_notes] || '') : '',
+      arr     : cols.arr     ? (row[cols.arr]     || null) : null,
       wk0: +row[cols.wk0] || 0,
       wk1: +row[cols.wk1] || 0,
       wk2: +row[cols.wk2] || 0,
@@ -396,7 +396,7 @@ function processRows(rows, cols) {
       const pctStr = aWk1 > 0 ? (diff/aWk1*100).toFixed(1)+'%' : '';
 
       // Aggregate last disposition, OB notes, module summary, and user-level metrics
-      let bestDispDate = '', bestDispo = '', accountObNotes = '';
+      let bestDispDate = '', bestDispo = '', accountObNotes = '', accountArr = null;
       const modSummary = {};
       // User-level sets for computing ACTIVE/DROP/CONN/COV
       const usersActiveWk0 = new Set();
@@ -412,6 +412,7 @@ function processRows(rows, cols) {
           modSummary[mod.name].wk1 += mod.wk1;
           for (const evt of (mod.events || [])) {
             if (!accountObNotes && evt.obNotes) accountObNotes = evt.obNotes;
+            if (accountArr === null && evt.arr !== null) accountArr = evt.arr;
             const ld = (evt.lastDisp || '').slice(0, 10);
             if (ld && ld > bestDispDate) { bestDispDate = ld; bestDispo = evt.dispo || ''; }
             // Track per-user activity for metrics
@@ -455,7 +456,9 @@ function processRows(rows, cols) {
         modSummary,
         // user-level metrics
         activeW0, dropW0, dropW0IsAlert, connW0, covW0, covPct, totalUsers,
-        droppedUsersList
+        droppedUsersList,
+        // financial / renewal
+        arr: accountArr
       });
     }
 
@@ -532,6 +535,8 @@ function renderPanel(tName, tData, tid) {
       <th class="r" title="New connected users in Wk0 (active now, not last week)">Conn. W0</th>
       <th class="r" title="Coverage: active users / total users">Cov. W0</th>
       <th style="text-align:center">Snap</th>
+      <th class="r" title="Annual Recurring Revenue">ARR</th>
+      <th title="Renewal Date">Renewal</th>
       <th>Last Dispos.</th><th>Note</th>
     </tr></thead><tbody id="tbody-${tid}">`;
 
@@ -544,7 +549,7 @@ function renderPanel(tName, tData, tid) {
     window.accRegistry[aId] = { acc, trainer: tName };
     if (acc.priority !== lastSect) {
       const isSD = acc.priority === 'STABLE_DROP';
-      html += `<tr class="row-section${isSD?' sd':''}" data-sect="${acc.priority}"><td colspan="18">${SECT_LABELS[acc.priority]||acc.priority}</td></tr>`;
+      html += `<tr class="row-section${isSD?' sd':''}" data-sect="${acc.priority}"><td colspan="20">${SECT_LABELS[acc.priority]||acc.priority}</td></tr>`;
       lastSect = acc.priority;
     }
 
@@ -569,6 +574,8 @@ function renderPanel(tName, tData, tid) {
       ${nTD(acc.connW0)}
       ${covCell}
       <td style="text-align:center"><button class="snap-btn" onclick="event.stopPropagation();openSnapModal('${aId}')" title="View snap report">📸 Snap</button></td>
+      <td class="nr" style="font-size:11px;color:#a0aec0;white-space:nowrap">${acc.arr != null ? (isNaN(+acc.arr) ? acc.arr : (+acc.arr).toLocaleString('en-IN')) : '—'}</td>
+      <td style="font-size:10px;color:#4a8070;white-space:nowrap">${acc.renewal || '—'}</td>
       <td></td><td></td>
     </tr>`;
 
@@ -597,7 +604,7 @@ function renderPanel(tName, tData, tid) {
         ${nTD(proj.wk0,true)}${nTD(proj.wk1)}${nTD(proj.wk2)}${nTD(proj.wk3)}
         ${dTD(proj.diff)}${pTD(proj.pct)}
         <td>${trend(proj.wk0,proj.wk1,proj.wk2,proj.wk3)}</td>
-        <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
       </tr>`;
 
       for (const [mi, mod] of proj.modules.entries()) {
@@ -608,7 +615,7 @@ function renderPanel(tName, tData, tid) {
           <td><span class="mod-name">📦 ${mod.name}</span></td>
           ${nTD(mod.wk0,true)}${nTD(mod.wk1)}${nTD(mod.wk2)}${nTD(mod.wk3)}
           ${dTD(mod.diff)}${pTD(mod.pct)}
-          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
         </tr>`;
 
         for (const evt of mod.events) {
@@ -623,7 +630,7 @@ function renderPanel(tName, tData, tid) {
             </td>
             ${nTD(evt.wk0,true)}${nTD(evt.wk1)}${nTD(evt.wk2)}${nTD(evt.wk3)}
             ${dTD(evt.wk0-evt.wk1)}
-            <td></td><td></td><td></td><td></td><td></td><td></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
             <td class="last-disp">${(evt.lastDisp||'—').slice(0,10)}</td>
             <td class="dispo" title="${(evt.dispo||'').replace(/"/g,"'")}">${evt.dispo||'—'}</td>
           </tr>`;
