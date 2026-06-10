@@ -4,8 +4,8 @@
 
 const https = require('https');
 
-const API_KEY     = process.env.REDASH_API_KEY || 'agg6zbjrdhjdp9RdxTmUmSpDx3DnXGclCljsUGSq';
-const REDASH_HOST = process.env.REDASH_HOST    || 'redashv3.getpowerplay.in';
+const API_KEY     = 'agg6zbjrdhjdp9RdxTmUmSpDx3DnXGclCljsUGSq';  // hardcoded — bypasses any stale Vercel env var
+const REDASH_HOST = 'redashv3.getpowerplay.in';
 const QUERY_ID    = '1468';
 
 // Query parameters (match what you use in Redash UI)
