@@ -4,7 +4,7 @@
 
 const https = require('https');
 
-const API_KEY     = '9tkymr5wfXUsAhU79SBoxmbPb8s35nCEfomHWAyi';  // hardcoded
+const API_KEY     = 'agg6zbjrdhjdp9RdxTmUmSpDx3DnXGclCljsUGSq';  // hardcoded
 const REDASH_HOST = 'redashv3.getpowerplay.in';
 const QUERY_ID    = '1454';
 
