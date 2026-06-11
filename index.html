@@ -1795,27 +1795,24 @@ async function downloadSnapImage() {
 }
 
 // ── Download snap as PDF ──────────────────────────────────────
-function downloadSnapPDF() {
+async function downloadSnapPDF() {
   const card = document.getElementById('snap-card');
   if (!card || !snapAcc) return;
-  const cardW = card.offsetWidth;
-  const cardH = card.scrollHeight;
-  const mmW   = (cardW * 0.264583).toFixed(1);
-  const mmH   = (cardH * 0.264583).toFixed(1);
-  const fname = `snap_${snapAcc.name.replace(/[^a-z0-9]/gi,'_')}`;
-  const win = window.open('', '_blank',
-    `width=${cardW+40},height=${Math.min(cardH+80,900)},menubar=no,toolbar=yes`);
-  win.document.write(`<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>${fname}</title>
-<style>
-  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box}
-  @page{size:${mmW}mm ${mmH}mm;margin:0}
-  html,body{margin:0;padding:0;width:${cardW}px;background:#f3f4f6}
-</style></head><body>
-${card.outerHTML}
-<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},800)});<\/script>
-</body></html>`);
-  win.document.close();
+  const btn = document.getElementById('snap-pdf-btn');
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const canvas = await html2canvas(card, { scale:2, backgroundColor:'#f3f4f6', useCORS:true, logging:false, allowTaint:true });
+    const w = card.offsetWidth;
+    const h = card.scrollHeight;
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation:'portrait', unit:'px', format:[w, h], hotfixes:['px_scaling'] });
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, w, h);
+    pdf.save(`snap_${snapAcc.name.replace(/[^a-z0-9]/gi,'_')}.pdf`);
+  } finally {
+    if (btn) { btn.textContent = '\uD83D\uDCC4 PDF'; btn.disabled = false; }
+  }
 }
 function closeSnapModal() {
   document.getElementById('snap-modal').classList.remove('open');
