@@ -1582,30 +1582,45 @@ function buildSnapCard(acc, trainer) {
     ${Object.entries(MOD_COLORS).map(([k,v])=>`<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:${v};border-radius:2px;flex-shrink:0"></span>${k}</span>`).join('')}
   </div>`;
 
-  // ── Per-project sections ─────────────────────────────────────
+  // ── Per-project sections — only projects with wk0>0 OR wk1>0 ──
   let projsHtml = '';
-  for (const proj of snapProjects) {
+  const activeProjects = snapProjects.filter(p => p.wk0 > 0 || p.wk1 > 0);
+
+  for (const proj of activeProjects) {
     const pNum = proj.wk1>0 ? Math.round((proj.wk0-proj.wk1)/proj.wk1*100) : null;
     const pStr = pNum!==null ? (pNum>=0 ? `↑ ${pNum}%` : `↓ ${Math.abs(pNum)}%`) : (proj.wk0>0 ? 'new' : '—');
     const pCol = pNum===null ? '#6b7280' : pNum>=0 ? '#16a34a' : '#dc2626';
     const isSilent = proj.wk0===0 && proj.wk1>0;
 
-    // Proportional bar with counts INSIDE each segment (matches PDF exactly)
+    // Proportional bar with counts INSIDE segments — sorted by wk0 desc
     const barMods = proj.modules.filter(m=>m.wk0>0).sort((a,b)=>b.wk0-a.wk0);
     const totalBarCount = barMods.reduce((s,m)=>s+m.wk0,0);
-    const barHtml = barMods.length>0
-      ? `<div style="display:flex;height:28px;border-radius:5px;overflow:hidden;width:100%;margin-bottom:10px">${
-          barMods.map(m => {
-            const pct = totalBarCount>0 ? m.wk0/totalBarCount*100 : 0;
-            return `<div style="flex:${m.wk0};background:${modColor(m.name)};display:flex;align-items:center;justify-content:center;min-width:3px;overflow:hidden;font-size:11px;font-weight:700;color:#fff" title="${m.name}: ${m.wk0}">${pct>=10?m.wk0:''}</div>`;
-          }).join('')
-        }</div>`
-      : `<div style="height:28px;border-radius:5px;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:11px;color:#dc2626;margin-bottom:10px;font-weight:500">Silent this week</div>`;
+    let barHtml;
+    if (barMods.length > 0) {
+      barHtml = `<div style="display:flex;height:28px;border-radius:5px;overflow:hidden;width:100%;margin-bottom:10px">${
+        barMods.map(m => {
+          const pct = totalBarCount>0 ? m.wk0/totalBarCount*100 : 0;
+          return `<div style="flex:${m.wk0};background:${modColor(m.name)};display:flex;align-items:center;justify-content:center;min-width:3px;overflow:hidden;font-size:11px;font-weight:700;color:#fff" title="${m.name}: ${m.wk0}">${pct>=10?m.wk0:''}</div>`;
+        }).join('')
+      }</div>`;
+    } else if (isSilent) {
+      // Stopped project — show "0" in red bar
+      barHtml = `<div style="height:28px;border-radius:5px;background:#fee2e2;display:flex;align-items:center;padding:0 12px;margin-bottom:10px"><span style="font-size:16px;font-weight:800;color:#dc2626;line-height:1">0</span></div>`;
+    } else {
+      barHtml = `<div style="height:28px;border-radius:5px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:11px;color:#9ca3af;margin-bottom:10px">No activity</div>`;
+    }
+
+    // Sort modules: active first (wk0 desc), stopped modules last
+    const sortedMods = [...proj.modules].sort((a,b) => {
+      if (a.isStopped && !b.isStopped) return 1;
+      if (!a.isStopped && b.isStopped) return -1;
+      return b.wk0 - a.wk0;
+    });
 
     // Module rows + collect stopped modules for chip at bottom
     let modRowsHtml = '';
     const stoppedChips = [];
-    for (const mod of proj.modules) {
+    for (const mod of sortedMods) {
       if (mod.wk0===0 && mod.wk1===0) continue;
       if (mod.isStopped) {
         // Goes into "Stopped this week" chip, not a regular row
@@ -1619,19 +1634,20 @@ function buildSnapCard(acc, trainer) {
         : '';
       const newModBadge = mod.isNewMod ? `<span style="background:#dbeafe;color:#1d4ed8;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:600">new module</span>` : '';
 
-      const topUsers = mod.users.filter(u=>u.wk0>0 || u.wk1>0).slice(0,3);
+      const visibleUsers = mod.users.filter(u=>u.wk0>0||u.wk1>0);
+      const topUsers = visibleUsers.slice(0,3);
       let userStr = '';
       if (topUsers.length>0) {
         const parts = topUsers.map(u => {
-          const isUnassigned = !u.user || u.user.toLowerCase()==='unassigned' || u.user==='Unknown';
+          const isUnassigned = !u.user || u.user==='' || u.user.toLowerCase()==='unassigned' || u.user.toLowerCase()==='unknown';
+          if (isUnassigned) return `<span style="color:#9ca3af;font-style:italic">unassigned</span>`;
           const dHtml = u.diff!==0 ? ` <span style="color:${u.diff>0?'#15803d':'#dc2626'};font-size:10px">${u.diff>0?'↑':'↓'}${Math.abs(u.diff)}</span>` : '';
           const newBadge = u.isNew ? ` <span style="background:#dbeafe;color:#1d4ed8;font-size:9px;padding:0 4px;border-radius:8px">new</span>` : '';
-          const procBadge = isUnassigned ? ` <span style="background:#f3f4f6;color:#6b7280;font-size:9px;padding:0 4px;border-radius:8px">${u.user||'unassigned'}</span>` : '';
-          if (isUnassigned) return procBadge || `<span style="color:#9ca3af;font-style:italic">unassigned</span>`;
           return `<b style="color:#374151">${u.user}</b> ${u.wk0}${dHtml}${newBadge}`;
         });
-        userStr = `<span style="color:#9ca3af;margin:0 5px">—</span>` + parts.join(`<span style="color:#d1d5db;margin:0 3px"> · </span>`);
-        if (mod.users.filter(u=>u.wk0>0||u.wk1>0).length>3) userStr += ` <span style="color:#9ca3af;font-size:10px">+${mod.users.filter(u=>u.wk0>0||u.wk1>0).length-3} more</span>`;
+        // Users separated by a space (matching original design)
+        userStr = `<span style="color:#9ca3af;margin:0 5px">—</span>` + parts.join(' ');
+        if (visibleUsers.length>3) userStr += ` <span style="color:#9ca3af;font-size:10px">+${visibleUsers.length-3} more</span>`;
       }
 
       modRowsHtml += `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:3px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:11.5px">
@@ -1639,6 +1655,18 @@ function buildSnapCard(acc, trainer) {
         <b style="color:#111827">${mod.name}</b>
         <span style="color:#374151;font-weight:600;margin-left:2px">${mod.wk0}</span>${mPctHtml}${newModBadge}${userStr}
       </div>`;
+    }
+
+    // ── All-unassigned check: if every visible user is unassigned/empty,
+    //    collapse module rows to "X modules · Y modules" summary (matches original design)
+    const renderedMods = sortedMods.filter(m => !(m.wk0===0 && m.wk1===0) && !m.isStopped);
+    const allUnassigned = renderedMods.length > 0 && renderedMods.every(m =>
+      m.users.filter(u=>u.wk0>0||u.wk1>0).every(u => !u.user || u.user==='' || u.user.toLowerCase()==='unassigned' || u.user.toLowerCase()==='unknown')
+    );
+    if (allUnassigned) {
+      const thisWeekMods = renderedMods.filter(m=>m.wk0>0).length;
+      const lastWeekMods = renderedMods.filter(m=>m.wk1>0).length;
+      modRowsHtml = `<div style="font-size:11px;color:#9ca3af;padding:5px 2px">${thisWeekMods} module${thisWeekMods!==1?'s':''} · ${lastWeekMods} module${lastWeekMods!==1?'s':''}</div>`;
     }
 
     // Stopped-this-week chip
@@ -1655,7 +1683,7 @@ function buildSnapCard(acc, trainer) {
         <span style="font-size:12px;white-space:nowrap;margin-left:10px">${proj.wk1} → <b style="color:${pNum!==null&&pNum<0?'#dc2626':'#111827'}">${proj.wk0}</b> <b style="color:${pCol};margin-left:4px">${pStr}</b></span>
       </div>
       ${barHtml}
-      ${modRowsHtml ? `<div style="border-top:1px solid #f3f4f6">${modRowsHtml}</div>` : ''}
+      ${modRowsHtml ? `<div style="${allUnassigned?'':'border-top:1px solid #f3f4f6'}">${modRowsHtml}</div>` : ''}
       ${stoppedHtml}
     </div>`;
   }
