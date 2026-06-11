@@ -1584,7 +1584,15 @@ function buildSnapCard(acc, trainer) {
 
   // ── Per-project sections — only projects with wk0>0 OR wk1>0 ──
   let projsHtml = '';
-  const activeProjects = snapProjects.filter(p => p.wk0 > 0 || p.wk1 > 0);
+  // Sort projects: active this week (wk0 desc), then stopped (wk1 desc), skip fully zero
+  const activeProjects = snapProjects
+    .filter(p => p.wk0 > 0 || p.wk1 > 0)
+    .sort((a, b) => {
+      // Stopped projects (wk0=0) go to the bottom, sorted by wk1 desc
+      if (a.wk0 === 0 && b.wk0 > 0) return 1;
+      if (b.wk0 === 0 && a.wk0 > 0) return -1;
+      return b.wk0 - a.wk0;
+    });
 
   for (const proj of activeProjects) {
     const pNum = proj.wk1>0 ? Math.round((proj.wk0-proj.wk1)/proj.wk1*100) : null;
