@@ -1805,17 +1805,21 @@ async function downloadSnapPDF() {
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     const w = card.offsetWidth;
     const h = card.scrollHeight;
-    const raw = await html2canvas(card, { scale:2, backgroundColor:'#f3f4f6', useCORS:true, logging:false, allowTaint:true });
-    // Normalise to max 900px wide so all PDFs stay consistent size for WhatsApp
-    const maxPx = 900;
-    const ratio  = Math.min(1, maxPx / raw.width);
-    const norm   = document.createElement('canvas');
-    norm.width   = Math.round(raw.width  * ratio);
-    norm.height  = Math.round(raw.height * ratio);
+    const raw = await html2canvas(card, { scale:1.5, backgroundColor:'#f3f4f6', useCORS:true, logging:false, allowTaint:true });
+    // Resize canvas so longest side <= 1200px
+    const longest = Math.max(raw.width, raw.height);
+    const r = longest > 1200 ? 1200 / longest : 1;
+    const norm = document.createElement('canvas');
+    norm.width  = Math.round(raw.width  * r);
+    norm.height = Math.round(raw.height * r);
     norm.getContext('2d').drawImage(raw, 0, 0, norm.width, norm.height);
+    // Auto-reduce JPEG quality until under 400 kB
+    let q = 0.85, imgData;
+    do { imgData = norm.toDataURL('image/jpeg', q); q -= 0.08; }
+    while (imgData.length > 550000 && q > 0.3);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation:'portrait', unit:'px', format:[w, h], hotfixes:['px_scaling'] });
-    pdf.addImage(norm.toDataURL('image/jpeg', 0.82), 'JPEG', 0, 0, w, h);
+    pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
     pdf.save(`snap_${snapAcc.name.replace(/[^a-z0-9]/gi,'_')}.pdf`);
   } finally {
     if (btn) { btn.textContent = '\uD83D\uDCC4 PDF'; btn.disabled = false; }
