@@ -1820,50 +1820,71 @@ function closeSnapModal() {
   snapAcc = null;
 }
 
-// ── Drop W0 popup — X = newly dropped, Y = full cold pool ────
-let _dropPopup = null;
+// ── Drop W0 inline expansion — opens BELOW the account row ────
+let _dropExpand = null; // { row: HTMLElement, aId, type }
+
 function showDropPopup(aId, type, evt) {
-  const entry = window.accRegistry[aId];
+  evt.stopPropagation();
+
+  // Toggle: clicking the same button again closes the panel
+  if (_dropExpand && _dropExpand.aId === aId && _dropExpand.type === type) {
+    closeDropPopup();
+    return;
+  }
+
   closeDropPopup();
+
+  const entry = window.accRegistry[aId];
   if (!entry) return;
 
   const isX = type === 'x';
   const users = isX ? (entry.acc.droppedXList || []) : (entry.acc.coldPoolList || []);
 
   const titleStr = isX
-    ? 'Newly dropped this week (W1 active → W0 silent)'
-    : 'Full cold pool (active any W1/W2/W3, silent W0)';
-  const footStr = isX
-    ? `${users.length} user${users.length!==1?'s':''} newly dropped`
-    : `${users.length} user${users.length!==1?'s':''} in cold pool`;
+    ? '↓ Newly dropped this week (active W1 → silent W0)'
+    : '❄ Full cold pool (active any W1/W2/W3, silent W0)';
+  const countStr = `${users.length} user${users.length!==1?'s':''} ${isX?'newly dropped':'in cold pool'}`;
 
-  const rowsHtml = users.length
-    ? users.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:5px 0;border-bottom:1px solid #1e2a40">
-        <span style="color:#e2e8f0">👤 ${u.user||'—'}</span>
-        <span style="color:#4a9edd;font-family:monospace">${u.mobile||''}</span>
+  // Find the account row in the DOM
+  const tr = document.querySelector(`tr.row-account[data-aid="${aId}"]`);
+  if (!tr) return;
+
+  // Build user grid (multi-column for large lists)
+  const userRowsHtml = users.length
+    ? users.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:20px;padding:5px 0;border-bottom:1px solid #1a2535">
+        <span style="color:#c8d8e8;font-size:12px">👤 ${u.user||'—'}</span>
+        <span style="color:#4a9edd;font-family:monospace;font-size:12px;white-space:nowrap">${u.mobile||''}</span>
       </div>`).join('')
-    : `<div style="color:#718096;font-style:italic;padding:6px 0">No users in this list</div>`;
+    : `<div style="color:#718096;font-style:italic;font-size:12px;padding:8px 0">No users in this list</div>`;
 
-  const html = `<div id="drop-popup" style="position:fixed;z-index:2000;background:#1a2035;border:1px solid ${isX?'#3d5a2a':'#2d4060'};border-radius:10px;padding:12px 16px;min-width:260px;max-width:340px;box-shadow:0 8px 30px #000a;font-size:12px">
-    <div style="font-size:10px;color:${isX?'#ed8936':'#4a9edd'};text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:700">${isX?'↓ ':'❄ '}${titleStr}</div>
-    ${rowsHtml}
-    <div style="margin-top:8px;font-size:10px;color:#4a5568;text-align:right">${footStr}</div>
-  </div>`;
+  const newTr = document.createElement('tr');
+  newTr.id = 'drop-expand-row';
+  newTr.style.cssText = 'border-bottom:2px solid ' + (isX?'#ed8936':'#4a9edd');
+  newTr.innerHTML = `<td colspan="20" style="padding:0;background:#0d1220">
+    <div style="padding:12px 24px 14px;background:#111827;border-top:2px solid ${isX?'#ed8936':'#4a9edd'};border-bottom:1px solid #1e2535">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:10px;color:${isX?'#ed8936':'#4a9edd'};text-transform:uppercase;letter-spacing:.6px;font-weight:700">${titleStr}</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:10px;color:#4a5568">${countStr}</span>
+          <button onclick="closeDropPopup()" style="background:#1e2535;border:1px solid #2d3748;border-radius:5px;color:#a0aec0;cursor:pointer;font-size:11px;padding:3px 10px;transition:all .15s" onmouseover="this.style.background='#2d3748'" onmouseout="this.style.background='#1e2535'">✕ Close</button>
+        </div>
+      </div>
+      <div style="columns:${users.length>10?2:1};column-gap:32px">${userRowsHtml}</div>
+    </div>
+  </td>`;
 
-  document.body.insertAdjacentHTML('beforeend', html);
-  _dropPopup = document.getElementById('drop-popup');
+  tr.after(newTr);
+  _dropExpand = { row: newTr, aId, type };
 
-  const r = evt.target.getBoundingClientRect();
-  const pw = 280;
-  const left = Math.min(r.left, window.innerWidth - pw - 10);
-  _dropPopup.style.left = Math.max(10, left) + 'px';
-  _dropPopup.style.top  = (r.bottom + 6) + 'px';
-
-  setTimeout(() => document.addEventListener('click', closeDropPopup, { once:true }), 50);
+  // Scroll smoothly to show the expansion
+  newTr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
 function closeDropPopup() {
-  if (_dropPopup) { _dropPopup.remove(); _dropPopup = null; }
-  document.removeEventListener('click', closeDropPopup);
+  if (_dropExpand) {
+    _dropExpand.row.remove();
+    _dropExpand = null;
+  }
 }
 </script>
 
