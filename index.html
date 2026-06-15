@@ -1794,95 +1794,39 @@ async function downloadSnapImage() {
   }
 }
 
-// ── Download snap as PDF — pure vector (no html2canvas) ────────
+// ── Download snap as PDF — html2canvas multi-page A4 ───────────
 async function downloadSnapPDF() {
-  if (!snapAcc) return;
+  const card = document.getElementById('snap-card');
+  if (!card || !snapAcc) return;
   const btn = document.getElementById('snap-pdf-btn');
   if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
   try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const canvas = await html2canvas(card, {
+      scale: 2, backgroundColor: '#f3f4f6', useCORS: true, logging: false, allowTaint: true
+    });
     const { jsPDF } = window.jspdf;
-    const acc=snapAcc, trainer=snapTrainer;
-    const { snapProjects,silentProjects,stoppedModules,biggestDrops,topMover,watchOut }=computeSnapData(acc);
-    const pctChange=acc.wk1>0?Math.round((acc.wk0-acc.wk1)/acc.wk1*100):null;
-    const weekStr=getWeekEndingStr();
-    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const PW=210,PH=297,M=13,CW=PW-M*2; let y=M;
-    function hr(hex){const h=hex.replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
-    function fr(x,yy,w,h,hex){const[r,g,b]=hr(hex);pdf.setFillColor(r,g,b);pdf.rect(x,yy,w,h,'F');}
-    function sr(x,yy,w,h,hex,lw=0.15){const[r,g,b]=hr(hex);pdf.setDrawColor(r,g,b);pdf.setLineWidth(lw);pdf.rect(x,yy,w,h,'S');}
-    function tx(str,x,yy,opts={}){const{sz=9,bold=false,col='#111827',align='left',mw=0}=opts;const[r,g,b]=hr(col);pdf.setFontSize(sz);pdf.setFont('helvetica',bold?'bold':'normal');pdf.setTextColor(r,g,b);const s=String(str||'');if(mw>0){const lines=pdf.splitTextToSize(s,mw);pdf.text(lines[0]+(lines.length>1?'...':''),x,yy,{align});}else{pdf.text(s,x,yy,{align});}}
-    function chk(need){if(y+need>PH-M){pdf.addPage();y=M;}}
-    fr(M,y,CW,24,'#1a2e4a');
-    tx(acc.name,M+5,y+9,{sz:13,bold:true,col:'#ffffff',mw:CW*0.62});
-    tx('Powerplay Weekly Snap  ·  '+(trainer||''),M+5,y+17,{sz:7.5,col:'#93c5fd',mw:CW*0.62});
-    tx('W0',PW-M-5,y+8,{sz:7,col:'#94a3b8',align:'right'});
-    tx(String(acc.wk0),PW-M-5,y+16,{sz:18,bold:true,col:'#ffffff',align:'right'});
-    if(pctChange!==null){tx((pctChange>=0?'↑':'↓')+Math.abs(pctChange)+'%  vs W1:'+acc.wk1,PW-M-5,y+22,{sz:8,col:pctChange>=0?'#86efac':'#fca5a5',align:'right'});}
-    y+=27;
-    if(weekStr){tx('Week ending: '+weekStr,M,y+4,{sz:8,col:'#6b7280'});y+=7;}
-    const hasAtt=silentProjects.length>0||stoppedModules.length>0||biggestDrops.length>0;
-    chk(14);y+=2;
-    if(hasAtt){
-      fr(M,y,2.5,12,'#ef4444');fr(M+2.5,y,CW-2.5,12,'#fff7ed');
-      tx('⚠  NEEDS ATTENTION',M+5,y+4.5,{sz:7.5,bold:true,col:'#b45309'});
-      const parts=[];
-      if(silentProjects.length)parts.push('Silent: '+silentProjects.map(p=>p.name).slice(0,4).join(', '));
-      if(stoppedModules.length)parts.push('Stopped: '+stoppedModules.slice(0,3).map(m=>m.module+' on '+m.project).join(' · '));
-      if(biggestDrops.length)parts.push('Drops: '+biggestDrops.slice(0,2).map(d=>d.user+' ↓'+d.drop).join(' · '));
-      tx(parts.join('   |   '),M+5,y+9.5,{sz:7.5,col:'#78350f',mw:CW-8});y+=15;
-    }else{
-      fr(M,y,CW,9,'#f0fdf4');sr(M,y,CW,9,'#bbf7d0');
-      tx('✅  ALL CLEAR — No significant drops this week',M+CW/2,y+5.5,{sz:8.5,bold:true,col:'#15803d',align:'center'});y+=12;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = 210, pageH = 297;
+    const pxPerMm = canvas.width / pageW;
+    const pageHpx = Math.floor(pageH * pxPerMm);
+    const totalPages = Math.ceil(canvas.height / pageHpx);
+    for (let p = 0; p < totalPages; p++) {
+      if (p > 0) pdf.addPage();
+      const srcY = p * pageHpx;
+      const sliceH = Math.min(pageHpx, canvas.height - srcY);
+      const slice = document.createElement('canvas');
+      slice.width = canvas.width; slice.height = sliceH;
+      const ctx = slice.getContext('2d');
+      ctx.fillStyle = '#f3f4f6'; ctx.fillRect(0, 0, canvas.width, sliceH);
+      ctx.drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      pdf.addImage(slice.toDataURL('image/png'), 'PNG', 0, 0, pageW, sliceH / pxPerMm);
     }
-    chk(8);let lx=M;y+=2;
-    for(const[k,v]of Object.entries(MOD_COLORS)){fr(lx,y+1,3,3,v);tx(k,lx+4.5,y+4.5,{sz:7.5,col:'#374151'});lx+=4.5+k.length*1.75+3;}
-    y+=8;
-    const activeProjects=snapProjects.filter(p=>p.wk0>0||p.wk1>0).sort((a,b)=>{if(a.wk0===0&&b.wk0>0)return 1;if(b.wk0===0&&a.wk0>0)return -1;return b.wk0-a.wk0;});
-    for(const proj of activeProjects){
-      chk(20);
-      const pNum=proj.wk1>0?Math.round((proj.wk0-proj.wk1)/proj.wk1*100):null;
-      const pStr=pNum!==null?(pNum>=0?'↑ '+pNum+'%':'↓ '+Math.abs(pNum)+'%'):(proj.wk0>0?'new':'—');
-      const pCol=pNum===null?'#6b7280':pNum>=0?'#16a34a':'#dc2626';
-      const isSilent=proj.wk0===0&&proj.wk1>0;
-      fr(M,y,CW,8,isSilent?'#fff5f5':'#f9fafb');sr(M,y,CW,8,isSilent?'#fca5a5':'#e5e7eb');
-      tx((isSilent?'⚠  ':'')+proj.name,M+3,y+5.5,{sz:9.5,bold:true,col:isSilent?'#dc2626':'#111827',mw:CW*0.58});
-      tx(proj.wk1+' → '+proj.wk0+'   '+pStr,PW-M-3,y+5.5,{sz:8.5,col:pCol,align:'right'});
-      y+=9;
-      const barMods=proj.modules.filter(m=>m.wk0>0).sort((a,b)=>b.wk0-a.wk0);
-      const totalBar=barMods.reduce((s,m)=>s+m.wk0,0);const BH=5;
-      if(barMods.length>0){let bx=M;for(const bm of barMods){const bw=(bm.wk0/totalBar)*CW;fr(bx,y,bw,BH,modColor(bm.name));if(bw>8)tx(String(bm.wk0),bx+bw/2,y+3.5,{sz:6.5,bold:true,col:'#ffffff',align:'center'});bx+=bw;}}
-      else if(isSilent){fr(M,y,CW,BH,'#fee2e2');tx('0',M+CW/2,y+3.5,{sz:7.5,bold:true,col:'#dc2626',align:'center'});}
-      else{fr(M,y,CW,BH,'#f3f4f6');}
-      y+=BH+2;
-      const sortedMods=[...proj.modules].sort((a,b)=>{if(a.isStopped&&!b.isStopped)return 1;if(!a.isStopped&&b.isStopped)return -1;return b.wk0-a.wk0;});
-      const stoppedChips=[];
-      for(const mod of sortedMods){
-        if(mod.wk0===0&&mod.wk1===0)continue;
-        if(mod.isStopped){const who=mod.users.filter(u=>u.wk1>0).map(u=>u.user+' '+u.wk1).join(', ');stoppedChips.push(mod.name+(who?' (was '+who+')':''));continue;}
-        chk(6);
-        fr(M+2,y+1.5,2.5,2.5,modColor(mod.name));
-        tx(mod.name+'  '+mod.wk0,M+6,y+4.5,{sz:8.5,col:'#111827'});
-        if(mod.wk1>0){const mp=Math.round((mod.wk0-mod.wk1)/mod.wk1*100);tx((mp>=0?'↑':'↓')+Math.abs(mp)+'%',M+52,y+4.5,{sz:7.5,col:mp>=0?'#15803d':'#dc2626'});}
-        const visU=mod.users.filter(u=>u.wk0>0||u.wk1>0).slice(0,3);
-        if(visU.length){tx('— '+visU.map(u=>(u.user||'unassigned')+' '+u.wk0).join('  '),M+68,y+4.5,{sz:7.5,col:'#6b7280',mw:CW-68});}
-        y+=5.5;
-      }
-      if(stoppedChips.length){chk(6);tx('⚠  Stopped: '+stoppedChips.join(' · '),M+3,y+4,{sz:7.5,col:'#92400e',mw:CW-5});y+=6;}
-      y+=4;
-    }
-    if(topMover||watchOut){
-      chk(24);y+=2;tx("✨  THIS WEEK'S HIGHLIGHTS",M,y+4,{sz:7.5,bold:true,col:'#6b7280'});y+=8;
-      const hw=(CW-4)/2;
-      if(topMover){fr(M,y,hw,18,'#f0fdf4');sr(M,y,hw,18,'#bbf7d0');tx('🏆  TOP MOVER',M+4,y+5.5,{sz:7,bold:true,col:'#15803d'});tx(topMover.user,M+4,y+11,{sz:9,bold:true,col:'#111827',mw:hw-6});tx(topMover.project+' · '+topMover.module+' ↑'+topMover.pct+'%',M+4,y+16,{sz:7.5,col:'#374151',mw:hw-6});}
-      if(watchOut){const wx=M+hw+4;fr(wx,y,hw,18,'#fff5f5');sr(wx,y,hw,18,'#fca5a5');tx('⚠  WATCH OUT',wx+4,y+5.5,{sz:7,bold:true,col:'#dc2626'});tx(watchOut.project,wx+4,y+11,{sz:9,bold:true,col:'#111827',mw:hw-6});tx(watchOut.issue,wx+4,y+16,{sz:7.5,col:'#374151',mw:hw-6});}
-      y+=20;
-    }
-    const fy=Math.min(y+4,PH-10);fr(M,fy,CW,0.2,'#e5e7eb');
-    tx('Generated by Powerplay Trainer Dashboard  ·  '+new Date().toLocaleDateString('en-IN'),M,fy+5,{sz:7,col:'#9ca3af'});
-    const today=new Date(),ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-    pdf.save('snap_'+acc.name.replace(/[^a-z0-9]/gi,'_')+'_'+ds+'.pdf');
-  } finally { if(btn){btn.textContent='📄 PDF';btn.disabled=false;} }
+    const today = new Date();
+    const ds = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    pdf.save('snap_' + snapAcc.name.replace(/[^a-z0-9]/gi,'_') + '_' + ds + '.pdf');
+  } finally { if (btn) { btn.textContent = '📄 PDF'; btn.disabled = false; } }
 }
 function closeSnapModal() {
   document.getElementById('snap-modal').classList.remove('open');
