@@ -225,7 +225,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="sync-dot" id="sync-dot"></div>
       <span class="sync-label" id="sync-label">Ready</span>
     </div>
-    <button class="tmpl-btn" onclick="openTemplateModal()">✉ Email Templates</button>
+    
     <button id="sync-btn" onclick="manualSync()" style="display:flex;align-items:center;gap:7px;padding:7px 16px;background:#4299e1;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">
       🔄 Sync Now
     </button>
@@ -589,7 +589,7 @@ function renderPanel(tName, tData, tid) {
       ${nTD(acc.wk0,true)}${nTD(acc.wk1)}${nTD(acc.wk2)}${nTD(acc.wk3)}
       ${dTD(acc.diff)}${pTD(acc.pct)}
       <td>${trend(acc.wk0,acc.wk1,acc.wk2,acc.wk3)}</td>
-      <td>${pb(acc.priority)} <button class="send-btn" onclick="event.stopPropagation();openSendModal('${aId}')" title="Send email to account owner">✉</button></td>
+      <td>${pb(acc.priority)} </td>
       ${nTD(acc.activeW0)}
       ${dropCell}
       ${nTD(acc.connW0)}
