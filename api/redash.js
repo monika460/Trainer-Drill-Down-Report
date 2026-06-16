@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
     // Redash expects parameters WITHOUT the "p_" prefix in the POST body
     const postBody = JSON.stringify({
       parameters: DEFAULT_PARAMS,
-      max_age: 2592000  // use ANY cached result (up to 30 days old) — avoids re-running broken query
+      max_age: 0  // use ANY cached result (up to 30 days old) — avoids re-running broken query
     });
 
     const postRaw  = await redashRequest('POST', `/api/queries/${QUERY_ID}/results`, postBody);
