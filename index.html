@@ -2,27 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Trainer DrillDown — Live</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trainer DrillDown — Live Dashboard</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh;font-size:13px}
 
 /* ── Header ── */
-.header{background:linear-gradient(135deg,#1a1f2e,#16213e);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2d3748;position:sticky;top:0;z-index:300}
+.header{background:linear-gradient(135deg,#1a1f2e,#16213e);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2d3748;position:sticky;top:0;z-index:300;flex-wrap:wrap;gap:10px}
 .header h1{font-size:17px;font-weight:700;color:#fff}
 .header-sub{font-size:11px;color:#718096;margin-top:2px}
-.sync-bar{display:flex;align-items:center;gap:14px}
-.sync-dot{width:8px;height:8px;border-radius:50%;background:#48bb78;animation:pulse 1.5s infinite}
+.sync-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#48bb78;animation:pulse 1.5s infinite;flex-shrink:0}
 .sync-dot.error{background:#fc5353;animation:none}
-.sync-dot.loading{background:#ecc94b}
+.sync-dot.loading{background:#ecc94b;animation:pulse .5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .sync-label{font-size:11px;color:#718096}
-.countdown{font-size:11px;color:#4299e1;font-weight:600;width:20px;text-align:right}
+.countdown{font-size:13px;color:#4299e1;font-weight:700;min-width:18px;text-align:right}
 .last-sync{font-size:10px;color:#4a5568}
-.gstats{display:flex;gap:16px}
-.gs{text-align:center}.gs .v{font-size:18px;font-weight:700}.gs .l{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.4px}
+.gstats{display:flex;gap:14px;flex-wrap:wrap}
+.gs{text-align:center}.gs .v{font-size:16px;font-weight:700}.gs .l{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.4px}
 
 /* ── Tabs ── */
 .tabs{display:flex;background:#1a1f2e;border-bottom:2px solid #2d3748;padding:0 24px;position:sticky;top:57px;z-index:200;overflow-x:auto}
@@ -50,6 +49,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* ── Summary cards ── */
 .sumcards{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:12px 24px;background:#12161f;border-bottom:1px solid #1a2033}
+@media(max-width:900px){.sumcards{grid-template-columns:repeat(4,1fr)}}
 .sc{background:#1a1f2e;border:1px solid #2d3748;border-radius:8px;padding:8px 12px;text-align:center}
 .sc .sv{font-size:20px;font-weight:700}.sc .sl{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
 .sc.crit{border-color:#fc5353;background:#1e0c0c}.sc.crit .sv{color:#fc5353}
@@ -66,11 +66,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tree-table th{padding:8px 10px;text-align:left;color:#4a5568;font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1a2033;background:#10141c;white-space:nowrap}
 .tree-table th.r{text-align:right}
 
-/* section */
+/* section rows */
 .row-section td{background:#0d1218;color:#3a5070;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;padding:6px 12px;border-bottom:1px solid #1a2033}
 .row-section.sd td{background:#1e0c0c;color:#ff6b6b;border-left:3px solid #ff6b6b}
 
-/* account */
+/* account rows */
 .row-account{border-bottom:1px solid #1e2535;cursor:pointer;transition:background .1s}
 .row-account:hover{background:#1a2030}
 .row-account td{padding:8px 10px;vertical-align:middle}
@@ -80,7 +80,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .acc-name{font-weight:600;color:#e2e8f0}
 .acc-sub{font-size:10px;color:#4a5568;margin-left:5px}
 
-/* project */
+/* project rows */
 .row-project{display:none;border-bottom:1px solid #161d2a;cursor:pointer;transition:background .1s}
 .row-project:hover{background:#161d28}.row-project.vis{display:table-row}
 .row-project td{padding:6px 10px 6px 32px;vertical-align:middle;background:#0f1420}
@@ -89,19 +89,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .proj-name{color:#c0cfe0;font-size:12px}
 .bdrop{background:#2d0f0f;color:#fc5353;border:1px solid #fc535355;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:5px;font-weight:600}
 .bstable{background:#0d2018;color:#48bb78;border:1px solid #48bb7855;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:5px}
-.bstabledrop{background:#2d0f0f;color:#ff6b6b;border:1px solid #ff6b6b;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:5px;font-weight:700}
+.bstabledrop{background:#2d0f0f;color:#ff6b6b;border:1px solid #ff6b6b55;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:5px;font-weight:700}
 
-/* module */
+/* module rows */
 .row-module{display:none;border-bottom:1px solid #131822}.row-module.vis{display:table-row}
 .row-module td{padding:5px 10px 5px 56px;vertical-align:middle;background:#0b1018}
 .mod-tog{width:14px;height:14px;background:#1a2030;margin-right:4px}.mod-tog:hover{background:#1a3a5a;color:#fff}
 .mod-name{color:#7a9ab0;font-size:11px}
 
-/* event/user */
+/* event/user rows */
 .row-event{display:none;border-bottom:1px solid #10151f}.row-event.vis{display:table-row}
 .row-event td{padding:5px 10px 5px 78px;vertical-align:middle;background:#080c14}
 .evt-name{color:#5a7090;font-size:11px;font-family:monospace}
-.ubox{margin-top:3px;display:inline-flex;align-items:center;gap:8px;background:#0f1828;border:1px solid #1e3050;border-radius:5px;padding:3px 8px}
+.ubox{margin-top:3px;display:inline-flex;align-items:center;gap:6px;background:#0f1828;border:1px solid #1e3050;border-radius:5px;padding:3px 8px;flex-wrap:wrap}
 .uname{color:#7eb8e0;font-size:12px;font-weight:600}
 .uphone{color:#4a9edd;font-size:12px;font-weight:700;letter-spacing:.4px}
 
@@ -120,7 +120,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .neg{color:#fc5353}.pos{color:#48bb78}.neu{color:#4a5568}.zred{color:#fc535355}
 .sm{font-size:11px}
 
-/* trend */
+/* trend bars */
 .trend{display:flex;align-items:flex-end;gap:2px;height:18px;min-width:40px}
 .tbar{flex:1;border-radius:1px 1px 0 0;min-height:2px;min-width:5px}
 
@@ -128,146 +128,76 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .overlay{position:fixed;inset:0;background:#0f1117ee;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
 .spinner{width:40px;height:40px;border:3px solid #2d3748;border-top-color:#4299e1;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.err-box{background:#1e0c0c;border:1px solid #fc5353;border-radius:10px;padding:20px 28px;max-width:480px;text-align:center}
-.err-box h3{color:#fc5353;margin-bottom:8px}
-.err-box p{color:#a0aec0;font-size:12px;line-height:1.6}
+.err-box{background:#1e0c0c;border:1px solid #fc5353;border-radius:10px;padding:24px 32px;max-width:500px;text-align:center}
+.err-box h3{color:#fc5353;margin-bottom:10px;font-size:15px}
+.err-box p{color:#a0aec0;font-size:12px;line-height:1.7}
 .panel{display:none}.panel.active{display:block}
 .last-disp{font-size:10px;color:#4a6080;white-space:nowrap}
 .dispo{font-size:10px;color:#556070;font-style:italic;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* ── Snap Button (in account row) ── */
-.sg-snap-btn{background:#1a2a4a;border:1px solid #2d4a7a;color:#7eb8e0;padding:3px 8px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap}
-.sg-snap-btn:hover{background:#2563eb;border-color:#2563eb;color:#fff}
+/* ── Email feature ── */
+.send-btn{background:transparent;border:1px solid #2d4a6a;border-radius:5px;color:#4a8ab0;cursor:pointer;font-size:11px;padding:2px 6px;margin-left:6px;transition:all .15s;vertical-align:middle}
+.send-btn:hover{background:#1a3a5a;color:#7eb8e0;border-color:#4a8ab0}
+/* Snap button */
+.snap-btn{background:#1a3050;border:1px solid #2d5080;border-radius:6px;color:#4a90d0;cursor:pointer;font-size:11px;padding:3px 9px;transition:all .15s;white-space:nowrap}
+.snap-btn:hover{background:#1e4a7a;color:#7eb8f0;border-color:#4a90d0}
+/* Coverage badge */
+.cvbadge{display:inline-block;padding:2px 6px;border-radius:8px;font-size:10px;font-weight:600}
+.cvbadge.cv0{background:#2d0f0f;color:#fc5353;border:1px solid #fc5353}
+.cvbadge.cv50{background:#2d1a00;color:#ed8936;border:1px solid #ed8936}
+.cvbadge.cvok{background:#0a2818;color:#48bb78;border:1px solid #48bb78}
+/* Snap modal — light themed to match card design */
+#snap-modal .modal{width:780px;background:#f3f4f6;border:1px solid #e5e7eb}
+#snap-modal .modal-head{background:#f3f4f6;border-bottom:1px solid #e5e7eb}
+#snap-modal .modal-head h2{color:#111827;font-size:14px}
+#snap-modal .modal-close{color:#6b7280}
+#snap-modal .modal-close:hover{color:#111827;background:#e5e7eb}
+#snap-modal .modal-body{background:#f3f4f6;padding:16px 20px 4px;overflow-x:auto}
+#snap-modal .modal-foot{background:#f3f4f6;border-top:1px solid #e5e7eb}
+.tmpl-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#1a2535;border:1px solid #2d3f55;border-radius:8px;color:#a0aec0;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
+.tmpl-btn:hover{background:#1e2e45;color:#e2e8f0;border-color:#4299e1}
 
-/* ── Snap Modal ── */
-.sg-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.72);display:none;align-items:flex-start;justify-content:center;z-index:1000;padding:30px 20px;overflow-y:auto}
-.sg-modal-bg.show{display:flex}
-.sg-modal{background:#fff;border-radius:16px;padding:24px;max-width:700px;width:100%;color:#1F2937}
-.sg-modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.sg-modal-head h2{font-size:17px;font-weight:600;color:#1F2937}
-.sg-close-btn{background:none;border:none;font-size:26px;cursor:pointer;color:#6B7280;line-height:1}
-.sg-detail-row{display:flex;align-items:center;flex-wrap:wrap;margin-bottom:12px;gap:8px}
-.sg-detail-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#4B5563;cursor:pointer;padding:6px 10px;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:999px;user-select:none}
-.sg-detail-toggle input{margin:0;cursor:pointer}
-.sg-size-hint{display:none;font-size:11px;color:#92400E;background:#FEF3C7;padding:4px 10px;border-radius:999px}
-.sg-size-hint.ok{color:#14532D;background:#DCFCE7}
+/* Modal overlay */
+.modal-bg{position:fixed;inset:0;background:#000c;z-index:600;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;width:620px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px #000a}
+#send-modal .modal{width:940px}
+.modal-head{padding:18px 22px 14px;border-bottom:1px solid #2d3748;display:flex;align-items:center;justify-content:space-between}
+.modal-head h2{font-size:15px;font-weight:600;color:#e2e8f0}
+.modal-close{background:transparent;border:none;color:#718096;font-size:18px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px}
+.modal-close:hover{color:#e2e8f0;background:#2d3748}
+.modal-body{padding:20px 22px}
+.modal-foot{padding:14px 22px;border-top:1px solid #2d3748;display:flex;gap:10px;justify-content:flex-end}
 
-/* Snap card */
-.sg-snap-card{background:#fff;border-radius:16px;padding:22px;max-width:580px;margin:0 auto;border:0.5px solid #E5E7EB;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-.sg-snap-header{text-align:center;padding-bottom:14px;border-bottom:0.5px solid #ECECE6}
-.sg-snap-brand{font-size:11px;color:#2563EB;letter-spacing:1.5px;font-weight:600}
-.sg-snap-acct{font-size:18px;font-weight:600;margin-top:6px;color:#1F2937}
-.sg-snap-meta{font-size:12px;color:#6B6B68;margin-top:2px}
+/* Template tabs */
+.tmpl-tabs{display:flex;gap:4px;margin-bottom:16px}
+.ttab{padding:6px 14px;border-radius:6px;border:1px solid #2d3748;background:transparent;color:#718096;font-size:12px;cursor:pointer;transition:all .15s}
+.ttab:hover{color:#e2e8f0;background:#252d3d}
+.ttab.active{background:#0a2040;border-color:#4299e1;color:#4299e1}
+.ttab.active.drop{background:#2d0f0f;border-color:#fc5353;color:#fc5353}
+.ttab.active.inactive{background:#1a1a1a;border-color:#718096;color:#a0aec0}
 
-.sg-hero-vs{padding:18px 0 16px}
-.sg-hero-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
-.sg-hero-side{text-align:center}
-.sg-hero-side-label{font-size:11px;letter-spacing:.5px;font-weight:500}
-.sg-hero-side-num{font-size:44px;font-weight:700;line-height:1.1}
-.sg-yest-label{color:#6B7280}.sg-yest-num{color:#6B7280}
-.sg-today-label{color:#16A34A;font-weight:600}.sg-today-num{color:#16A34A}
-.sg-today-label.down{color:#DC2626}.sg-today-num.down{color:#DC2626}
-.sg-hero-arrow{font-size:32px;color:#16A34A}
-.sg-hero-arrow.down{color:#DC2626}
-.sg-hero-strip{margin-top:12px;padding:8px;border-radius:8px;text-align:center;font-size:13px;font-weight:600}
-.sg-hero-strip.up{background:#DCFCE7;color:#14532D}
-.sg-hero-strip.down{background:#FEE2E2;color:#7F1D1D}
-.sg-hero-strip.flat{background:#F3F4F6;color:#374151}
+/* Form fields */
+.frow{margin-bottom:14px}
+.frow label{display:block;font-size:11px;color:#718096;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.frow input,.frow textarea{width:100%;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:8px 10px;font-size:12px;outline:none;resize:vertical}
+.frow input:focus,.frow textarea:focus{border-color:#4299e1}
+.frow textarea{min-height:120px;font-family:inherit;line-height:1.6}
+.ph-hint{font-size:10px;color:#4a5568;margin-top:4px}
 
-.sg-watchlist{margin:14px 0 4px;padding:12px 14px;border-radius:10px;border-left:3px solid #F59E0B;background:#FEF3C7}
-.sg-watchlist.danger{border-left-color:#DC2626;background:#FEE2E2}
-.sg-watchlist.clear{border-left-color:#16A34A;background:#DCFCE7}
-.sg-wl-title{font-size:11px;font-weight:700;color:#7C2D12;letter-spacing:.6px;margin-bottom:6px}
-.sg-watchlist.danger .sg-wl-title{color:#7F1D1D}
-.sg-watchlist.clear .sg-wl-title{color:#14532D}
-.sg-wl-item{font-size:12px;line-height:1.6;color:#1F2937}
-.sg-wl-item+.sg-wl-item{margin-top:2px}
-.sg-wl-item b{font-weight:700}
-.sg-wl-item .lbl{font-weight:700;color:#7C2D12;margin-right:4px}
-.sg-watchlist.danger .sg-wl-item .lbl{color:#7F1D1D}
+/* Send preview */
+.preview-field{background:#0f1420;border:1px solid #2d3748;border-radius:6px;padding:10px 12px;margin-bottom:10px}
+.preview-label{font-size:10px;color:#4a5568;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.preview-val{font-size:12px;color:#e2e8f0;white-space:pre-wrap;line-height:1.6}
+.preview-val.subject{color:#7eb8e0;font-weight:600}
 
-.sg-legend-wrap{padding-top:14px;border-top:0.5px solid #ECECE6}
-.sg-legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-bottom:14px;font-size:11px;color:#1F2937}
-.sg-legend-box{display:inline-block;width:12px;height:9px;border-radius:3px;vertical-align:middle;margin-right:5px}
-
-.sg-project-row{margin-bottom:14px;padding-bottom:12px;border-bottom:0.5px dashed #ECECE6}
-.sg-project-row:last-child{border-bottom:none;padding-bottom:0}
-.sg-project-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.sg-project-name{font-size:13px;font-weight:600;color:#1F2937}
-.sg-project-name.warn{color:#991B1B}
-.sg-project-delta{font-size:12px}
-.sg-delta-from{color:#6B7280}
-.sg-delta-pill{font-weight:700;padding:2px 8px;border-radius:999px;font-size:11px;margin-left:4px}
-.sg-delta-pill.up{background:#DCFCE7;color:#14532D}
-.sg-delta-pill.down{background:#FEE2E2;color:#991B1B}
-.sg-delta-pill.flat{background:#F3F4F6;color:#4B5563}
-
-.sg-stack-bar{display:flex;height:22px;border-radius:6px;overflow:hidden}
-.sg-stopped-line{font-size:10px;color:#991B1B;margin-top:6px;line-height:1.4}
-.sg-stopped-line strong{font-weight:600}
-.sg-stopped-pill{display:inline-block;background:#FEE2E2;color:#991B1B;padding:1px 7px;border-radius:999px;margin-right:4px;margin-top:2px;font-weight:500}
-.sg-breakdown{margin-top:8px;font-size:11.5px;line-height:1.65;display:grid;gap:4px}
-.sg-bd-line{display:grid;grid-template-columns:10px 1fr;gap:7px;align-items:baseline}
-.sg-bd-dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-top:4px}
-.sg-bd-text{color:#1F2937}
-.sg-bd-mod{font-weight:700;color:#111827}
-.sg-bd-cnt-big{font-weight:700;color:#111827;font-variant-numeric:tabular-nums;margin-left:2px}
-.sg-bd-em-dash{color:#D1D5DB;margin:0 2px}
-.sg-bd-sep{color:#D1D5DB;margin:0 5px}
-.sg-user-name{color:#1F2937;font-weight:500}
-.sg-user-name.drop{color:#991B1B;font-weight:700}
-.sg-user-cnt{color:#111827;font-weight:700;font-variant-numeric:tabular-nums;margin-left:2px}
-.sg-user-badge{font-size:9.5px;padding:1px 5px;border-radius:999px;font-weight:700;margin-left:3px;vertical-align:1px}
-.sg-user-badge.up{background:#DCFCE7;color:#15803D}
-.sg-user-badge.down{background:#FEE2E2;color:#991B1B}
-.sg-user-badge.new{background:#DBEAFE;color:#1D4ED8}
-.sg-mod-badge{font-size:10px;padding:1px 6px;border-radius:999px;font-weight:700;margin-left:5px;vertical-align:1px}
-.sg-mod-badge.up{background:#DCFCE7;color:#15803D}
-.sg-mod-badge.down{background:#FEE2E2;color:#991B1B}
-.sg-bd-unassigned{color:#9CA3AF;font-style:italic}
-.sg-mod-seg{display:flex;border-right:2px solid #fff;min-width:0;overflow:hidden}
-.sg-mod-seg:last-child{border-right:none}
-.sg-user-cell{text-align:center;line-height:28px;color:#fff;font-size:10px;font-weight:600;border-right:1px solid rgba(255,255,255,0.4);min-width:0;overflow:hidden;white-space:nowrap;padding:0 4px;text-overflow:clip}
-.sg-collapsed-summary{font-size:11.5px;color:#4B5563;margin-top:6px;line-height:1.5}
-.sg-collapsed-summary b{color:#1F2937;font-weight:600}
-
-.sg-highlights{margin-top:16px;padding-top:14px;border-top:0.5px solid #ECECE6}
-.sg-highlights-title{font-size:11px;font-weight:600;color:#6B6B68;letter-spacing:1px;margin-bottom:10px}
-.sg-highlights-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.sg-highlight-card{border-radius:10px;padding:10px 12px}
-.sg-highlight-card.good{background:#DCFCE7}
-.sg-highlight-card.warn{background:#FEF2F2}
-.sg-h-label{font-size:10px;font-weight:700;letter-spacing:.5px}
-.sg-highlight-card.good .sg-h-label{color:#15803D}
-.sg-highlight-card.warn .sg-h-label{color:#991B1B}
-.sg-h-name{font-size:14px;font-weight:700;margin-top:4px}
-.sg-highlight-card.good .sg-h-name{color:#14532D}
-.sg-highlight-card.warn .sg-h-name{color:#7F1D1D}
-.sg-h-sub{font-size:11px}
-.sg-highlight-card.good .sg-h-sub{color:#15803D}
-.sg-highlight-card.warn .sg-h-sub{color:#991B1B}
-
-.sg-caption-strip{margin-top:14px;padding:12px 14px;border-radius:0 8px 8px 0}
-.sg-caption-strip.healthy{background:#DCFCE7;border-left:3px solid #16A34A;color:#14532D}
-.sg-caption-strip.risk{background:#FEF3C7;border-left:3px solid #F59E0B;color:#78350F}
-.sg-caption-strip.declining{background:#FEE2E2;border-left:3px solid #DC2626;color:#7F1D1D}
-.sg-caption-strip .ct{font-size:13px;line-height:1.5}
-
-/* Caption editor */
-.sg-caption-editor{margin-top:16px;padding:12px 14px;border:1px dashed #B5B5AE;border-radius:10px;background:#FAFAF7}
-.sg-caption-editor-label{font-size:11px;font-weight:600;color:#4B5563;margin-bottom:6px;letter-spacing:.4px}
-.sg-caption-textarea{width:100%;border:none;background:transparent;resize:vertical;min-height:60px;font-family:inherit;font-size:13px;line-height:1.6;outline:none;color:#1F2937}
-
-/* Actions */
-.sg-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
-.sg-btn{flex:1;min-width:140px;padding:12px 8px;border-radius:10px;border:none;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px}
-.sg-btn-primary{background:#2563EB;color:#fff}
-.sg-btn-primary:hover{background:#1D4ED8}
-.sg-btn-secondary{background:#fff;color:#1F2937;border:1px solid #E5E7EB}
-.sg-btn-secondary:hover{background:#F9FAFB}
-
-.sg-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1F2937;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;z-index:2000}
-.sg-toast.show{opacity:1}
+.btn-primary{padding:8px 18px;background:#4299e1;border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-primary:hover{background:#3182ce}
+.btn-secondary{padding:8px 18px;background:transparent;border:1px solid #2d3748;border-radius:7px;color:#a0aec0;font-size:13px;cursor:pointer;transition:all .2s}
+.btn-secondary:hover{color:#e2e8f0;border-color:#4a5568}
+.email-input-row{display:flex;gap:8px;margin-bottom:14px}
+.email-input-row input{flex:1;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:7px 10px;font-size:12px;outline:none}
+.email-input-row input:focus{border-color:#4299e1}
 </style>
 </head>
 <body>
@@ -284,19 +214,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div style="display:flex;align-items:center;gap:10px">
       <span style="font-size:22px">📊</span>
       <div>
-        <h1>Trainer DrillDown — Live Dashboard</h1>
-        <div class="header-sub">Auto-syncing via Vercel · Query #1468 · Account → Project → Module → Event → User</div>
+        <h1>Trainer DrillDown Dashboard</h1>
+        <div class="header-sub">Redash Query #1454 · Account → Project → Module → Event → User · 📸 Snap per account</div>
       </div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:20px">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="last-sync" id="last-sync">Not yet synced</div>
     <div class="sync-bar">
       <div class="sync-dot" id="sync-dot"></div>
-      <span class="sync-label">Next sync in</span>
-      <span class="countdown" id="countdown">5</span>
-      <span class="sync-label">s</span>
+      <span class="sync-label" id="sync-label">Ready</span>
     </div>
-    <div class="last-sync" id="last-sync">Never synced</div>
+    <button class="tmpl-btn" onclick="openTemplateModal()">✉ Email Templates</button>
+    <button id="sync-btn" onclick="manualSync()" style="display:flex;align-items:center;gap:7px;padding:7px 16px;background:#4299e1;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">
+      🔄 Sync Now
+    </button>
     <div class="gstats" id="gstats"></div>
   </div>
 </div>
@@ -304,51 +236,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="tabs" id="tabs"></div>
 <div id="app"></div>
 
-<!-- ── SNAP MODAL ── -->
-<div class="sg-modal-bg" id="sgModal">
-  <div class="sg-modal">
-    <div class="sg-modal-head">
-      <h2>📸 Weekly Snap · <span id="sgModalTitle"></span></h2>
-      <button class="sg-close-btn" onclick="closeSgModal()">×</button>
-    </div>
-    <div class="sg-detail-row">
-      <label class="sg-detail-toggle">
-        <input type="checkbox" id="sgFullDetail" onchange="sgToggleFullDetail()"> Show all projects in full detail
-      </label>
-      <span id="sgSizeHint" class="sg-size-hint"></span>
-    </div>
-    <div id="sgCardContainer"></div>
-    <div class="sg-caption-editor">
-      <div class="sg-caption-editor-label">CAPTION TO SEND (edit before posting)</div>
-      <textarea class="sg-caption-textarea" id="sgCaptionText"></textarea>
-    </div>
-    <div class="sg-actions">
-      <button class="sg-btn sg-btn-secondary" onclick="sgCopyCaption()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        Copy caption
-      </button>
-      <button class="sg-btn sg-btn-secondary" onclick="sgDownloadSnap()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        PNG (WhatsApp)
-      </button>
-      <button class="sg-btn sg-btn-primary" onclick="sgDownloadPDF()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        PDF (full report)
-      </button>
-    </div>
-  </div>
-</div>
-<div class="sg-toast" id="sgToast"></div>
-
 <script>
-// ── Config ────────────────────────────────────────────────────
-const REDASH_URL  = "https://redashv3.getpowerplay.in";
-const API_KEY     = "yxqnSo7sT97kxbSPTFKDI0OvjRnMGroE1NGyySTc";
-const QUERY_ID    = "1468";
-const PARAMS      = {"p_renewal_start": "2026-04-01", "p_renewal_end": "2030-04-30"};
-const REFRESH_SEC = 5;
+// ─────────────────────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────────────────────
+const PARAMS = { p_renewal_start: '2026-04-01', p_renewal_end: '2030-04-30' };
 
-// ── Column name detection ─────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// COLUMN DETECTION (flexible — works even if Redash renames cols)
+// ─────────────────────────────────────────────────────────────
 function detectCols(columns) {
   const names = columns.map(c => c.name.toLowerCase());
   const find = (...opts) => {
@@ -369,135 +265,266 @@ function detectCols(columns) {
     renewal    : find('renewal_date','renewal'),
     last_disp  : find('last_disposition_date','last_disposition','last_disp'),
     disposition: find('disposition','notes'),
+    ob_notes   : find('ob_notes','onboarding_notes','ob_note','ob_summary'),
     wk0        : find('wk_0','wk0','week_0'),
     wk1        : find('wk_1','wk1','week_1'),
     wk2        : find('wk_2','wk2','week_2'),
     wk3        : find('wk_3','wk3','week_3'),
+    // Extra metric columns (present in some query versions)
+    active_w0  : find('active_w0','active_users_w0','active_users_wk0','active_wk0'),
+    drop_w0    : find('drop_w0','dropped_w0','drop_users_w0','dropped_wk0'),
+    conn_w0    : find('conn_w0','connected_w0','connections_w0','new_w0','connected_wk0'),
+    cov_w0     : find('cov_w0','coverage_w0','coverage_pct_w0','cov_pct_wk0'),
+    // Financial / renewal columns
+    arr        : find('arr','annual_recurring_revenue','arr_value','contract_value','total_arr','arr_inr'),
   };
 }
 
-const TRAINER_NAMES = {
-  'digvijay'  : 'Digvijay',
-  'farid'     : 'S Farid',
-  'sfarid'    : 'S Farid',
-  's farid'   : 'S Farid',
-  'divya'     : 'Divya',
+// ─────────────────────────────────────────────────────────────
+// TRAINER NAME MAPPING
+// ─────────────────────────────────────────────────────────────
+const TRAINER_MAP = {
+  'digvijay': 'Digvijay',
+  'farid'   : 'S Farid',
+  'sfarid'  : 'S Farid',
+  's farid' : 'S Farid',
+  'divya'   : 'Divya',
 };
 function trainerDisplay(email) {
-  if (!email) return email;
+  if (!email) return 'Unknown';
   const low = email.toLowerCase();
-  const prefix = low.split('@')[0];
-  for (const [k,v] of Object.entries(TRAINER_NAMES)) {
-    if (prefix.includes(k) || low.includes(k)) return v;
+  for (const [k, v] of Object.entries(TRAINER_MAP)) {
+    if (low.includes(k)) return v;
   }
   return email.split('@')[0];
 }
 
-function processRows(rows, cols) {
-  const trainers = {};
-  rows.forEach(row => {
-    const trainer  = trainerDisplay(row[cols.trainer] || '');
-    const org      = row[cols.org]     || 'Unknown';
-    const project  = row[cols.project] || 'Unknown';
-    const module   = row[cols.module]  || 'Unknown';
-    const event    = row[cols.event]   || '';
-    const user     = row[cols.user]    || '';
-    const mobile   = row[cols.mobile]  || '';
-    const renewal  = row[cols.renewal] || '';
-    const lastDisp = row[cols.last_disp] || '';
-    const dispo    = row[cols.disposition] || '';
-    const wk0 = parseInt(row[cols.wk0] || 0);
-    const wk1 = parseInt(row[cols.wk1] || 0);
-    const wk2 = parseInt(row[cols.wk2] || 0);
-    const wk3 = parseInt(row[cols.wk3] || 0);
-    if (!trainers[trainer]) trainers[trainer] = {};
-    const tMap = trainers[trainer];
-    if (!tMap[org]) tMap[org] = { renewal, projects: {} };
-    const orgObj = tMap[org];
-    if (!orgObj.projects[project]) orgObj.projects[project] = { modules: {} };
-    const projObj = orgObj.projects[project];
-    if (!projObj.modules[module]) projObj.modules[module] = { events: [] };
-    projObj.modules[module].events.push({ event, user, mobile, wk0, wk1, wk2, wk3, lastDisp, dispo });
-  });
+// ─────────────────────────────────────────────────────────────
+// PRIORITY LOGIC
+// ─────────────────────────────────────────────────────────────
+const PRIO_ORDER = ['CRITICAL','HIGH','MEDIUM','LOW','STABLE_DROP','STABLE','INACTIVE'];
 
-  const PRIO_ORDER = ['CRITICAL','HIGH','MEDIUM','LOW','STABLE_DROP','STABLE','INACTIVE'];
-  const result = {};
-  Object.entries(trainers).forEach(([tName, tMap]) => {
-    const accounts = [];
-    Object.entries(tMap).forEach(([orgName, orgData], ai) => {
-      const projects = [];
-      let accWk0=0, accWk1=0, accWk2=0, accWk3=0;
-      Object.entries(orgData.projects).forEach(([projName, projData]) => {
-        const modules = [];
-        let pWk0=0, pWk1=0, pWk2=0, pWk3=0;
-        Object.entries(projData.modules).forEach(([modName, modData]) => {
-          let mWk0=0, mWk1=0, mWk2=0, mWk3=0;
-          const events = modData.events.map(e => {
-            mWk0+=e.wk0; mWk1+=e.wk1; mWk2+=e.wk2; mWk3+=e.wk3;
-            return e;
-          });
-          const mDiff = mWk0 - mWk1;
-          const mPct  = mWk1 > 0 ? ((mDiff/mWk1)*100).toFixed(1)+'%' : '';
-          pWk0+=mWk0; pWk1+=mWk1; pWk2+=mWk2; pWk3+=mWk3;
-          modules.push({ name:modName, wk0:mWk0, wk1:mWk1, wk2:mWk2, wk3:mWk3, diff:mDiff, pct:mPct, events });
-        });
-        const pDiff = pWk0 - pWk1;
-        const pPct  = pWk1 > 0 ? ((pDiff/pWk1)*100).toFixed(1)+'%' : '';
-        const isDrop = pWk0 < pWk1;
-        accWk0+=pWk0; accWk1+=pWk1; accWk2+=pWk2; accWk3+=pWk3;
-        projects.push({ name:projName, wk0:pWk0, wk1:pWk1, wk2:pWk2, wk3:pWk3, diff:pDiff, pct:pPct, isDrop, modules });
-      });
-      const diff = accWk0 - accWk1;
-      const pct  = accWk1 > 0 ? (diff/accWk1)*100 : 0;
-      const pctStr = accWk1 > 0 ? pct.toFixed(1)+'%' : '';
-      let priority;
-      if (accWk0 === 0 && accWk1 > 0) priority = 'CRITICAL';
-      else if (pct <= -75)             priority = 'HIGH';
-      else if (pct <= -25)             priority = 'MEDIUM';
-      else if (pct < 0)                priority = 'LOW';
-      else if (accWk0 === 0)           priority = 'INACTIVE';
-      else                             priority = 'STABLE';
-      const effP = (priority === 'STABLE' && accWk0 === 0) ? 'STABLE_DROP' : priority;
-      accounts.push({
-        num: ai+1, name:orgName, renewal:orgData.renewal,
-        wk0:accWk0, wk1:accWk1, wk2:accWk2, wk3:accWk3,
-        diff, pct:pctStr, priority: effP, projects
-      });
+function calcPriority(wk0, wk1) {
+  if (wk0 === 0 && wk1 > 0)  return 'CRITICAL';
+  const pct = wk1 > 0 ? ((wk0 - wk1) / wk1) * 100 : 0;
+  if (pct <= -75)             return 'HIGH';
+  if (pct <= -25)             return 'MEDIUM';
+  if (pct < 0)                return 'LOW';
+  if (wk0 === 0)              return 'INACTIVE';
+  return 'STABLE';
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROCESS RAW ROWS → TRAINER HIERARCHY
+// ─────────────────────────────────────────────────────────────
+function processRows(rows, cols) {
+  const trainerMap = {};
+
+  for (const row of rows) {
+    const trainer = trainerDisplay(row[cols.trainer] || '');
+    const org     = row[cols.org]     || 'Unknown';
+    const project = row[cols.project] || 'Unknown';
+    const module  = row[cols.module]  || 'Unknown';
+
+    if (!trainerMap[trainer]) trainerMap[trainer] = {};
+    if (!trainerMap[trainer][org]) trainerMap[trainer][org] = { renewal: row[cols.renewal] || '', projects: {} };
+    const orgObj = trainerMap[trainer][org];
+
+    if (!orgObj.projects[project]) orgObj.projects[project] = { modules: {} };
+    if (!orgObj.projects[project].modules[module]) orgObj.projects[project].modules[module] = { events: [] };
+
+    orgObj.projects[project].modules[module].events.push({
+      event   : row[cols.event]       || '',
+      user    : row[cols.user]        || '',
+      mobile  : row[cols.mobile]      || '',
+      lastDisp: row[cols.last_disp]   || '',
+      dispo   : row[cols.disposition] || '',
+      obNotes : cols.ob_notes ? (row[cols.ob_notes] || '') : '',
+      arr     : cols.arr     ? (row[cols.arr]     || null) : null,
+      wk0: +row[cols.wk0] || 0,
+      wk1: +row[cols.wk1] || 0,
+      wk2: +row[cols.wk2] || 0,
+      wk3: +row[cols.wk3] || 0,
+      // store raw metric columns if present (used for account-level rollup)
+      raw_active_w0: cols.active_w0 ? (+row[cols.active_w0] || 0) : null,
+      raw_drop_w0  : cols.drop_w0   ? (+row[cols.drop_w0]   || 0) : null,
+      raw_conn_w0  : cols.conn_w0   ? (+row[cols.conn_w0]   || 0) : null,
+      raw_cov_w0   : cols.cov_w0    ? (+row[cols.cov_w0]    || 0) : null,
     });
+  }
+
+  // Aggregate sums upward: event → module → project → account
+  const result = {};
+  let tIdx = 0;
+
+  for (const [tName, orgMap] of Object.entries(trainerMap)) {
+    const accounts = [];
+    let aIdx = 0;
+
+    for (const [orgName, orgData] of Object.entries(orgMap)) {
+      let aWk0=0, aWk1=0, aWk2=0, aWk3=0;
+      const projects = [];
+
+      for (const [projName, projData] of Object.entries(orgData.projects)) {
+        let pWk0=0, pWk1=0, pWk2=0, pWk3=0;
+        const modules = [];
+
+        for (const [modName, modData] of Object.entries(projData.modules)) {
+          let mWk0=0, mWk1=0, mWk2=0, mWk3=0;
+          for (const e of modData.events) { mWk0+=e.wk0; mWk1+=e.wk1; mWk2+=e.wk2; mWk3+=e.wk3; }
+          pWk0+=mWk0; pWk1+=mWk1; pWk2+=mWk2; pWk3+=mWk3;
+          modules.push({
+            name: modName, wk0:mWk0, wk1:mWk1, wk2:mWk2, wk3:mWk3,
+            diff: mWk0-mWk1,
+            pct: mWk1>0 ? ((mWk0-mWk1)/mWk1*100).toFixed(1)+'%' : '',
+            events: modData.events
+          });
+        }
+
+        aWk0+=pWk0; aWk1+=pWk1; aWk2+=pWk2; aWk3+=pWk3;
+        projects.push({
+          name: projName, wk0:pWk0, wk1:pWk1, wk2:pWk2, wk3:pWk3,
+          diff: pWk0-pWk1,
+          pct: pWk1>0 ? ((pWk0-pWk1)/pWk1*100).toFixed(1)+'%' : '',
+          isDrop: pWk0 < pWk1, modules
+        });
+      }
+
+      const basePrio = calcPriority(aWk0, aWk1);
+      const priority = (basePrio === 'STABLE' && aWk0 === 0) ? 'STABLE_DROP' : basePrio;
+      const diff = aWk0 - aWk1;
+      const pctStr = aWk1 > 0 ? (diff/aWk1*100).toFixed(1)+'%' : '';
+
+      // Aggregate last disposition, OB notes, module summary, and user-level metrics
+      let bestDispDate = '', bestDispo = '', accountObNotes = '', accountArr = null;
+      const modSummary = {};
+      // User-level sets for computing ACTIVE/DROP/CONN/COV
+      const usersActiveWk0 = new Set();
+      const usersActiveWk1 = new Set();
+      const usersActiveWk2 = new Set();
+      const usersActiveWk3 = new Set();
+      const usersWithRecentDisp = new Set();
+      let hasRawMetrics = false;
+      let rawActiveW0 = 0, rawConnW0 = 0, rawCovW0 = null;
+      const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+
+      for (const proj of projects) {
+        for (const mod of proj.modules) {
+          if (!modSummary[mod.name]) modSummary[mod.name] = { wk0: 0, wk1: 0 };
+          modSummary[mod.name].wk0 += mod.wk0;
+          modSummary[mod.name].wk1 += mod.wk1;
+          for (const evt of (mod.events || [])) {
+            if (!accountObNotes && evt.obNotes) accountObNotes = evt.obNotes;
+            if (accountArr === null && evt.arr !== null) accountArr = evt.arr;
+            const ld = (evt.lastDisp || '').slice(0, 10);
+            if (ld && ld > bestDispDate) { bestDispDate = ld; bestDispo = evt.dispo || ''; }
+            // Track per-user activity for metrics
+            const uKey = (evt.user || '') + '|' + (evt.mobile || '');
+            if (uKey !== '|') {
+              if (evt.wk0 > 0) usersActiveWk0.add(uKey);
+              if (evt.wk1 > 0) usersActiveWk1.add(uKey);
+              if (evt.wk2 > 0) usersActiveWk2.add(uKey);
+              if (evt.wk3 > 0) usersActiveWk3.add(uKey);
+              const ld2 = (evt.lastDisp || '').slice(0, 10);
+              if (ld2 && ld2 >= sevenDaysAgo) usersWithRecentDisp.add(uKey);
+            }
+            // If query provides raw metric columns directly, accumulate max (not sum)
+            if (evt.raw_active_w0 !== null) { hasRawMetrics = true; rawActiveW0 = Math.max(rawActiveW0, evt.raw_active_w0); }
+            if (evt.raw_conn_w0   !== null) rawConnW0 = Math.max(rawConnW0, evt.raw_conn_w0);
+            if (evt.raw_cov_w0    !== null) rawCovW0  = Math.max(rawCovW0 ?? 0, evt.raw_cov_w0);
+          }
+        }
+      }
+
+      // ── Compute metrics ──────────────────────────────────────
+      const activeW0 = hasRawMetrics ? rawActiveW0 : usersActiveWk0.size;
+
+      // Cold pool: users active in ANY prior week (W1/W2/W3) but silent this week (W0)
+      const coldPool = new Set();
+      for (const u of [...usersActiveWk1, ...usersActiveWk2, ...usersActiveWk3]) {
+        if (!usersActiveWk0.has(u)) coldPool.add(u);
+      }
+
+      // X = newly dropped this week (active W1 → silent W0)
+      const droppedXList = [...usersActiveWk1]
+        .filter(u => !usersActiveWk0.has(u))
+        .map(u => ({ user: u.split('|')[0], mobile: u.split('|')[1] }));
+
+      // Y = full cold pool list (active any W1/W2/W3, silent W0)
+      const coldPoolList = [...coldPool]
+        .map(u => ({ user: u.split('|')[0], mobile: u.split('|')[1] }));
+
+      const dropX = droppedXList.length;
+      const dropY = coldPool.size;
+      const dropW0 = dropY > 0 ? `${dropX}/${dropY}` : '—';
+      const dropW0IsAlert = dropX > 0;
+
+      // Conn W0 = cold pool users who had a disposition logged in the last 7 days
+      const connW0 = [...coldPool].filter(u => usersWithRecentDisp.has(u)).length;
+
+      // Cov W0 = Connected ÷ Cold Pool × 100
+      // Red <30%, Amber 30–60%, Green 60%+, Dash if no cold pool
+      const covPct = dropY > 0 ? Math.round(connW0 / dropY * 100) : -1;
+      const covW0  = dropY > 0 ? covPct + '%' : '—';
+
+      accounts.push({
+        num: ++aIdx, name: orgName, renewal: orgData.renewal,
+        wk0:aWk0, wk1:aWk1, wk2:aWk2, wk3:aWk3,
+        diff, pct: pctStr, priority, projects,
+        lastDispDate: bestDispDate,
+        lastDispo: bestDispo,
+        obNotes: accountObNotes,
+        modSummary,
+        // user-level metrics
+        activeW0, dropW0, dropW0IsAlert, dropX, dropY, connW0, covW0, covPct,
+        droppedXList, coldPoolList,
+        // financial / renewal
+        arr: accountArr
+      });
+    }
+
     result[tName] = { accounts };
-  });
+  }
+
   return result;
 }
 
-// ── Rendering helpers ─────────────────────────────────────────
-const PRIO_ORDER = ['CRITICAL','HIGH','MEDIUM','LOW','STABLE_DROP','STABLE','INACTIVE'];
+// ─────────────────────────────────────────────────────────────
+// RENDER HELPERS
+// ─────────────────────────────────────────────────────────────
 function pb(p){ return `<span class="pb ${p}">${p.replace('_',' ')}</span>`; }
+
 function trend(w0,w1,w2,w3){
   const v=[w3,w2,w1,w0], mx=Math.max(...v,1);
-  const c=['#3a4a5a','#4a5a6a','#8899aa',w0===0?'#fc5353':(w0>=w1?'#48bb78':'#ed8936')];
-  return `<div class="trend">${v.map((n,i)=>`<div class="tbar" style="height:${Math.max(2,Math.round(n/mx*18))}px;background:${c[i]}"></div>`).join('')}</div>`;
-}
-function nTD(v, zr=false){
-  if(v===null||v===undefined) return `<td class="nr neu">—</td>`;
-  return `<td class="nr ${zr&&v===0?'zred':''}">${v}</td>`;
-}
-function dTD(v){
-  if(!v&&v!==0) return `<td class="nr neu">—</td>`;
-  return `<td class="nr ${v<0?'neg':v>0?'pos':'neu'}">${v>0?'+':''}${v}</td>`;
-}
-function pTD(v){
-  if(!v) return `<td class="nr neu sm">—</td>`;
-  return `<td class="nr ${v.startsWith('-')?'neg':'pos'} sm">${v}</td>`;
+  const col = ['#3a4a5a','#4a5a6a','#8899aa', w0===0?'#fc5353':(w0>=w1?'#48bb78':'#ed8936')];
+  return `<div class="trend">${v.map((n,i)=>`<div class="tbar" style="height:${Math.max(2,Math.round(n/mx*18))}px;background:${col[i]}"></div>`).join('')}</div>`;
 }
 
-// ── Render a single trainer panel ─────────────────────────────
-function renderPanel(tName, tData, tid){
+const nTD = (v,zr=false) => `<td class="nr ${zr&&v===0?'zred':''}">${v??'—'}</td>`;
+const dTD = v => (!v&&v!==0) ? `<td class="nr neu">—</td>` : `<td class="nr ${v<0?'neg':v>0?'pos':'neu'}">${v>0?'+':''}${v}</td>`;
+const pTD = v => !v ? `<td class="nr neu sm">—</td>` : `<td class="nr ${v.startsWith('-')?'neg':'pos'} sm">${v}</td>`;
+
+// ─────────────────────────────────────────────────────────────
+// RENDER TRAINER PANEL
+// ─────────────────────────────────────────────────────────────
+const SECT_LABELS = {
+  CRITICAL   : '🔴 CRITICAL — Immediate Action Required',
+  HIGH       : '🟠 HIGH — Act This Week',
+  MEDIUM     : '🟡 MEDIUM — Monitor Closely',
+  LOW        : '🔵 LOW DROP — Watch',
+  STABLE_DROP: '🔴 STABLE — Zero Activity This Week',
+  STABLE     : '✅ STABLE — Active This Week',
+  INACTIVE   : '⚫ INACTIVE ACCOUNTS',
+};
+
+function renderPanel(tName, tData, tid) {
   const accs = tData.accounts;
-  const cnt={};
-  PRIO_ORDER.forEach(p=>cnt[p]=0);
-  accs.forEach(a=>cnt[a.priority]=(cnt[a.priority]||0)+1);
+  const cnt = {};
+  PRIO_ORDER.forEach(p => cnt[p] = 0);
+  accs.forEach(a => cnt[a.priority] = (cnt[a.priority]||0)+1);
 
-  let html = `<div class="sumcards">
+  let html = `
+  <div class="sumcards">
     <div class="sc crit"><div class="sv">${cnt.CRITICAL||0}</div><div class="sl">🔴 Critical</div></div>
     <div class="sc high"><div class="sv">${cnt.HIGH||0}</div><div class="sl">🟠 High</div></div>
     <div class="sc med"><div class="sv">${cnt.MEDIUM||0}</div><div class="sl">🟡 Medium</div></div>
@@ -523,122 +550,159 @@ function renderPanel(tName, tData, tid){
       <th>Account / Project / Module / Event</th>
       <th class="r">Wk 0</th><th class="r">Wk 1</th><th class="r">Wk 2</th><th class="r">Wk 3</th>
       <th class="r">Diff</th><th class="r">%</th><th>Trend</th>
-      <th>Priority</th><th>Last Dispos.</th><th>Snap</th>
+      <th>Priority</th>
+      <th class="r" title="Active users in Wk0">Active W0</th>
+      <th class="r" title="Dropped users / was-active users (Wk1→Wk0)">Drop W0</th>
+      <th class="r" title="New connected users in Wk0 (active now, not last week)">Conn. W0</th>
+      <th class="r" title="Coverage: active users / total users">Cov. W0</th>
+      <th style="text-align:center">Snap</th>
+      <th class="r" title="Annual Recurring Revenue">ARR</th>
+      <th title="Renewal Date">Renewal</th>
+      <th>Last Dispos.</th><th>Note</th>
     </tr></thead><tbody id="tbody-${tid}">`;
 
-  const SECT = {
-    CRITICAL:'🔴 CRITICAL — Immediate Action Required',
-    HIGH:'🟠 HIGH — Act This Week',
-    MEDIUM:'🟡 MEDIUM — Monitor Closely',
-    LOW:'🔵 LOW DROP — Watch',
-    STABLE_DROP:'🔴 STABLE — Zero Activity This Week',
-    STABLE:'✅ STABLE — Active This Week',
-    INACTIVE:'⚫ INACTIVE ACCOUNTS'
-  };
-
-  const sorted = [...accs].sort((a,b)=>PRIO_ORDER.indexOf(a.priority)-PRIO_ORDER.indexOf(b.priority));
-
-  // Store sorted accounts for snap access
-  window._sgSorted = window._sgSorted || {};
-  window._sgSorted[tid] = sorted;
-
+  const sorted = [...accs].sort((a,b) => PRIO_ORDER.indexOf(a.priority) - PRIO_ORDER.indexOf(b.priority));
   let lastSect = null;
-  sorted.forEach((acc, ai) => {
+
+  for (const [ai, acc] of sorted.entries()) {
     const aId = `${tid}-a${ai}`;
-    const ep = acc.priority;
-    if (ep !== lastSect) {
-      html += `<tr class="row-section${ep==='STABLE_DROP'?' sd':''}" data-sect="${ep}"><td colspan="13">${SECT[ep]||ep}</td></tr>`;
-      lastSect = ep;
+    // Register account for email modal lookup
+    window.accRegistry[aId] = { acc, trainer: tName };
+    if (acc.priority !== lastSect) {
+      const isSD = acc.priority === 'STABLE_DROP';
+      html += `<tr class="row-section${isSD?' sd':''}" data-sect="${acc.priority}"><td colspan="20">${SECT_LABELS[acc.priority]||acc.priority}</td></tr>`;
+      lastSect = acc.priority;
     }
-    const hasProj = acc.projects.length > 0;
-    html += `<tr class="row-account" data-p="${ep}" data-name="${acc.name.toLowerCase()}" data-aid="${aId}" onclick="toggleAcc('${aId}',event)">
-      <td><button class="tog acc-tog" id="btn-${aId}">${hasProj?'+':'·'}</button></td>
+
+    const dropCell = acc.dropW0 === '—'
+      ? `<td class="nr neu sm">—</td>`
+      : `<td class="nr sm" style="white-space:nowrap"><span style="color:${acc.dropX>0?'#ed8936':'#48bb78'};cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();showDropPopup('${aId}','x',event)" title="Newly dropped (W1→W0 silent)">${acc.dropX}</span><span style="color:#4a5568">/</span><span style="color:#4a9edd;cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();showDropPopup('${aId}','y',event)" title="Full cold pool (any W1/W2/W3 silent in W0)">${acc.dropY}</span></td>`;
+    const covCell = acc.covW0 === '—'
+      ? `<td class="nr neu sm">—</td>`
+      : `<td><span class="cvbadge ${acc.covPct<30?'cv0':acc.covPct<60?'cv50':'cvok'}">${acc.covW0}</span></td>`;
+
+    html += `<tr class="row-account" data-p="${acc.priority}" data-name="${acc.name.toLowerCase()}" data-aid="${aId}" onclick="toggleAcc('${aId}',event)">
+      <td><button class="tog acc-tog" id="btn-${aId}">${acc.projects.length?'+':'·'}</button></td>
       <td style="color:#4a5568;font-size:11px">${acc.num}</td>
       <td><span class="acc-name">${acc.name}</span><span class="acc-sub">${acc.projects.length}p</span>
         ${acc.renewal?`<span style="font-size:10px;color:#4a5568;margin-left:5px">🗓 ${acc.renewal}</span>`:''}</td>
       ${nTD(acc.wk0,true)}${nTD(acc.wk1)}${nTD(acc.wk2)}${nTD(acc.wk3)}
       ${dTD(acc.diff)}${pTD(acc.pct)}
       <td>${trend(acc.wk0,acc.wk1,acc.wk2,acc.wk3)}</td>
-      <td>${pb(ep)}</td>
-      <td></td>
-      <td><button class="sg-snap-btn" onclick="event.stopPropagation();openDashboardSnap('${tid}',${ai})" title="Generate Snap">📸 Snap</button></td>
+      <td>${pb(acc.priority)} <button class="send-btn" onclick="event.stopPropagation();openSendModal('${aId}')" title="Send email to account owner">✉</button></td>
+      ${nTD(acc.activeW0)}
+      ${dropCell}
+      ${nTD(acc.connW0)}
+      ${covCell}
+      <td style="text-align:center"><button class="snap-btn" onclick="event.stopPropagation();openSnapModal('${aId}')" title="View snap report">📸 Snap</button></td>
+      <td class="nr" style="font-size:11px;color:#a0aec0;white-space:nowrap">${acc.arr != null ? (isNaN(+acc.arr) ? acc.arr : (+acc.arr).toLocaleString('en-IN')) : '—'}</td>
+      <td style="font-size:10px;color:#4a8070;white-space:nowrap">${acc.renewal || '—'}</td>
+      <td></td><td></td>
     </tr>`;
 
-    acc.projects.forEach((proj, pi) => {
+    // Sort projects: DROP first → STABLE DROP → STABLE (same status sorted by name)
+    const projSortOrder = p => p.isDrop ? 0 : (!p.isDrop && p.wk0===0) ? 1 : 2;
+    const sortedProjects = [...acc.projects].sort((a,b) => {
+      const diff = projSortOrder(a) - projSortOrder(b);
+      return diff !== 0 ? diff : a.name.localeCompare(b.name);
+    });
+
+    for (const [pi, proj] of sortedProjects.entries()) {
       const pId = `${aId}-p${pi}`;
       const isSD = !proj.isDrop && proj.wk0 === 0;
-      const sym  = proj.isDrop ? `<span style="color:#fc5353;margin-right:3px">⚠</span>` : isSD ? `<span style="color:#ff6b6b;margin-right:3px">⚠</span>` : `<span style="color:#48bb78;margin-right:3px">▲</span>`;
-      const bdg  = proj.isDrop ? `<span class="bdrop">DROP</span>` : isSD ? `<span class="bstabledrop">STABLE DROP</span>` : `<span class="bstable">STABLE</span>`;
-      const hasMod = proj.modules.length > 0;
+      const sym  = proj.isDrop ? '⚠' : isSD ? '⚠' : '▲';
+      const symColor = proj.isDrop ? '#fc5353' : isSD ? '#ff6b6b' : '#48bb78';
+      const bdg  = proj.isDrop
+        ? `<span class="bdrop">DROP</span>`
+        : isSD
+        ? `<span class="bstabledrop">STABLE DROP</span>`
+        : `<span class="bstable">STABLE</span>`;
+
       html += `<tr class="row-project${isSD?' sdp':''}" data-acc="${aId}" id="proj-${pId}" onclick="toggleProj('${pId}',event)">
-        <td><button class="tog proj-tog" id="btn-${pId}">${hasMod?'+':'·'}</button></td>
+        <td><button class="tog proj-tog" id="btn-${pId}">${proj.modules.length?'+':'·'}</button></td>
         <td></td>
-        <td><div style="display:flex;align-items:center">${sym}<span class="proj-name">${proj.name}</span>${bdg}</div></td>
+        <td><div style="display:flex;align-items:center;gap:4px"><span style="color:${symColor}">${sym}</span><span class="proj-name">${proj.name}</span>${bdg}</div></td>
         ${nTD(proj.wk0,true)}${nTD(proj.wk1)}${nTD(proj.wk2)}${nTD(proj.wk3)}
         ${dTD(proj.diff)}${pTD(proj.pct)}
         <td>${trend(proj.wk0,proj.wk1,proj.wk2,proj.wk3)}</td>
-        <td></td><td></td><td></td>
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
       </tr>`;
 
-      proj.modules.forEach((mod, mi) => {
+      for (const [mi, mod] of proj.modules.entries()) {
         const mId = `${pId}-m${mi}`;
-        const hasEvt = mod.events.length > 0;
         html += `<tr class="row-module" data-proj="${pId}" id="mod-${mId}" onclick="toggleMod('${mId}',event)">
-          <td><button class="tog mod-tog" id="btn-${mId}">${hasEvt?'+':'·'}</button></td>
+          <td><button class="tog mod-tog" id="btn-${mId}">${mod.events.length?'+':'·'}</button></td>
           <td></td>
           <td><span class="mod-name">📦 ${mod.name}</span></td>
           ${nTD(mod.wk0,true)}${nTD(mod.wk1)}${nTD(mod.wk2)}${nTD(mod.wk3)}
           ${dTD(mod.diff)}${pTD(mod.pct)}
-          <td></td><td></td><td></td><td></td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
         </tr>`;
 
-        mod.events.forEach(evt => {
+        for (const evt of mod.events) {
           html += `<tr class="row-event" data-mod="${mId}">
             <td></td><td></td>
             <td>
-              <div class="evt-name">⚡ ${evt.event}</div>
+              <div class="evt-name">⚡ ${evt.event||'—'}</div>
               <div class="ubox">
                 <span>👤</span><span class="uname">${evt.user||'—'}</span>
-                ${evt.mobile?`<span style="color:#2d3f50">|</span><span>📞</span><span class="uphone">${evt.mobile}</span>`:''}
+                ${evt.mobile ? `<span style="color:#2d3f50">|</span><span>📞</span><span class="uphone">${evt.mobile}</span>` : ''}
               </div>
             </td>
             ${nTD(evt.wk0,true)}${nTD(evt.wk1)}${nTD(evt.wk2)}${nTD(evt.wk3)}
             ${dTD(evt.wk0-evt.wk1)}
-            <td></td><td></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
             <td class="last-disp">${(evt.lastDisp||'—').slice(0,10)}</td>
             <td class="dispo" title="${(evt.dispo||'').replace(/"/g,"'")}">${evt.dispo||'—'}</td>
           </tr>`;
-        });
-      });
-    });
-  });
+        }
+      }
+    }
+  }
 
   html += `</tbody></table></div>`;
   return html;
 }
 
-// ── State ─────────────────────────────────────────────────────
-let countdown = REFRESH_SEC;
+// ─────────────────────────────────────────────────────────────
+// FETCH + RENDER
+// ─────────────────────────────────────────────────────────────
 let currentTab = null;
 let initialized = false;
 
-// ── Fetch + render ────────────────────────────────────────────
 async function fetchAndRender() {
   const dot = document.getElementById('sync-dot');
   dot.className = 'sync-dot loading';
+  document.getElementById('sync-label').textContent = 'Syncing...';
+
   try {
-    const paramStr = Object.entries(PARAMS).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');
-    const url = `/api/redash?${paramStr}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    const json = await res.json();
-    const qr = json.query_result || json;
-    const data = qr.data || qr;
-    const columns = data.columns || [];
-    const rows    = data.rows    || [];
-    if (!columns.length) throw new Error('No columns returned from Redash');
-    const cols = detectCols(columns);
-    const trainers = processRows(rows, cols);
+    const qs = new URLSearchParams(PARAMS).toString();
+    const res = await fetch(`/api/redash?${qs}`);
+    const rawText = await res.text();
+
+    if (!res.ok) throw new Error(`HTTP ${res.status} — Raw: ${rawText.slice(0,300)}`);
+
+    let json;
+    try { json = JSON.parse(rawText); }
+    catch(e) { throw new Error('Proxy returned non-JSON: ' + rawText.slice(0,300)); }
+
+    if (json.error) throw new Error('Proxy error: ' + json.error + (json.hint ? ' | ' + json.hint : ''));
+
+    // Try all known Redash response shapes
+    const qr   = json.query_result || json;
+    const data  = qr.data || qr;
+    const cols  = data.columns || [];
+    const rows  = data.rows   || [];
+
+    if (!cols.length) {
+      // Show raw for debugging
+      const preview = JSON.stringify(json, null, 2).slice(0, 600);
+      throw new Error('No columns in response. Raw preview:\n' + preview);
+    }
+
+    const detectedCols = detectCols(cols);
+    const trainers = processRows(rows, detectedCols);
+
     if (!initialized) {
       buildUI(trainers);
       initialized = true;
@@ -646,68 +710,77 @@ async function fetchAndRender() {
     } else {
       updateUI(trainers);
     }
+
     dot.className = 'sync-dot';
+    document.getElementById('sync-label').textContent = 'Live';
     document.getElementById('last-sync').textContent = 'Last synced: ' + new Date().toLocaleTimeString();
+
   } catch (err) {
     dot.className = 'sync-dot error';
+    document.getElementById('sync-label').textContent = 'Error';
     if (!initialized) showError(err);
-    console.error('Redash fetch error:', err);
+    console.error('[DrillDown] Fetch error:', err);
   }
-  countdown = REFRESH_SEC;
+
 }
 
 function showError(err) {
   document.getElementById('overlay').innerHTML = `
     <div class="err-box">
       <h3>⚠ Cannot connect to Redash</h3>
-      <p>${err.message}</p>
-      <p style="margin-top:10px">This usually means <strong>CORS is blocked</strong>.<br>
-      Deploy to Vercel — the dashboard is already configured for it.</p>
+      <pre style="background:#0a0a0a;border:1px solid #3a1515;border-radius:6px;padding:10px;font-size:10px;color:#fc9090;text-align:left;max-height:200px;overflow:auto;margin:10px 0;white-space:pre-wrap;word-break:break-all">${err.message}</pre>
+      <p style="font-size:11px;color:#718096">Screenshot this error and share with your developer to diagnose.<br>
+      Also visit <code style="color:#4299e1">/api/debug</code> on your Vercel URL for full diagnostics.</p>
     </div>`;
 }
 
+// ─────────────────────────────────────────────────────────────
+// UI: BUILD + UPDATE
+// ─────────────────────────────────────────────────────────────
 function buildUI(trainers) {
-  window._sgSorted = {}; // reset snap store
-  const tabs = document.getElementById('tabs');
-  const app  = document.getElementById('app');
-  tabs.innerHTML = ''; app.innerHTML = '';
+  const tabsEl = document.getElementById('tabs');
+  const appEl  = document.getElementById('app');
+  tabsEl.innerHTML = ''; appEl.innerHTML = '';
   currentTab = null;
+  window.accRegistry = {}; // reset registry on each rebuild
+
   Object.entries(trainers).forEach(([tName, tData], i) => {
-    const tid = tName.replace(/[^a-z0-9]/gi,'_');
-    const crit = tData.accounts.filter(a=>a.priority==='CRITICAL').length;
-    const high = tData.accounts.filter(a=>a.priority==='HIGH').length;
-    const sd   = tData.accounts.filter(a=>a.priority==='STABLE_DROP').length;
-    const urg  = crit>0?`<span style="color:#fc5353;font-weight:700"> ${crit}🔴</span>`:
-                 high>0?`<span style="color:#ed8936"> ${high}🟠</span>`:'';
-    const sdBadge = sd>0?`<span style="color:#ff6b6b;font-size:10px"> ${sd}⚠</span>`:'';
+    const tid  = tName.replace(/[^a-z0-9]/gi,'_');
+    const crit = tData.accounts.filter(a => a.priority==='CRITICAL').length;
+    const high = tData.accounts.filter(a => a.priority==='HIGH').length;
+    const sd   = tData.accounts.filter(a => a.priority==='STABLE_DROP').length;
+    const urg  = crit>0 ? `<span style="color:#fc5353;font-weight:700"> ${crit}🔴</span>`
+               : high>0 ? `<span style="color:#ed8936"> ${high}🟠</span>` : '';
+    const sdB  = sd>0 ? `<span style="color:#ff6b6b;font-size:10px"> ${sd}⚠</span>` : '';
+
     const tab = document.createElement('div');
-    tab.className = 'tab' + (i===0?' active':'');
+    tab.className = 'tab' + (i===0 ? ' active' : '');
     tab.dataset.tid = tid;
-    tab.innerHTML = `${tName} <span class="cnt">${tData.accounts.length}</span>${urg}${sdBadge}`;
+    tab.innerHTML = `${tName} <span class="cnt">${tData.accounts.length}</span>${urg}${sdB}`;
     tab.addEventListener('click', () => switchTab(tid));
-    tabs.appendChild(tab);
+    tabsEl.appendChild(tab);
+
     const panel = document.createElement('div');
-    panel.className = 'panel' + (i===0?' active':'');
+    panel.className = 'panel' + (i===0 ? ' active' : '');
     panel.id = 'panel-' + tid;
     panel.innerHTML = renderPanel(tName, tData, tid);
-    app.appendChild(panel);
+    appEl.appendChild(panel);
+
     if (i===0) currentTab = tid;
   });
+
   updateGlobalStats(trainers);
 }
 
 function updateUI(trainers) {
-  const prevTab = currentTab;
+  const prev = currentTab;
   buildUI(trainers);
-  if (prevTab) {
-    const el = document.querySelector(`[data-tid="${prevTab}"]`);
-    if (el) { switchTab(prevTab); }
-  }
+  if (prev && document.querySelector(`[data-tid="${prev}"]`)) switchTab(prev);
 }
 
 function updateGlobalStats(trainers) {
-  const gc={};
-  Object.values(trainers).forEach(t=>t.accounts.forEach(a=>gc[a.priority]=(gc[a.priority]||0)+1));
+  const gc = {};
+  Object.values(trainers).forEach(t => t.accounts.forEach(a => gc[a.priority] = (gc[a.priority]||0)+1));
   const total = Object.values(gc).reduce((s,v)=>s+v,0);
   document.getElementById('gstats').innerHTML = `
     <div class="gs"><div class="v" style="color:#fc5353">${gc.CRITICAL||0}</div><div class="l">Critical</div></div>
@@ -719,544 +792,1321 @@ function updateGlobalStats(trainers) {
 
 function switchTab(tid) {
   currentTab = tid;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tid===tid));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+tid));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tid===tid));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id==='panel-'+tid));
 }
 
-// ── Tree toggle functions ─────────────────────────────────────
-function toggleAcc(aId,e) {
+// ─────────────────────────────────────────────────────────────
+// TREE TOGGLES
+// ─────────────────────────────────────────────────────────────
+function toggleAcc(aId, e) {
   e.stopPropagation();
-  const btn=document.getElementById('btn-'+aId);
-  if(!btn||btn.textContent==='·') return;
-  const open=btn.textContent==='+'; btn.textContent=open?'−':'+';
-  document.querySelectorAll(`[data-acc="${aId}"]`).forEach(r=>{
-    r.classList.toggle('vis',open);
-    if(!open){const pb=r.querySelector('.proj-tog');if(pb&&pb.textContent!=='·')pb.textContent='+';}
-  });
-  if(!open){
-    document.querySelectorAll(`[data-acc="${aId}"]`).forEach(r=>{
-      const pid=r.id?.replace('proj-','');
-      if(pid){
-        document.querySelectorAll(`[data-proj="${pid}"]`).forEach(m=>{
+  const btn = document.getElementById('btn-'+aId);
+  if (!btn || btn.textContent==='·') return;
+  const open = btn.textContent==='+';
+  btn.textContent = open ? '−' : '+';
+  document.querySelectorAll(`[data-acc="${aId}"]`).forEach(r => {
+    r.classList.toggle('vis', open);
+    if (!open) {
+      const pb = r.querySelector('.proj-tog');
+      if (pb && pb.textContent!=='·') pb.textContent = '+';
+      const pid = r.id?.replace('proj-','');
+      if (pid) {
+        document.querySelectorAll(`[data-proj="${pid}"]`).forEach(m => {
           m.classList.remove('vis');
-          const mb=m.querySelector('.mod-tog');if(mb&&mb.textContent!=='·')mb.textContent='+';
-          const mid=m.id?.replace('mod-','');
-          if(mid) document.querySelectorAll(`[data-mod="${mid}"]`).forEach(ev=>ev.classList.remove('vis'));
+          const mb = m.querySelector('.mod-tog');
+          if (mb && mb.textContent!=='·') mb.textContent = '+';
+          const mid = m.id?.replace('mod-','');
+          if (mid) document.querySelectorAll(`[data-mod="${mid}"]`).forEach(ev => ev.classList.remove('vis'));
         });
       }
-    });
-  }
-}
-function toggleProj(pId,e) {
-  e.stopPropagation();
-  const btn=document.getElementById('btn-'+pId);
-  if(!btn||btn.textContent==='·') return;
-  const open=btn.textContent==='+'; btn.textContent=open?'−':'+';
-  document.querySelectorAll(`[data-proj="${pId}"]`).forEach(r=>{
-    r.classList.toggle('vis',open);
-    if(!open){const mb=r.querySelector('.mod-tog');if(mb&&mb.textContent!=='·')mb.textContent='+';
-      const mid=r.id?.replace('mod-','');
-      if(mid) document.querySelectorAll(`[data-mod="${mid}"]`).forEach(ev=>ev.classList.remove('vis'));
     }
   });
 }
-function toggleMod(mId,e) {
+
+function toggleProj(pId, e) {
   e.stopPropagation();
-  const btn=document.getElementById('btn-'+mId);
-  if(!btn||btn.textContent==='·') return;
-  const open=btn.textContent==='+'; btn.textContent=open?'−':'+';
-  document.querySelectorAll(`[data-mod="${mId}"]`).forEach(r=>r.classList.toggle('vis',open));
+  const btn = document.getElementById('btn-'+pId);
+  if (!btn || btn.textContent==='·') return;
+  const open = btn.textContent==='+';
+  btn.textContent = open ? '−' : '+';
+  document.querySelectorAll(`[data-proj="${pId}"]`).forEach(r => {
+    r.classList.toggle('vis', open);
+    if (!open) {
+      const mb = r.querySelector('.mod-tog');
+      if (mb && mb.textContent!=='·') mb.textContent = '+';
+      const mid = r.id?.replace('mod-','');
+      if (mid) document.querySelectorAll(`[data-mod="${mid}"]`).forEach(ev => ev.classList.remove('vis'));
+    }
+  });
 }
 
-// ── Filter + search ───────────────────────────────────────────
-document.addEventListener('click',e=>{
-  if(!e.target.classList.contains('pf-btn')) return;
-  const tid=e.target.dataset.t, prio=e.target.dataset.p;
-  const panel=document.getElementById('panel-'+tid);
-  panel.querySelectorAll('.pf-btn').forEach(b=>b.classList.remove('active'));
+function toggleMod(mId, e) {
+  e.stopPropagation();
+  const btn = document.getElementById('btn-'+mId);
+  if (!btn || btn.textContent==='·') return;
+  const open = btn.textContent==='+';
+  btn.textContent = open ? '−' : '+';
+  document.querySelectorAll(`[data-mod="${mId}"]`).forEach(r => r.classList.toggle('vis', open));
+}
+
+// ─────────────────────────────────────────────────────────────
+// FILTER + SEARCH (event delegation)
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+  if (!e.target.classList.contains('pf-btn')) return;
+  const tid  = e.target.dataset.t;
+  const prio = e.target.dataset.p;
+  const panel = document.getElementById('panel-'+tid);
+  panel.querySelectorAll('.pf-btn').forEach(b => b.classList.remove('active'));
   e.target.classList.add('active');
-  panel.querySelectorAll('.acc-tog').forEach(b=>{if(b.textContent!=='·')b.textContent='+'});
-  panel.querySelectorAll('.row-project,.row-module,.row-event').forEach(r=>r.classList.remove('vis'));
-  panel.querySelectorAll('.row-account').forEach(r=>r.classList.toggle('hidden',prio!=='ALL'&&r.dataset.p!==prio));
-  panel.querySelectorAll('.row-section').forEach(s=>s.style.display=prio==='ALL'||s.dataset.sect===prio?'':'none');
-});
-document.addEventListener('input',e=>{
-  if(!e.target.classList.contains('acc-search')) return;
-  const tid=e.target.dataset.t, q=e.target.value.toLowerCase();
-  document.getElementById('panel-'+tid).querySelectorAll('.row-account').forEach(r=>r.classList.toggle('hidden',!!q&&!r.dataset.name.includes(q)));
+  // Collapse all
+  panel.querySelectorAll('.acc-tog').forEach(b => { if(b.textContent!=='·') b.textContent='+'; });
+  panel.querySelectorAll('.row-project,.row-module,.row-event').forEach(r => r.classList.remove('vis'));
+  // Show/hide accounts and section headers
+  panel.querySelectorAll('.row-account').forEach(r => r.classList.toggle('hidden', prio!=='ALL' && r.dataset.p!==prio));
+  panel.querySelectorAll('.row-section').forEach(s => s.style.display = (prio==='ALL' || s.dataset.sect===prio) ? '' : 'none');
 });
 
-// ── Countdown + auto-refresh ──────────────────────────────────
-setInterval(() => {
-  countdown--;
-  document.getElementById('countdown').textContent = Math.max(0, countdown);
-  if (countdown <= 0) fetchAndRender();
-}, 1000);
+document.addEventListener('input', e => {
+  if (!e.target.classList.contains('acc-search')) return;
+  const tid = e.target.dataset.t;
+  const q   = e.target.value.toLowerCase();
+  document.getElementById('panel-'+tid).querySelectorAll('.row-account').forEach(r => {
+    r.classList.toggle('hidden', !!q && !r.dataset.name.includes(q));
+  });
+});
 
-fetchAndRender();
-
-// ═══════════════════════════════════════════════════════════════
-// ── SNAP GENERATOR ────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════
-
-const SG_MODULE_COLORS = {
-  'attendance':'#16A34A','attendance payable':'#F59E0B','attendance payable payment':'#F59E0B',
-  'staff':'#9333EA','staff attendance':'#9333EA','tasks':'#2563EB','task':'#2563EB',
-  'material':'#F97316','materials':'#F97316','material payable':'#EA580C','material payable payment':'#EA580C',
-  'petty_cash':'#DC2626','petty cash':'#DC2626','reports':'#EC4899','report':'#EC4899',
-  'documents':'#0891B2','document':'#0891B2','projects':'#6366F1','project':'#6366F1',
-  'photos':'#10B981','photo log':'#10B981','photo logs':'#10B981','expense':'#DC2626','expenses':'#DC2626',
-  'inventory':'#84CC16','drawing':'#7C3AED','drawings':'#7C3AED','meeting':'#0EA5E9','meetings':'#0EA5E9',
-  'wo':'#0D9488','workorder':'#0D9488','workorder payable':'#14B8A6','boq':'#A855F7',
-  'po':'#3B82F6','purchase order':'#3B82F6'
-};
-const SG_FALLBACK = ['#2563EB','#F97316','#16A34A','#9333EA','#0891B2','#EC4899','#F59E0B','#10B981','#6366F1','#84CC16','#DC2626','#7C3AED'];
-
-function sgGetColor(name, colorMap) {
-  if (colorMap[name]) return colorMap[name];
-  const key = (name||'').toLowerCase().trim();
-  if (SG_MODULE_COLORS[key]) { colorMap[name]=SG_MODULE_COLORS[key]; return SG_MODULE_COLORS[key]; }
-  const used = Object.values(colorMap);
-  for (const c of SG_FALLBACK) { if (!used.includes(c)) { colorMap[name]=c; return c; } }
-  colorMap[name] = SG_FALLBACK[Object.keys(colorMap).length % SG_FALLBACK.length];
-  return colorMap[name];
+// ─────────────────────────────────────────────────────────────
+// MANUAL SYNC
+// ─────────────────────────────────────────────────────────────
+function manualSync() {
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Syncing...';
+  btn.style.background = '#2d6aa0';
+  fetchAndRender().finally(() => {
+    btn.disabled = false;
+    btn.innerHTML = '🔄 Sync Now';
+    btn.style.background = '#4299e1';
+  });
 }
 
-// Transform dashboard account object → snap generator format
-function transformAccForSnap(acc) {
-  const userSet = new Set();
-  const activeUserSet = new Set();
-  const silentProjects = [];
-  const stoppedModulesFlat = [];
-  const allUserDrops = [];
+fetchAndRender(); // load on first open
 
-  const projects = acc.projects.map(proj => {
-    const modUserMap = {}; // module -> user -> {thisWk, lastWk}
-    const stoppedMods = [];
+// ─────────────────────────────────────────────────────────────
+// EMAIL TEMPLATES — 4 types, AMG-style, stored in localStorage
+// ─────────────────────────────────────────────────────────────
+const DEFAULT_TEMPLATES = {
+  active: {
+    label: '✅ Active / Stable',
+    subject: 'What {{account}} set out to fix — and where it stands today',
+    body: `Hi,
 
-    proj.modules.forEach(mod => {
-      const userMap = {};
-      mod.events.forEach(evt => {
-        if (!evt.user) return;
-        userSet.add(evt.user);
-        if (!userMap[evt.user]) userMap[evt.user] = {name:evt.user, thisWk:0, lastWk:0};
-        userMap[evt.user].thisWk += evt.wk0;
-        userMap[evt.user].lastWk += evt.wk1;
-      });
-      const users = Object.values(userMap).sort((a,b)=>b.thisWk-a.thisWk);
-      users.forEach(u => {
-        if (u.thisWk > 0) activeUserSet.add(u.name);
-        const delta = u.thisWk - u.lastWk;
-        if (delta <= -5 && u.lastWk > 0) {
-          allUserDrops.push({name:u.name, project:proj.name, module:mod.name, delta, thisWk:u.thisWk, lastWk:u.lastWk});
-        }
-      });
-      if (mod.wk0 === 0 && mod.wk1 > 0) {
-        const lastWkUsers = users.filter(u=>u.lastWk>0).slice(0,3);
-        stoppedMods.push({name:mod.name, lastWk:mod.wk1, lastWkUsers});
-        stoppedModulesFlat.push({project:proj.name, module:mod.name, lastWk:mod.wk1, lastWkUsers});
-      }
-      modUserMap[mod.name] = {today:mod.wk0, yest:mod.wk1, users};
-    });
+When you started on Powerplay, the goal was clear:
+"{{ob_notes}}"
 
-    const modList = Object.entries(modUserMap).map(([name,v])=>({name, today:v.today, yest:v.yest, users:v.users}));
-    const sortedMods = [...modList].sort((a,b)=>b.today-a.today);
-    const allUsers = modList.flatMap(m=>m.users);
-    const topUser = [...allUsers].sort((a,b)=>b.thisWk-a.thisWk)[0];
-    const topModule = sortedMods[0];
+Here's where things stand this week.
 
-    const pPct = proj.wk1>0 ? Math.round(((proj.wk0-proj.wk1)/proj.wk1)*100) : 0;
-    const warn = proj.isDrop || (proj.wk0===0 && proj.wk1>0);
-    const significant = proj.wk0===0 || Math.abs(pPct)>=10 || stoppedMods.length>0;
-    if (proj.wk0===0 && proj.wk1>0) silentProjects.push({name:proj.name, lastWk:proj.wk1});
+────────────────────────────────────
+  This week (Wk 0)   : {{wk0}}
+  Last week  (Wk 1)  : {{wk1}}
+  2 weeks ago (Wk 2) : {{wk2}}
+  3 weeks ago (Wk 3) : {{wk3}}
 
-    return {
-      name:proj.name, today:proj.wk0, yest:proj.wk1, warn, pct:pPct, significant,
-      stoppedModules:stoppedMods, modules:modList,
-      topModuleName:topModule?.name, topUserName:topUser?.name, topUserCount:topUser?.thisWk
-    };
-  });
+Module activity this week:
+{{modules_status}}
+────────────────────────────────────
 
-  stoppedModulesFlat.sort((a,b)=>b.lastWk-a.lastWk);
-  allUserDrops.sort((a,b)=>a.delta-b.delta);
+{{wk0}} activities across {{projects}} project(s) this week — your team is building strong habits on the platform.
 
-  // Top mover
-  const allUsersList = acc.projects.flatMap(p => p.modules.flatMap(m => {
-    const um = {};
-    m.events.forEach(e => {
-      if (!e.user) return;
-      if (!um[e.user]) um[e.user]={name:e.user,thisWk:0,lastWk:0,project:p.name,module:m.name};
-      um[e.user].thisWk+=e.wk0; um[e.user].lastWk+=e.wk1;
-    });
-    return Object.values(um);
-  }));
-  const topMoverCandidate = allUsersList
-    .filter(u=>u.lastWk>0&&u.thisWk>u.lastWk)
-    .sort((a,b)=>(b.thisWk-b.lastWk)/b.lastWk-(a.thisWk-a.lastWk)/a.lastWk)[0];
-  const topMover = topMoverCandidate ? {
-    name:topMoverCandidate.name, project:topMoverCandidate.project, module:topMoverCandidate.module,
-    pct:Math.round(((topMoverCandidate.thisWk-topMoverCandidate.lastWk)/topMoverCandidate.lastWk)*100)
-  } : null;
+The next phase is making sure every module delivers measurable value. There may also be features your team hasn't fully explored yet that could save significant time on site.
 
-  // Watch out
-  const worstProj = [...projects].sort((a,b)=>{
-    const pa=a.yest>0?(a.today-a.yest)/a.yest:0;
-    const pb=b.yest>0?(b.today-b.yest)/b.yest:0;
-    return pa-pb;
-  })[0];
-  const watchOut = worstProj&&worstProj.today<worstProj.yest ? {project:worstProj.name, issue:`Down ${Math.abs(worstProj.pct)}% this week`} : null;
+Renewal: {{renewal}}
 
-  return {
-    name:acc.name, totalToday:acc.wk0, totalYest:acc.wk1,
-    totalUsers:userSet.size, activeUsersToday:activeUserSet.size,
-    moduleColors:{}, projects, silentProjects, stoppedModulesFlat,
-    topDrops:allUserDrops.slice(0,4), topMover, watchOut
+Can we do 20 minutes this week — you and your team — to walk through the live reports and plan what comes next?
+
+{{trainer}}
+Customer Success — Powerplay`
+  },
+  drop: {
+    label: '🟠 Low Activity / Drop',
+    subject: 'Activity has dipped for {{account}} — let\'s get back on track',
+    body: `Hi,
+
+When you started on Powerplay, the goal was:
+"{{ob_notes}}"
+
+This week, activity has dropped:
+
+────────────────────────────────────
+  This week (Wk 0)   : {{wk0}}  ← {{diff}} ({{pct}}) vs last week
+  Last week  (Wk 1)  : {{wk1}}
+  2 weeks ago (Wk 2) : {{wk2}}
+  3 weeks ago (Wk 3) : {{wk3}}
+
+Module activity this week:
+{{modules_status}}
+
+Last note ({{last_disposition}}):
+"{{disposition}}"
+────────────────────────────────────
+
+A dip like this usually means one of two things — the team got busy on site, or there's a friction point in the workflow we haven't resolved yet. Either way, we'd like to understand and help.
+
+{{trainer}} can be on a 15-minute call this week. No agenda required — just a quick check-in.
+
+Renewal: {{renewal}}
+
+Would this week work for a catch-up? Just reply and we'll set it up.
+
+{{trainer}}
+Customer Success — Powerplay`
+  },
+  recent_inactive: {
+    label: '🔴 Recently Inactive',
+    subject: '{{account}} — no activity this week. One question.',
+    body: `Hi,
+
+Your Powerplay account shows no activity this week.
+
+────────────────────────────────────
+  This week (Wk 0)   : 0
+  Last week  (Wk 1)  : {{wk1}}
+  2 weeks ago (Wk 2) : {{wk2}}
+  3 weeks ago (Wk 3) : {{wk3}}
+
+Last note ({{last_disposition}}):
+"{{disposition}}"
+────────────────────────────────────
+
+When activity stops, it's usually one of these three:
+
+  A. Team is busy on site — we can reschedule training sessions around your timelines
+  B. Something in the workflow isn't working — one call is usually all it takes to fix it
+  C. Team needs a refresher — we can run a short session this week
+
+Just reply with A, B, or C — and {{trainer}} will set it up within 24 hours.
+
+Renewal: {{renewal}}
+
+{{trainer}}
+Customer Success — Powerplay`
+  },
+  long_inactive: {
+    label: '⚫ Long Inactive',
+    subject: '{{account}} — before your renewal, a quick conversation',
+    body: `Hi,
+
+Your Powerplay subscription renews on {{renewal}}.
+
+Before that date, I want to be direct with you.
+
+────────────────────────────────────
+  3 weeks ago (Wk 3) : {{wk3}}
+  2 weeks ago (Wk 2) : {{wk2}}
+  Last week  (Wk 1)  : {{wk1}}
+  This week  (Wk 0)  : {{wk0}}
+────────────────────────────────────
+
+When you started on Powerplay, the goal was:
+"{{ob_notes}}"
+
+We haven't fully got there yet — and we want to understand why before you make any decision about renewal.
+
+I'm not asking for a commitment. I'm asking for 30 minutes before you decide.
+
+In that call, {{trainer}} will:
+  — Walk through exactly what your team has built in Powerplay so far
+  — Be honest about what worked and what didn't
+  — Show you what's still possible with the time remaining
+
+Two options:
+  1. Book 30 minutes with {{trainer}} — reply and we'll send a slot within the hour
+  2. If you've already decided not to renew — tell us and we'll make the transition clean
+
+Last note ({{last_disposition}}): "{{disposition}}"
+
+{{trainer}}
+Customer Success — Powerplay`
+  }
+};
+
+let emailTemplates = JSON.parse(localStorage.getItem('pp_email_templates_v2') || 'null') || JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+let emailMap     = JSON.parse(localStorage.getItem('pp_email_map')      || '{}');
+let obNotesMap   = JSON.parse(localStorage.getItem('pp_ob_notes_map')   || '{}');
+let kamNotesMap  = JSON.parse(localStorage.getItem('pp_kam_notes_map')  || '{}');
+let snapDataMap  = JSON.parse(localStorage.getItem('pp_snap_data_map')  || '{}');
+let currentTmplTab = 'active';
+let pendingAcc     = null;
+
+// Global account registry — populated during render, reset on each rebuild
+window.accRegistry = {};
+
+// ── Module summary for email body ─────────────────────────────
+function buildModulesSummary(acc) {
+  const entries = Object.entries(acc.modSummary || {});
+  if (!entries.length) return '  (Module data not available)';
+  return entries.map(([name, d]) => {
+    const icon = d.wk0 === 0 ? '🔴' : d.wk0 >= d.wk1 ? '✅' : '🟡';
+    const detail = d.wk0 === 0
+      ? 'No activity this week'
+      : d.wk0 > d.wk1  ? `${d.wk0} events (+${d.wk0 - d.wk1} vs last week)`
+      : d.wk0 === d.wk1 ? `${d.wk0} events (stable)`
+      : `${d.wk0} events (↓ from ${d.wk1} last week)`;
+    const pad = Math.max(1, 26 - name.length);
+    return `  ${icon} ${name}${' '.repeat(pad)}: ${detail}`;
+  }).join('\n');
+}
+
+// ── Fill all placeholders ─────────────────────────────────────
+function fillTemplate(text, acc, trainer, obNotes) {
+  const ob = obNotes || acc.obNotes || '[Paste OB notes here — what the owner said they wanted to fix]';
+  return text
+    .replace(/\{\{account\}\}/g,         acc.name || '')
+    .replace(/\{\{trainer\}\}/g,         trainer || '')
+    .replace(/\{\{wk0\}\}/g,             acc.wk0 ?? 0)
+    .replace(/\{\{wk1\}\}/g,             acc.wk1 ?? 0)
+    .replace(/\{\{wk2\}\}/g,             acc.wk2 ?? 0)
+    .replace(/\{\{wk3\}\}/g,             acc.wk3 ?? 0)
+    .replace(/\{\{diff\}\}/g,            (acc.diff > 0 ? '+' : '') + (acc.diff ?? 0))
+    .replace(/\{\{pct\}\}/g,             acc.pct || '—')
+    .replace(/\{\{renewal\}\}/g,         acc.renewal || 'N/A')
+    .replace(/\{\{priority\}\}/g,        (acc.priority || '').replace('_', ' '))
+    .replace(/\{\{projects\}\}/g,        acc.projects?.length ?? 0)
+    .replace(/\{\{disposition\}\}/g,     acc.lastDispo || '—')
+    .replace(/\{\{last_disposition\}\}/g, acc.lastDispDate || '—')
+    .replace(/\{\{modules_status\}\}/g,  buildModulesSummary(acc))
+    .replace(/\{\{ob_notes\}\}/g,        ob);
+}
+
+// ── Pick template based on priority + 4-week data ────────────
+function pickTemplate(priority, acc) {
+  // All 4 weeks zero → long inactive
+  if (acc && acc.wk0 === 0 && acc.wk1 === 0 && acc.wk2 === 0 && acc.wk3 === 0) return 'long_inactive';
+  if (['CRITICAL', 'STABLE_DROP'].includes(priority)) return 'recent_inactive';
+  if (priority === 'INACTIVE') return 'recent_inactive';
+  if (['HIGH', 'MEDIUM', 'LOW'].includes(priority)) return 'drop';
+  return 'active';
+}
+
+// ─────────────────────────────────────────────────────────────
+// TEMPLATE SETTINGS MODAL
+// ─────────────────────────────────────────────────────────────
+function openTemplateModal() {
+  currentTmplTab = 'active';
+  renderTmplModal();
+  document.getElementById('tmpl-modal').classList.add('open');
+}
+function closeTemplateModal() { document.getElementById('tmpl-modal').classList.remove('open'); }
+function switchTmplTab(tab) { currentTmplTab = tab; renderTmplModal(); }
+
+function renderTmplModal() {
+  const tabs = ['active', 'drop', 'recent_inactive', 'long_inactive'];
+  const tabClass = { active:'', drop:'drop', recent_inactive:'inactive', long_inactive:'inactive' };
+  const tabHtml = tabs.map(t => `
+    <button class="ttab ${tabClass[t]} ${currentTmplTab===t?'active':''}" onclick="switchTmplTab('${t}')">
+      ${emailTemplates[t].label}
+    </button>`).join('');
+
+  const tpl = emailTemplates[currentTmplTab];
+  document.getElementById('tmpl-modal-body').innerHTML = `
+    <div class="tmpl-tabs">${tabHtml}</div>
+    <div class="frow">
+      <label>Subject line</label>
+      <input id="tpl-subj" type="text" value="${(tpl.subject||'').replace(/"/g,'&quot;')}">
+    </div>
+    <div class="frow">
+      <label>Email body</label>
+      <textarea id="tpl-body" rows="14">${tpl.body||''}</textarea>
+      <div class="ph-hint">Placeholders: {{account}} {{trainer}} {{wk0}} {{wk1}} {{wk2}} {{wk3}} {{diff}} {{pct}} {{renewal}} {{projects}} {{disposition}} {{last_disposition}} {{modules_status}} {{ob_notes}}</div>
+    </div>`;
+}
+function saveTmplCurrent() {
+  emailTemplates[currentTmplTab].subject = document.getElementById('tpl-subj').value;
+  emailTemplates[currentTmplTab].body    = document.getElementById('tpl-body').value;
+  localStorage.setItem('pp_email_templates_v2', JSON.stringify(emailTemplates));
+  const btn = document.getElementById('tmpl-save-btn');
+  btn.textContent = '✓ Saved!'; btn.style.background = '#276749';
+  setTimeout(() => { btn.textContent = 'Save Template'; btn.style.background = ''; }, 1500);
+}
+function resetTmpl() {
+  if (!confirm('Reset all 4 templates to default?')) return;
+  emailTemplates = JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+  localStorage.removeItem('pp_email_templates_v2');
+  renderTmplModal();
+}
+
+// ─────────────────────────────────────────────────────────────
+// SMART EMAIL GENERATOR — reads all 5 data sources
+// Goals by status:
+//   active       → maintain activity, expand modules, realize value, no churn
+//   drop         → drive adoption, kill parallel processes, recover usage
+//   recent_inact → identify blocker (A/B/C), restart the team fast
+//   long_inact   → honest 30-min conversation before renewal decision
+// ─────────────────────────────────────────────────────────────
+function generateSmartEmail(acc, trainer, inputs) {
+  const ob   = (inputs.obNotes  || acc.obNotes || '').trim();
+  const kam  = (inputs.kamNotes || '').trim();
+  const snap = (inputs.snapData || '').trim();
+  const tKey = pickTemplate(acc.priority, acc);
+  const D    = '─'.repeat(36);
+  const L    = [];
+
+  const subjects = {
+    long_inactive:   `${acc.name} — before your renewal on ${acc.renewal||'N/A'}, a quick conversation`,
+    recent_inactive: `${acc.name} — activity stopped this week. One question.`,
+    drop:            `Activity has dipped for ${acc.name} — a few specific things to flag`,
+    active:          `What ${acc.name} set out to fix — and where it stands today`
   };
-}
+  const subject = subjects[tKey] || subjects.active;
 
-// ── Snap captions ─────────────────────────────────────────────
-const SG_CAPTIONS = {
-  up:["Hi {customer_name} Sir, sharing this week's snap — team logged {today} activities, up {pct}% vs last week. {top_user} leading on {top_project}. Great momentum 🚀",
-      "{customer_name} Sir, this week's update — {today} activities, up {pct}% from last week. {top_user} & team going strong on {top_project}."],
-  flat:["Hi {customer_name} Sir, sharing this week's snap — {today} activities, roughly steady vs last week. {top_user} leading on {top_project}. Let's keep building on this.",
-        "{customer_name} Sir, this week's update — {today} activities logged. Adoption is steady. {top_user} continues to drive on {top_project}."],
-  slight_dip:["Hi {customer_name} Sir, sharing this week's snap — {today} activities logged, slight dip of {pct}% vs last week. {top_user} still active on {top_project}. Want me to do a quick check-in?",
-              "{customer_name} Sir, this week's snap — small dip of {pct}% vs last week. Nothing alarming yet, but {watch_project} could use a nudge."],
-  risk:["Hi {customer_name} Sir, activity dropped to {today} this week (down {pct}%). {watch_project} needs attention — {watch_issue}. Want me to set up a 15-min refresher?",
-        "{customer_name} Sir, this week's snap — {pct}% drop vs last week. Some modules went silent. Happy to do a quick walkthrough if helpful."],
-  declining:["Sir, this week's snap shows zero activity. Can we hop on a quick 10-min call to understand what's blocking the team?",
-             "Hi {customer_name} Sir, urgent — team hasn't been active this week. Adoption is at risk. Requesting 15 min to discuss."]
-};
+  L.push('Hi,'); L.push('');
 
-function sgPctChange(today, yest) {
-  if (yest===0) return today>0?100:0;
-  return Math.round(((today-yest)/yest)*100);
-}
-function sgClassifyHealth(a) {
-  if (a.totalToday===0) return 'declining';
-  const pct=sgPctChange(a.totalToday,a.totalYest);
-  if (pct<-30) return 'risk';
-  return 'healthy';
-}
-function sgPickTier(pct, health) {
-  if (health==='declining') return 'declining';
-  if (health==='risk') return 'risk';
-  if (pct>=5) return 'up';
-  if (pct>=-5) return 'flat';
-  return 'slight_dip';
-}
-function sgWeekRange() {
-  const today=new Date();
-  return `Week ending ${today.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} · vs prior week`;
-}
-
-let sgCurrentAcct = null;
-let sgShowFull = false;
-
-function sgBuildWatchList(a) {
-  const hasSilent = a.silentProjects&&a.silentProjects.length>0;
-  const hasStopped = a.stoppedModulesFlat&&a.stoppedModulesFlat.length>0;
-  const hasDrops = a.topDrops&&a.topDrops.length>0;
-  if (!hasSilent&&!hasStopped&&!hasDrops) {
-    return `<div class="sg-watchlist clear"><div class="sg-wl-title">✅ ALL CLEAR THIS WEEK</div><div class="sg-wl-item">No silent projects, no stopped modules, no significant drops. Team firing on all cylinders.</div></div>`;
+  // OB anchor — owner's own words as the hook
+  if (ob && tKey !== 'recent_inactive') {
+    L.push('When you started on Powerplay, the goal was:');
+    L.push(`"${ob}"`); L.push('');
   }
-  const danger = hasSilent||a.stoppedModulesFlat.length>=5;
-  const items=[];
-  if (hasSilent) {
-    const txt=a.silentProjects.slice(0,3).map(p=>`<b>${p.name}</b> (was ${p.lastWk})`).join(', ');
-    const more=a.silentProjects.length>3?` +${a.silentProjects.length-3} more`:'';
-    items.push(`<div class="sg-wl-item"><span class="lbl">Silent projects:</span>${txt}${more}</div>`);
+
+  // Activity data table
+  L.push(D);
+  if (tKey === 'long_inactive') {
+    L.push(`  3 weeks ago (Wk 3) : ${acc.wk3 ?? 0}`);
+    L.push(`  2 weeks ago (Wk 2) : ${acc.wk2 ?? 0}`);
+    L.push(`  Last week  (Wk 1)  : ${acc.wk1 ?? 0}`);
+    L.push(`  This week  (Wk 0)  : ${acc.wk0 ?? 0}`);
+  } else {
+    const dropNote = (tKey === 'drop' && acc.pct) ? `  ← ${(acc.diff>0?'+':'')+acc.diff} (${acc.pct}) vs last week` : '';
+    L.push(`  This week (Wk 0)   : ${acc.wk0 ?? 0}${dropNote}`);
+    L.push(`  Last week  (Wk 1)  : ${acc.wk1 ?? 0}`);
+    L.push(`  2 weeks ago (Wk 2) : ${acc.wk2 ?? 0}`);
+    L.push(`  3 weeks ago (Wk 3) : ${acc.wk3 ?? 0}`);
   }
-  if (hasStopped) {
-    const txt=a.stoppedModulesFlat.slice(0,3).map(s=>{
-      const by=s.lastWkUsers&&s.lastWkUsers[0]?` by <b>${s.lastWkUsers[0].name}</b>`:'';
-      return `<b>${s.module}</b> on ${s.project} (was ${s.lastWk}${by})`;
-    }).join(' · ');
-    const more=a.stoppedModulesFlat.length>3?` +${a.stoppedModulesFlat.length-3} more`:'';
-    items.push(`<div class="sg-wl-item"><span class="lbl">Modules stopped:</span>${txt}${more}</div>`);
+  L.push('');
+
+  // Module breakdown from dashboard data
+  const modEntries = Object.entries(acc.modSummary || {});
+  if (modEntries.length && tKey !== 'long_inactive') {
+    L.push('Module activity this week:');
+    modEntries.forEach(([name, d]) => {
+      const icon   = d.wk0 === 0 ? '🔴' : d.wk0 >= d.wk1 ? '✅' : '🟡';
+      const detail = d.wk0 === 0
+        ? (d.wk1 > 0 ? `No activity this week (was ${d.wk1} last week)` : 'No activity')
+        : d.wk0 > d.wk1 ? `${d.wk0} events (+${d.wk0-d.wk1} vs last week)`
+        : d.wk0 === d.wk1 ? `${d.wk0} events (stable)`
+        : `${d.wk0} events (↓ from ${d.wk1} last week)`;
+      const pad = Math.max(1, 22 - name.length);
+      L.push(`  ${icon} ${name}${' '.repeat(pad)}: ${detail}`);
+    });
+    L.push('');
   }
-  if (hasDrops) {
-    const txt=a.topDrops.slice(0,3).map(d=>`<b>${d.name}</b> ↓${Math.abs(d.delta)} (${d.module} on ${d.project})`).join(' · ');
-    items.push(`<div class="sg-wl-item"><span class="lbl">Biggest drops:</span>${txt}</div>`);
+  L.push(D); L.push('');
+
+  // Trainer disposition (auto from Redash)
+  const dispLine = acc.lastDispo
+    ? `Last note${acc.lastDispDate ? ` (${acc.lastDispDate})` : ''}: "${acc.lastDispo}"`
+    : '';
+
+  // Weekly snap highlights — project/user-level detail
+  if (snap) {
+    L.push('From this week\'s snap:');
+    snap.split('\n').forEach(line => line.trim() && L.push(`  ${line.trim()}`));
+    L.push('');
   }
-  return `<div class="sg-watchlist ${danger?'danger':''}"><div class="sg-wl-title">⚠ NEEDS ATTENTION</div>${items.join('')}</div>`;
-}
 
-function sgBuildStackBar(project, maxToday, colorMap) {
-  if (!project.modules||project.modules.length===0) {
-    return `<div style="height:22px;background:#FEE2E2;border-radius:6px;width:8%;display:flex;align-items:center;justify-content:center;color:#991B1B;font-size:11px;font-weight:600;padding:0 6px">0</div>`;
-  }
-  const projWidthPct = Math.max((project.today/maxToday)*100,6);
-  const barPx = 536*(projWidthPct/100);
-  const segs = project.modules.map(m=>{
-    const mWPct = project.today>0?(m.today/project.today)*100:0;
-    const mPx = barPx*(mWPct/100);
-    const color = sgGetColor(m.name,colorMap);
-    const label = mPx>22?`${m.today}`:'';
-    return `<div class="sg-mod-seg" style="width:${mWPct}%;background:${color};"><div class="sg-user-cell">${label}</div></div>`;
-  }).join('');
-  return `<div class="sg-stack-bar" style="width:${projWidthPct}%">${segs}</div>`;
-}
+  // Status-specific narrative
+  if (tKey === 'long_inactive') {
+    L.push(ob
+      ? `You came in with a clear goal. We haven't fully got there — and we want to understand why before you make any renewal decision.`
+      : `Your account has been inactive for several weeks. Before your renewal, we want to be direct.`);
+    L.push('');
+    L.push(`I'm not asking for a commitment. I'm asking for 30 minutes before you decide.`);
+    L.push('');
+    L.push(`In that call, ${trainer} will:`);
+    L.push(`  — Show exactly what your team has built in Powerplay so far`);
+    L.push(`  — Be honest about what worked and what didn't`);
+    L.push(`  — Show what's still possible in the time remaining`);
+    L.push('');
+    if (dispLine) { L.push(dispLine); L.push(''); }
+    if (kam)      { L.push(`KAM note: ${kam}`); L.push(''); }
+    L.push('Two options:');
+    L.push(`  1. Book 30 minutes with ${trainer} — reply and we'll send a slot within the hour`);
+    L.push(`  2. If you've already decided not to renew — tell us and we'll make the transition clean`);
 
-function sgBuildBreakdown(project, colorMap) {
-  if (!project.modules||project.modules.length===0) return '';
-  const lines = project.modules.map(m=>{
-    const color = sgGetColor(m.name,colorMap);
-    const modDelta = m.today-(m.yest||0);
-    const modPct = m.yest===0?(m.today>0?100:0):Math.round((modDelta/m.yest)*100);
-    const mbClass = modDelta>0?'up':modDelta<0?'down':'';
-    const modBadge = modDelta!==0&&m.yest>0
-      ?`<span class="sg-mod-badge ${mbClass}">${modDelta>0?'↑':'↓'}${Math.abs(modPct)}%</span>`
-      :(m.yest===0?`<span class="sg-mod-badge" style="background:#DBEAFE;color:#1D4ED8">new</span>`:'');
-    let usersText = '';
-    if (m.users&&m.users.length>0) {
-      usersText = m.users.map(u=>{
-        const delta=u.thisWk-u.lastWk;
-        let badge='', nc='sg-user-name';
-        if (u.lastWk===0&&u.thisWk>0) badge=`<span class="sg-user-badge new">new</span>`;
-        else if (delta<0) { badge=`<span class="sg-user-badge down">↓${Math.abs(delta)}</span>`; nc='sg-user-name drop'; }
-        else if (delta>0) badge=`<span class="sg-user-badge up">↑${delta}</span>`;
-        return `<span class="${nc}">${u.name}</span> <span class="sg-user-cnt">${u.thisWk}</span>${badge}`;
-      }).join('<span class="sg-bd-sep">·</span>');
-    } else usersText=`<span class="sg-bd-unassigned">unassigned</span>`;
-    return `<div class="sg-bd-line"><span class="sg-bd-dot" style="background:${color}"></span><span class="sg-bd-text"><span class="sg-bd-mod">${m.name}</span> <span class="sg-bd-cnt-big">${m.today}</span>${modBadge} <span class="sg-bd-em-dash">—</span> ${usersText}</span></div>`;
-  }).join('');
-  return `<div class="sg-breakdown">${lines}</div>`;
-}
-
-function sgBuildCollapsed(p) {
-  const topInfo = p.topUserName
-    ? `<b>${p.topUserName}</b> ${p.topUserCount} leading on ${p.topModuleName}`
-    : `${p.modules?p.modules.length:0} modules`;
-  const stoppedHint = (p.stoppedModules&&p.stoppedModules.length>0) ? ` · <span style="color:#991B1B">${p.stoppedModules.length} stopped</span>` : '';
-  return `<div class="sg-collapsed-summary">${p.modules.length} modules · ${topInfo}${stoppedHint}</div>`;
-}
-
-function sgRenderCard(a) {
-  const health = sgClassifyHealth(a);
-  const pct = sgPctChange(a.totalToday, a.totalYest);
-  const isDown = pct<0, isFlat = pct===0;
-  a.moduleColors = {};
-  const maxToday = Math.max(...a.projects.map(p=>p.today),1);
-
-  const projectsHtml = a.projects.map(p=>{
-    const pPctClass = p.pct>0?'up':p.pct<0?'down':'flat';
-    const arrow = p.pct>0?'↑':p.pct<0?'↓':'–';
-    const nameClass = p.warn?'sg-project-name warn':'sg-project-name';
-    const warnPfx = p.warn?'⚠ ':'';
-    let stoppedHtml='';
-    if (p.stoppedModules&&p.stoppedModules.length>0) {
-      const pills = p.stoppedModules.map(s=>{
-        let by='';
-        if (s.lastWkUsers&&s.lastWkUsers.length>0) by=' by '+s.lastWkUsers.map(u=>`<b>${u.name}</b> ${u.lastWk}`).join(', ');
-        return `<span class="sg-stopped-pill">${s.name} (was ${s.lastWk}${by})</span>`;
-      }).join('');
-      stoppedHtml=`<div class="sg-stopped-line"><strong>⚠ Stopped this week:</strong> ${pills}</div>`;
+  } else if (tKey === 'recent_inactive') {
+    L.push(`When activity stops, it's usually one of these three:`);
+    L.push('');
+    L.push(`  A. Team is busy on site — we reschedule training sessions around your timelines`);
+    L.push(`  B. Something in the workflow isn't working — one call is usually all it takes to fix it`);
+    L.push(`  C. Team needs a refresher — we'll run a short session this week`);
+    L.push('');
+    if (dispLine) { L.push(dispLine); L.push(''); }
+    if (kam)      { L.push(`KAM note: ${kam}`); L.push(''); }
+    if (ob) {
+      L.push(`Your original goal was: "${ob}"`);
+      L.push(`That's still achievable — but only if the team is back on the platform.`);
+      L.push('');
     }
-    const expanded = sgShowFull||p.significant;
-    const headerHtml = `<div class="sg-project-head"><div class="${nameClass}">${warnPfx}${p.name}</div><div class="sg-project-delta"><span class="sg-delta-from">${p.yest} →</span> <strong style="color:${p.warn?'#991B1B':'#1F2937'}">${p.today}</strong><span class="sg-delta-pill ${pPctClass}">${arrow} ${Math.abs(p.pct)}%</span></div></div>`;
-    if (expanded) {
-      return `<div class="sg-project-row">${headerHtml}${sgBuildStackBar(p,maxToday,a.moduleColors)}${sgBuildBreakdown(p,a.moduleColors)}${stoppedHtml}</div>`;
-    } else {
-      return `<div class="sg-project-row">${headerHtml}${sgBuildStackBar(p,maxToday,a.moduleColors)}${sgBuildCollapsed(p)}</div>`;
+    L.push(`Just reply with A, B, or C — and ${trainer} will set it up within 24 hours.`);
+
+  } else if (tKey === 'drop') {
+    const stopped = modEntries.filter(([,d]) => d.wk0 === 0 && d.wk1 > 0);
+    const growing = modEntries.filter(([,d]) => d.wk0 > d.wk1);
+    if (stopped.length) {
+      L.push(`Modules that stopped this week:`);
+      stopped.forEach(([n,d]) => L.push(`  — ${n} (was ${d.wk1} last week, 0 this week)`));
+      L.push('');
     }
+    if (growing.length) {
+      L.push(`Still growing:`);
+      growing.forEach(([n,d]) => L.push(`  — ${n}: ${d.wk1} → ${d.wk0} this week`));
+      L.push('');
+    }
+    if (ob) { L.push(`Your original goal was: "${ob}"`); L.push(''); }
+    const stoppedNames = stopped.map(([n]) => n);
+    L.push(stoppedNames.length
+      ? `When ${stoppedNames.join(' and ')} ${stoppedNames.length > 1 ? 'drop' : 'drops'} like this, it usually means the team has gone back to a parallel process — Excel, WhatsApp, manual sheets. That's the gap we need to close.`
+      : `A dip like this usually means the team has reverted to a parallel process for some modules. That's what we need to address.`);
+    L.push('');
+    if (dispLine) { L.push(dispLine); L.push(''); }
+    if (kam)      { L.push(`KAM note: ${kam}`); L.push(''); }
+    L.push(`${trainer} can spend 20 minutes with your team lead this week — specifically on the modules that have dropped. No big session. Just that.`);
+    L.push(''); L.push(`Would this week work? Just reply and we'll set it up.`);
+
+  } else {
+    // ACTIVE — value realization, expand, no churn
+    const zeroMods   = modEntries.filter(([,d]) => d.wk0 === 0 && d.wk1 === 0);
+    const activeMods = modEntries.filter(([,d]) => d.wk0 > 0);
+    L.push(`${acc.wk0} activities across ${acc.projects?.length||0} project(s) this week — your team is building consistent habits on the platform.`);
+    L.push('');
+    if (activeMods.length) { L.push(`Running well: ${activeMods.map(([n])=>n).join(', ')}`); L.push(''); }
+    if (zeroMods.length) {
+      L.push(`Not yet active: ${zeroMods.map(([n])=>n).join(', ')}`);
+      L.push(`These modules are included in your subscription — activating even one more could eliminate a parallel process entirely.`);
+      L.push('');
+    }
+    if (ob) {
+      L.push(`Progress against your original goal:`);
+      L.push(`"${ob}"`);
+      activeMods.forEach(([n]) => L.push(`  ✅ ${n}: Active and running`));
+      zeroMods.forEach(([n])   => L.push(`  🔄 ${n}: Not yet started — potential next phase`));
+      L.push('');
+    }
+    if (dispLine) { L.push(dispLine); L.push(''); }
+    if (kam)      { L.push(`Note from ${trainer}: ${kam}`); L.push(''); }
+    L.push(`The next step is making sure every active module delivers measurable value — and that no parallel process remains running alongside Powerplay. The data your team is building grows in value every week.`);
+    L.push(''); L.push(`Can we do 20 minutes this week to walk through the live reports and plan the next phase?`);
+  }
+
+  L.push('');
+  L.push(`Renewal: ${acc.renewal || 'N/A'}`);
+  L.push(''); L.push(trainer); L.push('Customer Success — Powerplay');
+
+  return { subject, body: L.join('\n'), tKey };
+}
+
+// ─────────────────────────────────────────────────────────────
+// SEND EMAIL MODAL — two-panel: data sources | generated email
+// ─────────────────────────────────────────────────────────────
+function openSendModal(aId) {
+  const entry = window.accRegistry[aId];
+  if (!entry) return;
+  pendingAcc = entry;
+
+  const { acc, trainer } = entry;
+  const tKey  = pickTemplate(acc.priority, acc);
+  const tColors = { long_inactive:'#718096', recent_inactive:'#fc5353', drop:'#ed8936', active:'#48bb78' };
+  const tLabels = { long_inactive:'⚫ Long Inactive', recent_inactive:'🔴 Recently Inactive', drop:'🟠 Drop', active:'✅ Active / Stable' };
+  const col   = tColors[tKey] || '#4299e1';
+  const lbl   = tLabels[tKey] || tKey;
+
+  const savedEmail = emailMap[acc.name]    || '';
+  const savedOb    = obNotesMap[acc.name]  || acc.obNotes || '';
+  const savedKam   = kamNotesMap[acc.name] || '';
+  const savedSnap  = snapDataMap[acc.name] || '';
+
+  document.getElementById('send-modal-title').textContent = '✉  ' + acc.name;
+
+  const modRows = Object.entries(acc.modSummary || {}).map(([n,d]) => {
+    const ic = d.wk0===0?'🔴':d.wk0>=d.wk1?'✅':'🟡';
+    return `<div style="font-size:11px;color:#718096;margin-top:2px">${ic} ${n}: <b style="color:#a0aec0">${d.wk0}</b> this wk</div>`;
   }).join('');
 
-  // Legend
-  const modSet={};
-  a.projects.forEach(p=>{
-    (p.modules||[]).forEach(m=>{modSet[m.name]=(modSet[m.name]||0)+m.today;});
-    (p.stoppedModules||[]).forEach(m=>{if(!modSet[m.name])modSet[m.name]=0;});
-  });
-  const legendHtml = Object.entries(modSet).sort((x,y)=>y[1]-x[1]).map(([name])=>{
-    const c=sgGetColor(name,a.moduleColors);
-    return `<span><span class="sg-legend-box" style="background:${c}"></span>${name}</span>`;
-  }).join('');
+  const esc = s => (s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-  // Caption
-  const tier = sgPickTier(pct,health);
-  const pool = SG_CAPTIONS[tier];
-  let caption = pool[Math.floor(Math.random()*pool.length)]
-    .replace('{customer_name}',a.name.split(' ')[0])
-    .replace('{today}',a.totalToday)
-    .replace('{yest}',a.totalYest)
-    .replace(/{pct}/g,Math.abs(pct))
-    .replace('{top_user}',a.topMover?.name||'the team')
-    .replace('{top_project}',a.topMover?.project||'site')
-    .replace('{watch_project}',a.watchOut?.project||'')
-    .replace('{watch_issue}',a.watchOut?.issue||'');
-  if (a.silentProjects.length>0) caption+=` Note: ${a.silentProjects[0].name} went silent (was ${a.silentProjects[0].lastWk}).`;
-  else if (a.topDrops.length>0) { const d=a.topDrops[0]; caption+=` Note: ${d.name} dropped ${Math.abs(d.delta)} on ${d.module} (${d.project}).`; }
-  else if (a.stoppedModulesFlat.length>0) { const s=a.stoppedModulesFlat[0]; caption+=` Note: ${s.module} on ${s.project} stopped this week.`; }
-  document.getElementById('sgCaptionText').value = caption;
+  document.getElementById('send-modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:290px 1fr;margin:0 -22px -20px;min-height:500px">
 
-  const highlightsHtml = `<div class="sg-highlights-grid">
-    ${a.topMover?`<div class="sg-highlight-card good"><div class="sg-h-label">🏆 TOP MOVER</div><div class="sg-h-name">${a.topMover.name}</div><div class="sg-h-sub">${a.topMover.project} · ${a.topMover.module} ↑${a.topMover.pct}%</div></div>`:
-    `<div class="sg-highlight-card warn"><div class="sg-h-label">⚠ NO MOVERS</div><div class="sg-h-name">Team silent</div><div class="sg-h-sub">No activity to highlight</div></div>`}
-    ${a.watchOut?`<div class="sg-highlight-card warn"><div class="sg-h-label">⚠ WATCH OUT</div><div class="sg-h-name">${a.watchOut.project}</div><div class="sg-h-sub">${a.watchOut.issue}</div></div>`:
-    `<div class="sg-highlight-card good"><div class="sg-h-label">✅ ALL GOOD</div><div class="sg-h-name">No red flags</div><div class="sg-h-sub">Team firing across projects</div></div>`}
-  </div>`;
+      <div style="border-right:1px solid #2d3748;padding:14px;overflow-y:auto;max-height:calc(90vh - 130px);display:flex;flex-direction:column;gap:12px">
 
-  const capIcon = health==='healthy'?'💡':health==='risk'?'⚠️':'🚨';
-  document.getElementById('sgCardContainer').innerHTML = `
-    <div id="sgSnapCard" class="sg-snap-card">
-      <div class="sg-snap-header">
-        <div class="sg-snap-brand">POWERPLAY · WEEKLY SNAP</div>
-        <div class="sg-snap-acct">${a.name}</div>
-        <div class="sg-snap-meta">${sgWeekRange()} · ${a.activeUsersToday} users active this week</div>
-      </div>
-      <div class="sg-hero-vs">
-        <div class="sg-hero-grid">
-          <div class="sg-hero-side"><div class="sg-hero-side-label sg-yest-label">LAST WEEK</div><div class="sg-hero-side-num sg-yest-num">${a.totalYest}</div></div>
-          <div class="sg-hero-arrow ${isDown?'down':''}">→</div>
-          <div class="sg-hero-side"><div class="sg-hero-side-label sg-today-label ${isDown?'down':''}">THIS WEEK</div><div class="sg-hero-side-num sg-today-num ${isDown?'down':''}">${a.totalToday}</div></div>
+        <div style="background:#10141c;border:1px solid #1e2535;border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070;margin-bottom:7px">📊 Dashboard Data</div>
+          <div style="font-size:12px;color:#a0aec0;line-height:1.9">
+            <div>Status: <span style="color:${col};font-weight:600">${lbl}</span></div>
+            <div>Wk0: <b style="color:#e2e8f0">${acc.wk0}</b> · Wk1: ${acc.wk1} · Wk2: ${acc.wk2} · Wk3: ${acc.wk3}</div>
+            <div>Δ: <span style="color:${acc.diff<0?'#fc5353':'#48bb78'}">${(acc.diff>0?'+':'')+acc.diff} (${acc.pct||'—'})</span> · ${acc.projects?.length||0} projects</div>
+            <div>Renewal: <b style="color:#7eb8e0">${acc.renewal||'N/A'}</b></div>
+            ${modRows}
+            ${acc.lastDispDate?`<div style="margin-top:5px;font-size:11px;color:#4a6080">Last call: ${acc.lastDispDate}</div>`:''}
+            ${acc.lastDispo?`<div style="font-size:11px;color:#4a6080;font-style:italic" title="${esc(acc.lastDispo)}">"${acc.lastDispo.slice(0,80)}${acc.lastDispo.length>80?'...':''}"</div>`:''}
+          </div>
         </div>
-        <div class="sg-hero-strip ${isDown?'down':isFlat?'flat':'up'}">${isDown?'↓':isFlat?'–':'↑'} ${Math.abs(pct)}% activity</div>
+
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070;margin-bottom:5px">📋 OB Notes — Owner's Goal</div>
+          <textarea id="inp-ob" rows="3" oninput="_refreshSmartEmail()"
+            placeholder="What did the owner say they wanted to fix? Paste OB form summary here."
+            style="width:100%;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:7px 9px;font-size:11.5px;outline:none;resize:vertical;min-height:70px;line-height:1.55;font-family:inherit"
+          >${esc(savedOb)}</textarea>
+          <div style="font-size:10px;color:#4a5568;margin-top:3px">Saved per account. Fills into email automatically.</div>
+        </div>
+
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070;margin-bottom:5px">💬 KAM Notes</div>
+          <textarea id="inp-kam" rows="2" oninput="_refreshSmartEmail()"
+            placeholder="Key account observations, team context, escalations"
+            style="width:100%;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:7px 9px;font-size:11.5px;outline:none;resize:vertical;min-height:56px;line-height:1.55;font-family:inherit"
+          >${esc(savedKam)}</textarea>
+        </div>
+
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070;margin-bottom:5px">📸 Weekly Snap Highlights</div>
+          <textarea id="inp-snap" rows="3" oninput="_refreshSmartEmail()"
+            placeholder="Paste key lines from this week's snap — e.g. 'Godrej Industries silent (was 6)' / 'STT Jaipur material stopped'"
+            style="width:100%;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:7px 9px;font-size:11.5px;outline:none;resize:vertical;min-height:70px;line-height:1.55;font-family:inherit"
+          >${esc(savedSnap)}</textarea>
+        </div>
+
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070;margin-bottom:5px">📧 Send to</div>
+          <input id="send-to" type="email" placeholder="owner@company.com" value="${esc(savedEmail)}"
+            style="width:100%;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:7px 9px;font-size:12px;outline:none">
+        </div>
+
       </div>
-      ${sgBuildWatchList(a)}
-      <div class="sg-legend-wrap">
-        <div class="sg-legend">${legendHtml}</div>
-        ${projectsHtml}
+
+      <div style="padding:14px 16px;overflow-y:auto;max-height:calc(90vh - 130px);display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070">Generated Email — auto-updates as you fill data</div>
+        <div style="background:#0f1420;border:1px solid #2d3748;border-radius:6px;padding:10px 13px">
+          <div style="font-size:10px;color:#3a5070;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Subject</div>
+          <div id="prev-subj" style="font-size:13px;color:#7eb8e0;font-weight:600;line-height:1.4"></div>
+        </div>
+        <div style="background:#0f1420;border:1px solid #2d3748;border-radius:6px;padding:10px 13px;flex:1">
+          <div style="font-size:10px;color:#3a5070;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Body</div>
+          <div id="prev-body" style="font-size:12px;color:#a0aec0;line-height:1.75;white-space:pre-wrap;font-family:inherit"></div>
+        </div>
       </div>
-      <div class="sg-highlights">
-        <div class="sg-highlights-title">THIS WEEK'S HIGHLIGHTS</div>
-        ${highlightsHtml}
-      </div>
-      <div class="sg-caption-strip ${health}"><div class="ct">${capIcon} ${caption}</div></div>
+
     </div>`;
 
-  // Size hint
-  setTimeout(()=>{
-    const card=document.getElementById('sgSnapCard');
-    const hint=document.getElementById('sgSizeHint');
-    if(!card||!hint) return;
-    const h=card.scrollHeight;
-    let scale=2.5;
-    if(h>1800)scale=2; if(h>3000)scale=1.6; if(h>4500)scale=1.3; if(h>6000)scale=1.0;
-    const outH=h*scale;
-    const MAX=5500;
-    if(outH<=MAX){hint.className='sg-size-hint ok';hint.style.display='inline-block';hint.textContent=`✓ 1 image (${Math.round(outH)}px)`;}
-    else{const parts=Math.ceil(outH/MAX);hint.className='sg-size-hint';hint.style.display='inline-block';hint.textContent=`ℹ Will split into ${parts} images`;}
-  },50);
+  _refreshSmartEmail();
+  document.getElementById('send-modal').classList.add('open');
 }
 
-function openDashboardSnap(tid, ai) {
-  const sorted = window._sgSorted && window._sgSorted[tid];
-  if (!sorted || !sorted[ai]) { sgShowToast('Account data not available'); return; }
-  const acc = sorted[ai];
-  sgCurrentAcct = transformAccForSnap(acc);
-  sgShowFull = false;
-  const tg = document.getElementById('sgFullDetail');
-  if (tg) tg.checked = false;
-  document.getElementById('sgModalTitle').textContent = acc.name;
-  sgRenderCard(sgCurrentAcct);
-  document.getElementById('sgModal').classList.add('show');
-  document.getElementById('sgModal').scrollTop = 0;
+function _refreshSmartEmail() {
+  if (!pendingAcc) return;
+  const { acc, trainer } = pendingAcc;
+  const inputs = {
+    obNotes:  document.getElementById('inp-ob')?.value   || '',
+    kamNotes: document.getElementById('inp-kam')?.value  || '',
+    snapData: document.getElementById('inp-snap')?.value || ''
+  };
+  const { subject, body } = generateSmartEmail(acc, trainer, inputs);
+  const se = document.getElementById('prev-subj');
+  const be = document.getElementById('prev-body');
+  if (se) se.textContent = subject;
+  if (be) be.textContent = body;
 }
 
-function sgToggleFullDetail() {
-  sgShowFull = document.getElementById('sgFullDetail').checked;
-  if (sgCurrentAcct) sgRenderCard(sgCurrentAcct);
-}
-function closeSgModal() { document.getElementById('sgModal').classList.remove('show'); }
-document.getElementById('sgModal').addEventListener('click', e=>{ if(e.target.id==='sgModal') closeSgModal(); });
+function doSendEmail() {
+  const to      = (document.getElementById('send-to')?.value  || '').trim();
+  const subject = document.getElementById('prev-subj')?.textContent || '';
+  const body    = document.getElementById('prev-body')?.textContent || '';
+  const ob      = document.getElementById('inp-ob')?.value   || '';
+  const kam     = document.getElementById('inp-kam')?.value  || '';
+  const snap    = document.getElementById('inp-snap')?.value || '';
 
-function sgShowToast(msg) {
-  const t=document.getElementById('sgToast');
-  t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),1800);
-}
-function sgCopyCaption() {
-  const txt=document.getElementById('sgCaptionText').value;
-  navigator.clipboard.writeText(txt).then(()=>sgShowToast('Caption copied!'));
-}
+  if (!to)               { alert('Please enter a recipient email address.'); return; }
+  if (!to.includes('@')) { alert('Please enter a valid email address.'); return; }
 
-function sgSaveCanvas(canvas, filename) {
-  const link=document.createElement('a');
-  link.download=filename; link.href=canvas.toDataURL('image/png'); link.click();
-}
-
-async function sgDownloadSnap() {
-  const card=document.getElementById('sgSnapCard');
-  if(!card) return;
-  const safeName=sgCurrentAcct.name.replace(/[^a-zA-Z0-9]+/g,'_');
-  const dateStamp=new Date().toISOString().split('T')[0];
-  const FIXED_WIDTH=620;
-  const orig={width:card.style.width,maxWidth:card.style.maxWidth,margin:card.style.margin};
-  card.style.width=FIXED_WIDTH+'px'; card.style.maxWidth=FIXED_WIDTH+'px'; card.style.margin='0 auto';
-  await new Promise(r=>requestAnimationFrame(r));
-  await new Promise(r=>setTimeout(r,30));
-  const cardHeight=card.scrollHeight;
-  let scale=2.5;
-  if(cardHeight>1800)scale=2; if(cardHeight>3000)scale=1.6; if(cardHeight>4500)scale=1.3; if(cardHeight>6000)scale=1.0;
-  sgShowToast('Generating image…');
-  const restore=()=>{card.style.width=orig.width;card.style.maxWidth=orig.maxWidth;card.style.margin=orig.margin;};
-  let fullCanvas;
-  try {
-    fullCanvas=await html2canvas(card,{backgroundColor:'#ffffff',scale,useCORS:true,width:FIXED_WIDTH,windowWidth:1200,height:cardHeight,windowHeight:cardHeight+100});
-  } catch(err) { console.error(err); sgShowToast('Render failed'); restore(); return; }
-  restore();
-  const MAX_PART=5500;
-  if(fullCanvas.height<=MAX_PART){sgSaveCanvas(fullCanvas,`${safeName}_weekly_snap_${dateStamp}.png`);sgShowToast('Image downloaded');return;}
-  const parts=Math.ceil(fullCanvas.height/MAX_PART);
-  const partH=Math.ceil(fullCanvas.height/parts);
-  for(let i=0;i<parts;i++){
-    const startY=i*partH, thisH=Math.min(partH,fullCanvas.height-startY);
-    const part=document.createElement('canvas');
-    part.width=fullCanvas.width; part.height=thisH;
-    const ctx=part.getContext('2d');
-    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,part.width,part.height);
-    ctx.drawImage(fullCanvas,0,startY,fullCanvas.width,thisH,0,0,fullCanvas.width,thisH);
-    sgSaveCanvas(part,`${safeName}_weekly_snap_${dateStamp}_part_${i+1}_of_${parts}.png`);
-    await new Promise(r=>setTimeout(r,350));
+  if (pendingAcc) {
+    const n = pendingAcc.acc.name;
+    emailMap[n] = to;
+    if (ob)   obNotesMap[n]  = ob;
+    if (kam)  kamNotesMap[n] = kam;
+    if (snap) snapDataMap[n] = snap;
+    localStorage.setItem('pp_email_map',      JSON.stringify(emailMap));
+    localStorage.setItem('pp_ob_notes_map',   JSON.stringify(obNotesMap));
+    localStorage.setItem('pp_kam_notes_map',  JSON.stringify(kamNotesMap));
+    localStorage.setItem('pp_snap_data_map',  JSON.stringify(snapDataMap));
   }
-  sgShowToast(`Split into ${parts} parts for WhatsApp`);
+
+  window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  closeSendModal();
 }
 
-async function sgDownloadPDF() {
-  const card=document.getElementById('sgSnapCard');
-  if(!card) return;
-  if(!window.jspdf){sgShowToast('PDF library loading — try again');return;}
-  const safeName=sgCurrentAcct.name.replace(/[^a-zA-Z0-9]+/g,'_');
-  const dateStamp=new Date().toISOString().split('T')[0];
-  const FIXED_WIDTH=620;
-  const orig={width:card.style.width,maxWidth:card.style.maxWidth,margin:card.style.margin};
-  card.style.width=FIXED_WIDTH+'px'; card.style.maxWidth=FIXED_WIDTH+'px'; card.style.margin='0 auto';
-  await new Promise(r=>requestAnimationFrame(r));
-  await new Promise(r=>setTimeout(r,30));
-  const cardHeight=card.scrollHeight;
-  let scale=2;
-  if(cardHeight>4000)scale=1.5; if(cardHeight>7000)scale=1.2;
-  sgShowToast('Generating PDF…');
-  const restore=()=>{card.style.width=orig.width;card.style.maxWidth=orig.maxWidth;card.style.margin=orig.margin;};
-  let canvas;
-  try {
-    canvas=await html2canvas(card,{backgroundColor:'#ffffff',scale,useCORS:true,width:FIXED_WIDTH,windowWidth:1200,height:cardHeight,windowHeight:cardHeight+100});
-  } catch(err){console.error(err);sgShowToast('PDF render failed');restore();return;}
-  restore();
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const pdfW=pdf.internal.pageSize.getWidth(), pdfH=pdf.internal.pageSize.getHeight();
-  const margin=8, useW=pdfW-margin*2, useH=pdfH-margin*2;
-  const mmToPx=canvas.width/useW, sliceHPx=Math.floor(useH*mmToPx);
-  const totalPages=Math.max(1,Math.ceil(canvas.height/sliceHPx));
-  for(let i=0;i<totalPages;i++){
-    if(i>0)pdf.addPage();
-    const startY=i*sliceHPx, thisHPx=Math.min(sliceHPx,canvas.height-startY);
-    const slice=document.createElement('canvas');
-    slice.width=canvas.width; slice.height=thisHPx;
-    const ctx=slice.getContext('2d');
-    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,slice.width,slice.height);
-    ctx.drawImage(canvas,0,startY,canvas.width,thisHPx,0,0,canvas.width,thisHPx);
-    const imgData=slice.toDataURL('image/jpeg',0.92);
-    const imgH=thisHPx/mmToPx;
-    pdf.addImage(imgData,'JPEG',margin,margin,useW,imgH);
-    pdf.setFontSize(8); pdf.setTextColor(150);
-    pdf.text(`${sgCurrentAcct.name} · Weekly Snap · ${dateStamp} · Page ${i+1} of ${totalPages}`,pdfW/2,pdfH-4,{align:'center'});
+function closeSendModal() {
+  document.getElementById('send-modal').classList.remove('open');
+  pendingAcc = null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SNAP REPORT MODAL — Powerplay branded card with download
+// ─────────────────────────────────────────────────────────────
+let snapAcc = null;
+let snapTrainer = null;
+
+// Module colors (matching screenshot exactly)
+const MOD_COLORS = {
+  'attendance' : '#22c55e',
+  'staff'      : '#a855f7',
+  'task'       : '#3b82f6',
+  'material'   : '#f97316',
+  'petty_cash' : '#ec4899',
+};
+function modColor(name) {
+  const n = (name||'').toLowerCase().replace(/[\s_]+/g,'');
+  for (const [k,v] of Object.entries(MOD_COLORS)) {
+    if (n === k.replace(/_/g,'') || n.includes(k.replace(/_/g,''))) return v;
   }
-  pdf.save(`${safeName}_weekly_snap_${dateStamp}.pdf`);
-  sgShowToast(`PDF saved (${totalPages} page${totalPages>1?'s':''})`);
+  return '#6b7280';
+}
+
+// Week-ending string (next Sunday from today)
+function getWeekEndingStr() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = day === 0 ? 0 : 7 - day;
+  const sun = new Date(d.getTime() + diff * 86400000);
+  return sun.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+}
+
+// Compute rich per-project/module/user snap data from acc.projects
+function computeSnapData(acc) {
+  const snapProjects = [];
+  const silentProjects = [], stoppedModules = [], biggestDrops = [];
+  let topMover = null, topMoverScore = -Infinity;
+  let watchOut = null, watchOutScore = 0;
+
+  for (const proj of (acc.projects || [])) {
+    const snapModules = [];
+
+    for (const mod of (proj.modules || [])) {
+      // aggregate per user
+      const userMap = {};
+      for (const evt of (mod.events || [])) {
+        const uk = evt.user || 'Unknown';
+        if (!userMap[uk]) userMap[uk] = { user: evt.user||'', mobile: evt.mobile||'', wk0:0, wk1:0 };
+        userMap[uk].wk0 += evt.wk0;
+        userMap[uk].wk1 += evt.wk1;
+      }
+      const users = Object.values(userMap)
+        .filter(u => u.wk0>0 || u.wk1>0)
+        .sort((a,b) => b.wk0 - a.wk0);
+
+      const modWk0 = users.reduce((s,u)=>s+u.wk0,0);
+      const modWk1 = users.reduce((s,u)=>s+u.wk1,0);
+      const isStopped = modWk0===0 && modWk1>0;
+      const isNewMod  = modWk0>0  && modWk1===0;
+      const modPct    = modWk1>0 ? Math.round((modWk0-modWk1)/modWk1*100) : null;
+
+      users.forEach(u => {
+        u.isNew = u.wk0>0 && u.wk1===0;
+        u.diff  = u.wk0 - u.wk1;
+      });
+
+      if (isStopped) {
+        const byWho = users.filter(u=>u.wk1>0).map(u=>`${u.user} ${u.wk1}`).join(', ');
+        stoppedModules.push({ module:mod.name, project:proj.name, was:modWk1, byWho });
+      }
+
+      // biggest drops per user+module
+      users.filter(u=>u.diff<0).forEach(u => {
+        biggestDrops.push({ user:u.user, drop:Math.abs(u.diff), module:mod.name, project:proj.name });
+      });
+
+      // top mover (biggest absolute gain)
+      users.filter(u=>u.wk1>0 && u.diff>0).forEach(u => {
+        if (u.diff > topMoverScore) {
+          topMoverScore = u.diff;
+          topMover = { user:u.user, diff:u.diff, pct:Math.round(u.diff/u.wk1*100), module:mod.name, project:proj.name };
+        }
+      });
+
+      snapModules.push({ name:mod.name, wk0:modWk0, wk1:modWk1, pct:modPct, isStopped, isNewMod, users });
+    }
+
+    if (proj.wk0===0 && proj.wk1>0) silentProjects.push({ name:proj.name, was:proj.wk1 });
+
+    if (Math.abs(proj.diff||0) > watchOutScore && (proj.wk0<proj.wk1 || proj.wk0===0)) {
+      watchOutScore = Math.abs(proj.diff||0);
+      watchOut = { project:proj.name, issue: proj.wk0===0 ? 'material stopped' : `activity dropped` };
+    }
+
+    snapProjects.push({ name:proj.name, wk0:proj.wk0, wk1:proj.wk1, diff:proj.diff, isDrop:proj.isDrop, modules:snapModules });
+  }
+
+  biggestDrops.sort((a,b)=>b.drop-a.drop);
+  return { snapProjects, silentProjects, stoppedModules, biggestDrops:biggestDrops.slice(0,5), topMover, watchOut };
+}
+
+// Build the branded snap card HTML — matches exact PDF design
+function buildSnapCard(acc, trainer) {
+  const { snapProjects, silentProjects, stoppedModules, biggestDrops, topMover, watchOut } = computeSnapData(acc);
+  const pctChange = acc.wk1>0 ? Math.round((acc.wk0-acc.wk1)/acc.wk1*100) : null;
+  const isDown = pctChange!==null && pctChange<0;
+  const isUp   = pctChange!==null && pctChange>0;
+  const weekStr = getWeekEndingStr();
+  const hasAttention = silentProjects.length>0 || stoppedModules.length>0 || biggestDrops.length>0;
+
+  // ── NEEDS ATTENTION block ────────────────────────────────────
+  let attHtml = '';
+  if (hasAttention) {
+    const silentStr = silentProjects.map(p=>`<b>${p.name}</b> (was ${p.was})`).join(', ');
+    const stopStr   = stoppedModules.slice(0,5).map(m=>`<b>${m.module}</b> on ${m.project} (was ${m.was} by ${m.byWho})`).join(' · ')
+                    + (stoppedModules.length>5 ? ` +${stoppedModules.length-5} more` : '');
+    const dropStr   = biggestDrops.slice(0,3).map(d=>`<b>${d.user}</b> ↓${d.drop} (${d.module} on ${d.project})`).join(' · ');
+    attHtml = `<div style="border-left:3px solid #ef4444;border-radius:0 8px 8px 0;background:#fff7ed;padding:12px 14px;margin:10px 0">
+      <div style="font-weight:700;color:#b45309;font-size:11px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">⚠ NEEDS ATTENTION</div>
+      ${silentProjects.length ? `<div style="font-size:11.5px;color:#374151;margin-bottom:5px"><b style="color:#92400e">Silent projects:</b> ${silentStr}</div>` : ''}
+      ${stoppedModules.length ? `<div style="font-size:11.5px;color:#374151;margin-bottom:5px"><b style="color:#92400e">Modules stopped:</b> ${stopStr}</div>` : ''}
+      ${biggestDrops.length   ? `<div style="font-size:11.5px;color:#374151"><b style="color:#92400e">Biggest drops:</b> ${dropStr}</div>` : ''}
+    </div>`;
+  } else {
+    attHtml = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 14px;margin:10px 0;text-align:center;font-size:11.5px;color:#15803d;font-weight:600">✅ ALL CLEAR — No significant drops this week</div>`;
+  }
+
+  // ── Module legend ────────────────────────────────────────────
+  const legendHtml = `<div style="display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 12px;font-size:11px;color:#374151;align-items:center">
+    ${Object.entries(MOD_COLORS).map(([k,v])=>`<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:${v};border-radius:2px;flex-shrink:0"></span>${k}</span>`).join('')}
+  </div>`;
+
+  // ── Per-project sections — only projects with wk0>0 OR wk1>0 ──
+  let projsHtml = '';
+  // Sort projects: active this week (wk0 desc), then stopped (wk1 desc), skip fully zero
+  const activeProjects = snapProjects
+    .filter(p => p.wk0 > 0 || p.wk1 > 0)
+    .sort((a, b) => {
+      // Stopped projects (wk0=0) go to the bottom, sorted by wk1 desc
+      if (a.wk0 === 0 && b.wk0 > 0) return 1;
+      if (b.wk0 === 0 && a.wk0 > 0) return -1;
+      return b.wk0 - a.wk0;
+    });
+
+  for (const proj of activeProjects) {
+    const pNum = proj.wk1>0 ? Math.round((proj.wk0-proj.wk1)/proj.wk1*100) : null;
+    const pStr = pNum!==null ? (pNum>=0 ? `↑ ${pNum}%` : `↓ ${Math.abs(pNum)}%`) : (proj.wk0>0 ? 'new' : '—');
+    const pCol = pNum===null ? '#6b7280' : pNum>=0 ? '#16a34a' : '#dc2626';
+    const isSilent = proj.wk0===0 && proj.wk1>0;
+
+    // Proportional bar with counts INSIDE segments — sorted by wk0 desc
+    const barMods = proj.modules.filter(m=>m.wk0>0).sort((a,b)=>b.wk0-a.wk0);
+    const totalBarCount = barMods.reduce((s,m)=>s+m.wk0,0);
+    let barHtml;
+    if (barMods.length > 0) {
+      barHtml = `<div style="display:flex;height:28px;border-radius:5px;overflow:hidden;width:100%;margin-bottom:10px">${
+        barMods.map(m => {
+          const pct = totalBarCount>0 ? m.wk0/totalBarCount*100 : 0;
+          return `<div style="flex:${m.wk0};background:${modColor(m.name)};display:flex;align-items:center;justify-content:center;min-width:3px;overflow:hidden;font-size:11px;font-weight:700;color:#fff" title="${m.name}: ${m.wk0}">${pct>=10?m.wk0:''}</div>`;
+        }).join('')
+      }</div>`;
+    } else if (isSilent) {
+      // Stopped project — show "0" in red bar
+      barHtml = `<div style="height:28px;border-radius:5px;background:#fee2e2;display:flex;align-items:center;padding:0 12px;margin-bottom:10px"><span style="font-size:16px;font-weight:800;color:#dc2626;line-height:1">0</span></div>`;
+    } else {
+      barHtml = `<div style="height:28px;border-radius:5px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:11px;color:#9ca3af;margin-bottom:10px">No activity</div>`;
+    }
+
+    // Sort modules: active first (wk0 desc), stopped modules last
+    const sortedMods = [...proj.modules].sort((a,b) => {
+      if (a.isStopped && !b.isStopped) return 1;
+      if (!a.isStopped && b.isStopped) return -1;
+      return b.wk0 - a.wk0;
+    });
+
+    // Module rows + collect stopped modules for chip at bottom
+    let modRowsHtml = '';
+    const stoppedChips = [];
+    for (const mod of sortedMods) {
+      if (mod.wk0===0 && mod.wk1===0) continue;
+      if (mod.isStopped) {
+        // Goes into "Stopped this week" chip, not a regular row
+        const who = mod.users.filter(u=>u.wk1>0).map(u=>`${u.user} ${u.wk1}`).join(', ');
+        stoppedChips.push(`${mod.name} (was ${mod.wk1} by ${who})`);
+        continue;
+      }
+      const mPct = mod.wk1>0 ? Math.round((mod.wk0-mod.wk1)/mod.wk1*100) : null;
+      const mPctHtml = mPct!==null
+        ? `<span style="background:${mPct>=0?'#dcfce7':'#fee2e2'};color:${mPct>=0?'#15803d':'#dc2626'};font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:4px">${mPct>=0?'↑':'↓'}${Math.abs(mPct)}%</span>`
+        : '';
+      const newModBadge = mod.isNewMod ? `<span style="background:#dbeafe;color:#1d4ed8;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:600">new module</span>` : '';
+
+      const visibleUsers = mod.users.filter(u=>u.wk0>0||u.wk1>0);
+      const topUsers = visibleUsers.slice(0,3);
+      let userStr = '';
+      if (topUsers.length>0) {
+        const parts = topUsers.map(u => {
+          const isUnassigned = !u.user || u.user==='' || u.user.toLowerCase()==='unassigned' || u.user.toLowerCase()==='unknown';
+          if (isUnassigned) return `<span style="color:#9ca3af;font-style:italic">unassigned</span>`;
+          const dHtml = u.diff!==0 ? ` <span style="color:${u.diff>0?'#15803d':'#dc2626'};font-size:10px">${u.diff>0?'↑':'↓'}${Math.abs(u.diff)}</span>` : '';
+          const newBadge = u.isNew ? ` <span style="background:#dbeafe;color:#1d4ed8;font-size:9px;padding:0 4px;border-radius:8px">new</span>` : '';
+          return `<b style="color:#374151">${u.user}</b> ${u.wk0}${dHtml}${newBadge}`;
+        });
+        // Users separated by a space (matching original design)
+        userStr = `<span style="color:#9ca3af;margin:0 5px">—</span>` + parts.join(' ');
+        if (visibleUsers.length>3) userStr += ` <span style="color:#9ca3af;font-size:10px">+${visibleUsers.length-3} more</span>`;
+      }
+
+      modRowsHtml += `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:3px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:11.5px">
+        <span style="display:inline-block;width:10px;height:10px;background:${modColor(mod.name)};border-radius:2px;flex-shrink:0;margin-right:2px"></span>
+        <b style="color:#111827">${mod.name}</b>
+        <span style="color:#374151;font-weight:600;margin-left:2px">${mod.wk0}</span>${mPctHtml}${newModBadge}${userStr}
+      </div>`;
+    }
+
+    // ── All-unassigned check: if every visible user is unassigned/empty,
+    //    collapse module rows to "X modules · Y modules" summary (matches original design)
+    const renderedMods = sortedMods.filter(m => !(m.wk0===0 && m.wk1===0) && !m.isStopped);
+    const allUnassigned = renderedMods.length > 0 && renderedMods.every(m =>
+      m.users.filter(u=>u.wk0>0||u.wk1>0).every(u => !u.user || u.user==='' || u.user.toLowerCase()==='unassigned' || u.user.toLowerCase()==='unknown')
+    );
+    if (allUnassigned) {
+      const thisWeekMods = renderedMods.filter(m=>m.wk0>0).length;
+      const lastWeekMods = renderedMods.filter(m=>m.wk1>0).length;
+      modRowsHtml = `<div style="font-size:11px;color:#9ca3af;padding:5px 2px">${thisWeekMods} module${thisWeekMods!==1?'s':''} · ${lastWeekMods} module${lastWeekMods!==1?'s':''}</div>`;
+    }
+
+    // Stopped-this-week chip
+    const stoppedHtml = stoppedChips.length
+      ? `<div style="margin-top:7px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:10.5px">
+          <span style="color:#92400e;font-weight:600">⚠ Stopped this week:</span>
+          ${stoppedChips.map(s=>`<span style="background:#fef3c7;border:1px solid #fde68a;color:#78350f;padding:2px 7px;border-radius:12px">${s}</span>`).join('')}
+         </div>`
+      : '';
+
+    projsHtml += `<div style="background:${isSilent?'#fff5f5':'#fff'};border:1px solid ${isSilent?'#fca5a5':'#e5e7eb'};border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+        <b style="color:${isSilent?'#dc2626':'#111827'};font-size:13px">${isSilent?'⚠ ':''}${proj.name}</b>
+        <span style="font-size:12px;white-space:nowrap;margin-left:10px">${proj.wk1} → <b style="color:${pNum!==null&&pNum<0?'#dc2626':'#111827'}">${proj.wk0}</b> <b style="color:${pCol};margin-left:4px">${pStr}</b></span>
+      </div>
+      ${barHtml}
+      ${modRowsHtml ? `<div style="${allUnassigned?'':'border-top:1px solid #f3f4f6'}">${modRowsHtml}</div>` : ''}
+      ${stoppedHtml}
+    </div>`;
+  }
+
+  // ── Highlights ───────────────────────────────────────────────
+  let hlHtml = '';
+  if (topMover || watchOut) {
+    hlHtml = `<div style="margin:12px 0 8px">
+      <div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">✨ THIS WEEK'S HIGHLIGHTS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${topMover ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
+          <div style="font-size:9px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">🏆 TOP MOVER</div>
+          <b style="font-size:12px;color:#111827">${topMover.user}</b>
+          <div style="font-size:10.5px;color:#374151;margin-top:2px">${topMover.project} · ${topMover.module} ↑${topMover.pct}%</div>
+        </div>` : '<div></div>'}
+        ${watchOut ? `<div style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:10px">
+          <div style="font-size:9px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">⚠ WATCH OUT</div>
+          <b style="font-size:12px;color:#111827">${watchOut.project}</b>
+          <div style="font-size:10.5px;color:#374151;margin-top:2px">${watchOut.issue}</div>
+        </div>` : '<div></div>'}
+      </div>
+    </div>`;
+  }
+
+  // ── WhatsApp message ─────────────────────────────────────────
+  const wpMsg = `Hi ${acc.name} Sir, sharing this week's snap — ${acc.wk0} activities logged${pctChange!==null?`, ${isDown?'slight dip':'increase'} of ${Math.abs(pctChange)}% vs last week`:''}.${topMover ? ` ${topMover.user} still active on ${topMover.project}.` : ''}${watchOut ? ` Note: ${watchOut.project} needs attention.` : ''} Want me to do a quick check-in with the team?`;
+
+  return `<div id="snap-card" style="background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:24px 26px;width:700px;max-width:100%;border-radius:12px;color:#111827">
+
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:9px;font-weight:700;color:#3b82f6;letter-spacing:3px;text-transform:uppercase;margin-bottom:6px">POWERPLAY · WEEKLY SNAP</div>
+      <div style="font-size:24px;font-weight:800;color:#111827;letter-spacing:-0.3px;margin-bottom:4px">${acc.name}</div>
+      <div style="font-size:11px;color:#6b7280">Week ending ${weekStr} · vs prior week · ${acc.activeW0} user${acc.activeW0!==1?'s':''} active this week${acc.renewal ? ` · 🗓 Renewal: ${acc.renewal}` : ''}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 44px 1fr;gap:12px;align-items:center;margin-bottom:10px">
+      <div style="text-align:center;padding:14px 8px">
+        <div style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">LAST WEEK</div>
+        <div style="font-size:48px;font-weight:800;color:#374151;line-height:1">${acc.wk1}</div>
+      </div>
+      <div style="text-align:center;font-size:30px;color:#9ca3af;line-height:1">→</div>
+      <div style="text-align:center;padding:14px 8px">
+        <div style="font-size:9px;font-weight:600;color:${isDown?'#dc2626':isUp?'#16a34a':'#9ca3af'};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">THIS WEEK</div>
+        <div style="font-size:48px;font-weight:800;color:${isDown?'#dc2626':isUp?'#16a34a':'#374151'};line-height:1">${acc.wk0}</div>
+      </div>
+    </div>
+
+    ${pctChange!==null
+      ? `<div style="text-align:center;margin:0 0 14px"><span style="display:inline-block;background:${isDown?'#fee2e2':isUp?'#dcfce7':'#f1f5f9'};color:${isDown?'#dc2626':isUp?'#16a34a':'#374151'};font-weight:700;font-size:13px;padding:5px 22px;border-radius:20px">${isDown?'↓':'↑'} ${Math.abs(pctChange)}% activity</span></div>`
+      : '<div style="height:6px"></div>'}
+
+    ${attHtml}
+    ${legendHtml}
+    ${projsHtml}
+    ${hlHtml}
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;margin-top:12px">
+      <div style="font-size:9px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">💬 READY-TO-SEND MESSAGE</div>
+      <div style="font-size:11.5px;color:#14532d;line-height:1.7">${wpMsg}</div>
+    </div>
+
+  </div>`;
+}
+
+function openSnapModal(aId) {
+  const entry = window.accRegistry[aId];
+  if (!entry) return;
+  snapAcc = entry.acc;
+  snapTrainer = entry.trainer;
+  document.getElementById('snap-modal-title').textContent = '📸 Snap — ' + snapAcc.name;
+  document.getElementById('snap-modal-body').innerHTML = buildSnapCard(snapAcc, snapTrainer);
+  document.getElementById('snap-modal').classList.add('open');
+}
+
+// ── Lazy-load external script ────────────────────────────────
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+// ── Download snap as PNG image ────────────────────────────────
+async function downloadSnapImage() {
+  const card = document.getElementById('snap-card');
+  if (!card || !snapAcc) return;
+  const btn = document.getElementById('snap-img-btn');
+  if (btn) btn.textContent = '⏳ Generating...';
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    const canvas = await html2canvas(card, { scale:3, backgroundColor:'#ffffff', useCORS:true, logging:false });
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    const _d=new Date(),_ds=_d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');
+    a.download = `snap_${snapAcc.name.replace(/[^a-z0-9]/gi,'_')}_${_ds}.png`;
+    a.click();
+  } finally {
+    if (btn) btn.textContent = '📷 Image';
+  }
+}
+
+// ── Download snap as PDF — pure vector (no html2canvas) ────────
+// Uses jsPDF native drawing so the PDF is vector-based:
+//   • tiny file size (≈5–15 kB)
+//   • one-click direct download (no print dialog)
+//   • clean WhatsApp thumbnail (red PDF icon, not blurry screenshot)
+async function downloadSnapPDF() {
+  if (!snapAcc) return;
+  const btn = document.getElementById('snap-pdf-btn');
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const { jsPDF } = window.jspdf;
+
+    const acc     = snapAcc;
+    const trainer = snapTrainer;
+    const { snapProjects, silentProjects, stoppedModules, biggestDrops, topMover, watchOut } = computeSnapData(acc);
+    const pctChange = acc.wk1 > 0 ? Math.round((acc.wk0 - acc.wk1) / acc.wk1 * 100) : null;
+    const weekStr   = getWeekEndingStr();
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const PW = 210, PH = 297, M = 13, CW = PW - M * 2;
+    let y = M;
+
+    // ── Primitive helpers ──────────────────────────────────────
+    function hr(hex) {
+      const h = hex.replace('#','');
+      return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+    }
+    function fr(x,yy,w,h,hex) { const [r,g,b]=hr(hex); pdf.setFillColor(r,g,b); pdf.rect(x,yy,w,h,'F'); }
+    function sr(x,yy,w,h,hex,lw=0.15) { const [r,g,b]=hr(hex); pdf.setDrawColor(r,g,b); pdf.setLineWidth(lw); pdf.rect(x,yy,w,h,'S'); }
+    function tx(str,x,yy,{sz=9,bold=false,col='#111827',align='left',mw=0}={}) {
+      const [r,g,b]=hr(col); pdf.setFontSize(sz); pdf.setFont('helvetica',bold?'bold':'normal'); pdf.setTextColor(r,g,b);
+      const s=String(str||'');
+      if(mw>0){ const lines=pdf.splitTextToSize(s,mw); pdf.text(lines[0]+(lines.length>1?'…':''),x,yy,{align}); }
+      else { pdf.text(s,x,yy,{align}); }
+    }
+    function chk(need) { if(y+need>PH-M){ pdf.addPage(); y=M; } }
+
+    // ══ HEADER ════════════════════════════════════════════════
+    fr(M, y, CW, 24, '#1a2e4a');
+    tx(acc.name, M+5, y+9,  {sz:13,bold:true,col:'#ffffff',mw:CW*0.62});
+    tx('Powerplay Weekly Snap  ·  '+(trainer||''), M+5, y+16, {sz:7.5,col:'#93c5fd',mw:CW*0.62});
+    tx('W0', PW-M-5, y+8, {sz:7,col:'#94a3b8',align:'right'});
+    tx(String(acc.wk0), PW-M-5, y+15, {sz:18,bold:true,col:'#ffffff',align:'right'});
+    if(pctChange!==null){
+      tx((pctChange>=0?'↑':'↓')+Math.abs(pctChange)+'%  vs W1:'+acc.wk1, PW-M-5, y+21, {sz:8,col:pctChange>=0?'#86efac':'#fca5a5',align:'right'});
+    }
+    y += 27;
+
+    // Week line
+    if(weekStr){ tx('Week ending: '+weekStr, M, y+4, {sz:8,col:'#6b7280'}); y+=7; }
+
+    // ══ NEEDS ATTENTION ═══════════════════════════════════════
+    const hasAtt = silentProjects.length>0 || stoppedModules.length>0 || biggestDrops.length>0;
+    chk(14); y+=2;
+    if(hasAtt){
+      fr(M, y, 2.5, 12, '#ef4444');
+      fr(M+2.5, y, CW-2.5, 12, '#fff7ed');
+      tx('⚠  NEEDS ATTENTION', M+5, y+4.5, {sz:7.5,bold:true,col:'#b45309'});
+      const parts=[];
+      if(silentProjects.length) parts.push('Silent: '+silentProjects.map(p=>p.name).slice(0,4).join(', '));
+      if(stoppedModules.length) parts.push('Stopped: '+stoppedModules.slice(0,3).map(m=>m.module+' on '+m.project).join(' · '));
+      if(biggestDrops.length)   parts.push('Drops: '+biggestDrops.slice(0,2).map(d=>d.user+' ↓'+d.drop).join(' · '));
+      tx(parts.join('   |   '), M+5, y+9.5, {sz:7.5,col:'#78350f',mw:CW-8});
+      y+=15;
+    } else {
+      fr(M, y, CW, 9, '#f0fdf4'); sr(M, y, CW, 9, '#bbf7d0');
+      tx('✅  ALL CLEAR — No significant drops this week', M+CW/2, y+5.5, {sz:8.5,bold:true,col:'#15803d',align:'center'});
+      y+=12;
+    }
+
+    // ══ MODULE LEGEND ═════════════════════════════════════════
+    chk(8); let lx=M; y+=2;
+    for(const [k,v] of Object.entries(MOD_COLORS)){
+      fr(lx, y+1, 3, 3, v);
+      tx(k, lx+4.5, y+4.5, {sz:7.5,col:'#374151'});
+      lx += 4.5 + k.length*1.75 + 3;
+    }
+    y+=8;
+
+    // ══ PROJECTS ══════════════════════════════════════════════
+    const activeProjects = snapProjects
+      .filter(p=>p.wk0>0||p.wk1>0)
+      .sort((a,b)=>{
+        if(a.wk0===0&&b.wk0>0) return 1;
+        if(b.wk0===0&&a.wk0>0) return -1;
+        return b.wk0-a.wk0;
+      });
+
+    for(const proj of activeProjects){
+      chk(20);
+      const pNum = proj.wk1>0 ? Math.round((proj.wk0-proj.wk1)/proj.wk1*100) : null;
+      const pStr = pNum!==null ? (pNum>=0?'↑ '+pNum+'%':'↓ '+Math.abs(pNum)+'%') : (proj.wk0>0?'new':'—');
+      const pCol = pNum===null?'#6b7280':pNum>=0?'#16a34a':'#dc2626';
+      const isSilent = proj.wk0===0&&proj.wk1>0;
+
+      // Project header
+      fr(M, y, CW, 8, isSilent?'#fff5f5':'#f9fafb');
+      sr(M, y, CW, 8, isSilent?'#fca5a5':'#e5e7eb');
+      tx((isSilent?'⚠  ':'')+proj.name, M+3, y+5.5, {sz:9.5,bold:true,col:isSilent?'#dc2626':'#111827',mw:CW*0.58});
+      tx(proj.wk1+' → '+proj.wk0+'   '+pStr, PW-M-3, y+5.5, {sz:8.5,col:pCol,align:'right'});
+      y+=9;
+
+      // Module activity bar
+      const barMods = proj.modules.filter(m=>m.wk0>0).sort((a,b)=>b.wk0-a.wk0);
+      const totalBar = barMods.reduce((s,m)=>s+m.wk0,0);
+      const BH=5;
+      if(barMods.length>0){
+        let bx=M;
+        for(const bm of barMods){
+          const bw=(bm.wk0/totalBar)*CW;
+          fr(bx, y, bw, BH, modColor(bm.name));
+          if(bw>8) tx(String(bm.wk0), bx+bw/2, y+3.5, {sz:6.5,bold:true,col:'#ffffff',align:'center'});
+          bx+=bw;
+        }
+      } else if(isSilent){
+        fr(M, y, CW, BH, '#fee2e2');
+        tx('0', M+CW/2, y+3.5, {sz:7.5,bold:true,col:'#dc2626',align:'center'});
+      } else {
+        fr(M, y, CW, BH, '#f3f4f6');
+      }
+      y+=BH+2;
+
+      // Module rows
+      const sortedMods=[...proj.modules].sort((a,b)=>{
+        if(a.isStopped&&!b.isStopped) return 1;
+        if(!a.isStopped&&b.isStopped) return -1;
+        return b.wk0-a.wk0;
+      });
+      const stoppedChips=[];
+      for(const mod of sortedMods){
+        if(mod.wk0===0&&mod.wk1===0) continue;
+        if(mod.isStopped){
+          const who=mod.users.filter(u=>u.wk1>0).map(u=>u.user+' '+u.wk1).join(', ');
+          stoppedChips.push(mod.name+(who?' (was '+who+')':''));
+          continue;
+        }
+        chk(6);
+        fr(M+2, y+1.5, 2.5, 2.5, modColor(mod.name));
+        tx(mod.name+'  '+mod.wk0, M+6, y+4.5, {sz:8.5,col:'#111827'});
+        if(mod.wk1>0){
+          const mp=Math.round((mod.wk0-mod.wk1)/mod.wk1*100);
+          tx((mp>=0?'↑':'↓')+Math.abs(mp)+'%', M+52, y+4.5, {sz:7.5,col:mp>=0?'#15803d':'#dc2626'});
+        }
+        const visU=mod.users.filter(u=>u.wk0>0||u.wk1>0).slice(0,3);
+        if(visU.length){
+          const uStr='— '+visU.map(u=>(u.user||'unassigned')+' '+u.wk0).join('  ');
+          tx(uStr, M+68, y+4.5, {sz:7.5,col:'#6b7280',mw:CW-68});
+        }
+        y+=5.5;
+      }
+      if(stoppedChips.length){
+        chk(6);
+        tx('⚠  Stopped this week: '+stoppedChips.join(' · '), M+3, y+4, {sz:7.5,col:'#92400e',mw:CW-5});
+        y+=6;
+      }
+      y+=4;
+    }
+
+    // ══ HIGHLIGHTS ════════════════════════════════════════════
+    if(topMover||watchOut){
+      chk(24); y+=2;
+      tx('✨  THIS WEEK\'S HIGHLIGHTS', M, y+4, {sz:7.5,bold:true,col:'#6b7280'});
+      y+=8;
+      const hw=(CW-4)/2;
+      if(topMover){
+        fr(M, y, hw, 18, '#f0fdf4'); sr(M, y, hw, 18, '#bbf7d0');
+        tx('🏆  TOP MOVER', M+4, y+5.5, {sz:7,bold:true,col:'#15803d'});
+        tx(topMover.user, M+4, y+11, {sz:9,bold:true,col:'#111827',mw:hw-6});
+        tx(topMover.project+' · '+topMover.module+' ↑'+topMover.pct+'%', M+4, y+16, {sz:7.5,col:'#374151',mw:hw-6});
+      }
+      if(watchOut){
+        const wx=M+hw+4;
+        fr(wx, y, hw, 18, '#fff5f5'); sr(wx, y, hw, 18, '#fca5a5');
+        tx('⚠  WATCH OUT', wx+4, y+5.5, {sz:7,bold:true,col:'#dc2626'});
+        tx(watchOut.project, wx+4, y+11, {sz:9,bold:true,col:'#111827',mw:hw-6});
+        tx(watchOut.issue, wx+4, y+16, {sz:7.5,col:'#374151',mw:hw-6});
+      }
+      y+=20;
+    }
+
+    // ══ FOOTER ════════════════════════════════════════════════
+    const fy=Math.min(y+4, PH-10);
+    fr(M, fy, CW, 0.2, '#e5e7eb');
+    tx('Generated by Powerplay Trainer Dashboard  ·  '+new Date().toLocaleDateString('en-IN'), M, fy+5, {sz:7,col:'#9ca3af'});
+
+    const _today = new Date();
+    const _dateStr = _today.getFullYear()+'-'+String(_today.getMonth()+1).padStart(2,'0')+'-'+String(_today.getDate()).padStart(2,'0');
+    pdf.save('snap_'+acc.name.replace(/[^a-z0-9]/gi,'_')+'_'+_dateStr+'.pdf');
+  } finally {
+    if (btn) { btn.textContent = '📄 PDF'; btn.disabled = false; }
+  }
+}
+
+function closeSnapModal() {
+  document.getElementById('snap-modal').classList.remove('open');
+  snapAcc = null;
+}
+
+// ── Drop W0 inline expansion — opens BELOW the account row ────
+let _dropExpand = null; // { row: HTMLElement, aId, type }
+
+function showDropPopup(aId, type, evt) {
+  evt.stopPropagation();
+
+  // Toggle: clicking the same button again closes the panel
+  if (_dropExpand && _dropExpand.aId === aId && _dropExpand.type === type) {
+    closeDropPopup();
+    return;
+  }
+
+  closeDropPopup();
+
+  const entry = window.accRegistry[aId];
+  if (!entry) return;
+
+  const isX = type === 'x';
+  const users = isX ? (entry.acc.droppedXList || []) : (entry.acc.coldPoolList || []);
+
+  const titleStr = isX
+    ? '↓ Newly dropped this week (active W1 → silent W0)'
+    : '❄ Full cold pool (active any W1/W2/W3, silent W0)';
+  const countStr = `${users.length} user${users.length!==1?'s':''} ${isX?'newly dropped':'in cold pool'}`;
+
+  // Find the account row in the DOM
+  const tr = document.querySelector(`tr.row-account[data-aid="${aId}"]`);
+  if (!tr) return;
+
+  // Build user grid (multi-column for large lists)
+  const userRowsHtml = users.length
+    ? users.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:20px;padding:5px 0;border-bottom:1px solid #1a2535">
+        <span style="color:#c8d8e8;font-size:12px">👤 ${u.user||'—'}</span>
+        <span style="color:#4a9edd;font-family:monospace;font-size:12px;white-space:nowrap">${u.mobile||''}</span>
+      </div>`).join('')
+    : `<div style="color:#718096;font-style:italic;font-size:12px;padding:8px 0">No users in this list</div>`;
+
+  const newTr = document.createElement('tr');
+  newTr.id = 'drop-expand-row';
+  newTr.style.cssText = 'border-bottom:2px solid ' + (isX?'#ed8936':'#4a9edd');
+  newTr.innerHTML = `<td colspan="20" style="padding:0;background:#0d1220">
+    <div style="padding:12px 24px 14px;background:#111827;border-top:2px solid ${isX?'#ed8936':'#4a9edd'};border-bottom:1px solid #1e2535">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:10px;color:${isX?'#ed8936':'#4a9edd'};text-transform:uppercase;letter-spacing:.6px;font-weight:700">${titleStr}</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:10px;color:#4a5568">${countStr}</span>
+          <button onclick="closeDropPopup()" style="background:#1e2535;border:1px solid #2d3748;border-radius:5px;color:#a0aec0;cursor:pointer;font-size:11px;padding:3px 10px;transition:all .15s" onmouseover="this.style.background='#2d3748'" onmouseout="this.style.background='#1e2535'">✕ Close</button>
+        </div>
+      </div>
+      <div style="columns:${users.length>10?2:1};column-gap:32px">${userRowsHtml}</div>
+    </div>
+  </td>`;
+
+  tr.after(newTr);
+  _dropExpand = { row: newTr, aId, type };
+
+  // Scroll smoothly to show the expansion
+  newTr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeDropPopup() {
+  if (_dropExpand) {
+    _dropExpand.row.remove();
+    _dropExpand = null;
+  }
 }
 </script>
+
+<!-- ── Template Settings Modal ── -->
+<div class="modal-bg" id="tmpl-modal" onclick="if(event.target===this)closeTemplateModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>✉ Email Templates</h2>
+      <button class="modal-close" onclick="closeTemplateModal()">✕</button>
+    </div>
+    <div class="modal-body" id="tmpl-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="resetTmpl()">Reset to Default</button>
+      <button class="btn-primary" id="tmpl-save-btn" onclick="saveTmplCurrent()">Save Template</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Snap Report Modal ── -->
+<div class="modal-bg" id="snap-modal" onclick="if(event.target===this)closeSnapModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="snap-modal-title">📸 Snap Report</h2>
+      <button class="modal-close" onclick="closeSnapModal()">✕</button>
+    </div>
+    <div class="modal-body" id="snap-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="closeSnapModal()">Close</button>
+      <button id="snap-img-btn" class="btn-secondary" onclick="downloadSnapImage()" style="background:#1a3050;border-color:#2d5080;color:#7eb8f0">📷 Image</button>
+      <button id="snap-pdf-btn" class="btn-primary" onclick="downloadSnapPDF()">📄 PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Send Email Modal ── -->
+<div class="modal-bg" id="send-modal" onclick="if(event.target===this)closeSendModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="send-modal-title">✉ Send Email</h2>
+      <button class="modal-close" onclick="closeSendModal()">✕</button>
+    </div>
+    <div class="modal-body" id="send-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="closeSendModal()">Cancel</button>
+      <button class="btn-primary" onclick="doSendEmail()">📤 Open in Mail App</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
