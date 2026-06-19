@@ -1,7 +1,3 @@
-https://raw.githubusercontent.com/monika460/Trainer-Drill-Down-Report/main/index.html
-→ https://raw.githubusercontent.com/monika460/Trainer-Drill-Down-Report/main/index.html
-Content-Type: text/plain; charset=utf-8
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,6 +95,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .email-body-box{background:#0d1117;border:1px solid #2d3748;border-radius:8px;padding:20px;color:#c9d1d9;font-size:13px;line-height:1.8;white-space:pre-wrap;font-family:'Segoe UI',sans-serif;max-height:65vh;overflow-y:auto}
 .email-body-box b{color:#f0f6fc;font-weight:700}
 .email-actions{display:flex;gap:10px;margin-top:14px;justify-content:flex-end}
+.email-subject-row{display:flex;align-items:center;gap:10px;background:#0d1117;border:1px solid #2d3748;border-radius:6px;padding:8px 14px;margin-bottom:10px}
+.email-subject-label{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;font-weight:700}
+.email-subject-text{font-size:12px;color:#e2e8f0;font-weight:600;flex:1}
+.email-copy-subj-btn{background:#2d3748;color:#a0aec0;border:none;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;white-space:nowrap}
+.email-copy-subj-btn:hover{background:#4a5568;color:#fff}
 .email-copy-btn{background:#4299e1;color:#fff;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
 .email-copy-btn:hover{background:#2b6cb0}
 .email-status-pill{display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;margin-bottom:14px}
@@ -373,8 +374,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <button class="snap-close-btn" onclick="closeEmailModal()">&times;</button>
     </div>
     <div id="emailStatusPill"></div>
+    <div class="email-subject-row">
+      <span class="email-subject-label">Subject:</span>
+      <span class="email-subject-text" id="emailSubjectText">—</span>
+      <button class="email-copy-subj-btn" onclick="copySubjectLine()" title="Copy subject line">📋 Copy Subject</button>
+    </div>
     <div class="email-body-box" id="emailBodyBox"></div>
     <textarea id="emailPlainText" style="position:absolute;left:-9999px;top:0;opacity:0"></textarea>
+    <textarea id="emailSubjectValue" style="position:absolute;left:-9999px;top:0;opacity:0"></textarea>
     <div class="email-actions">
       <button class="email-copy-btn" onclick="copyEmailText()">📋 Copy Email</button>
     </div>
@@ -624,8 +631,12 @@ style="color:#F0997B">Drop W0</th><th class="r" style="color:#5DCAA5">Conn. W0</
     </tr>`;
 
 if (acc.coldUsers && acc.coldUsers.length > 0) {
-      var pills = acc.coldUsers.map(function(u){return '<span style="font-size:10px;background:#2A1810;color:#F0997B;padding:3px 8px;border-radius:3px;margin:2px;display:inline-block">'+u+'</span>';}).join('');
-      html += '<tr class="row-drop-users" id="drop-'+aId+'" style="display:none"><td colspan="18" style="background:#0a0e16;padding:8px 12px 10px 80px;border-bottom:1px solid #1a2033"><div style="font-size:9px;color:#7C8AA3;letter-spacing:0.4px;margin-bottom:6px;text-transform:uppercase">Drop users (W0) — call queue</div><div style="display:flex;flex-wrap:wrap;gap:4px">'+pills+'</div></td></tr>';
+      var pills = acc.coldUsers.map(function(u){
+        // If it's a raw user ID (USRxxx format), display it more readably
+        var display = /^USR[a-zA-Z0-9]{6,}$/.test(u) ? ('User ' + u.substring(3, 9).toUpperCase()) : u;
+        return '<div style="font-size:11px;background:#2A1810;color:#F0997B;padding:5px 10px;border-radius:4px;border-left:3px solid #ed8936">' + display + '</div>';
+      }).join('');
+      html += '<tr class="row-drop-users" id="drop-'+aId+'" style="display:none"><td colspan="18" style="background:#0a0e16;padding:8px 12px 10px 80px;border-bottom:1px solid #1a2033"><div style="font-size:9px;color:#7C8AA3;letter-spacing:0.4px;margin-bottom:8px;text-transform:uppercase">Drop users (W0) — call queue</div><div style="display:flex;flex-direction:column;gap:6px;max-width:420px">'+pills+'</div></td></tr>';
     }
     acc.projects.forEach((proj, pi) => {  
       const pId = `${aId}-p${pi}`;
@@ -1411,7 +1422,7 @@ document.getElementById('emailModal').addEventListener('click', e => {
 function openEmail(aId) {
   const acc = ACCOUNT_REGISTRY[aId];
   if (!acc) { showSnapToast('Account not found'); return; }
-  const { html, plain, priority } = generateEmail(acc);
+  const { html, plain, priority, subject } = generateEmail(acc);
   // status pill
   const pillMap = {
     INACTIVE: ['pill-inactive','⚫ INACTIVE'],
@@ -1425,6 +1436,8 @@ function openEmail(aId) {
   const [cls, label] = pillMap[priority] || ['pill-stable', priority];
   document.getElementById('emailStatusPill').innerHTML =
     `<span class="email-status-pill ${cls}">${label}</span>`;
+  document.getElementById('emailSubjectText').textContent = subject;
+  document.getElementById('emailSubjectValue').value = subject;
   document.getElementById('emailBodyBox').innerHTML = html;
   document.getElementById('emailPlainText').value = plain;
   document.getElementById('emailModal').classList.add('show');
@@ -1436,11 +1449,16 @@ function copyEmailText() {
   const txt = document.getElementById('emailPlainText').value;
   navigator.clipboard.writeText(txt).then(() => showSnapToast('Email copied to clipboard ✓'));
 }
+function copySubjectLine() {
+  const txt = document.getElementById('emailSubjectValue').value;
+  navigator.clipboard.writeText(txt).then(() => showSnapToast('Subject line copied ✓'));
+}
 
 function generateEmail(acc) {
   const isInactive = acc.priority === 'INACTIVE';
   const trainerFirst = acc.trainer ? acc.trainer.split('@')[0].split('.').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ') : 'Your Trainer';
   const orgFirst = acc.name.split(' ')[0];
+  const orgShort = acc.name.length > 28 ? acc.name.substring(0,26)+'…' : acc.name;
 
   // ── gather module activity ──
   const activeModules = [], dropModules = [], zeroModules = [];
@@ -1465,25 +1483,27 @@ function generateEmail(acc) {
   const totalDrop = acc.wk1 > 0 ? Math.round((1 - acc.wk0/acc.wk1)*100) : 0;
 
   let plain = '', html = '';
+  const projCount = (acc.projects||[]).length;
 
   if (isInactive) {
-    // ── INACTIVE TEMPLATE ──
+    // ── INACTIVE TEMPLATE (onboarding gap focus) ──
     plain = `Hi ${orgFirst} Sir & Team,
 
 Hope you're doing well. We noticed that Powerplay hasn't been active since our onboarding session, and we wanted to check in — because we genuinely want to make sure the problems you came to us with actually get solved.
 
 💡 WHY YOU SIGNED UP — A QUICK REMINDER
-[Pain points from your onboarding notes — update from OB summary]
-• Problem 1 from OB
-• Problem 2 from OB
-• Problem 3 from OB
+
+At the time of onboarding, you highlighted these key challenges:
+• Tracking material issues at the site level
+• Monitoring daily labour and attendance
+• Reducing project delays due to poor documentation
 
 These problems don't go away on their own. The risk of repeating the same challenges at a larger scale is very real.
 
 📋 WHAT'S ALREADY READY FOR YOU
 • System is configured and waiting
 • ${trainerFirst} is ready to resume right where we left off
-• All ${acc.projects.length} project(s) are set up on Powerplay
+• All ${projCount} project(s) are set up on Powerplay
 
 ⚡ ONE ASK — LET'S GET RESTARTED
 Can we schedule a 30-minute session this week? The goal is simple — get the site team logging daily updates on Powerplay before more time passes.
@@ -1497,48 +1517,60 @@ Powerplay — Customer Success`;
     html = plain
       .replace(/💡 WHY YOU SIGNED UP — A QUICK REMINDER/, '<b>💡 WHY YOU SIGNED UP — A QUICK REMINDER</b>')
       .replace(/📋 WHAT'S ALREADY READY FOR YOU/, '<b>📋 WHAT\'S ALREADY READY FOR YOU</b>')
-      .replace(/⚡ ONE ASK — LET'S GET RESTARTED/, '<b>⚡ ONE ASK — LET\'S GET RESTARTED</b>')
-      .replace(/\[Pain points.*?\]/g, '<span style="color:#ed8936">[Pain points from your onboarding notes — update from OB summary]</span>');
+      .replace(/⚡ ONE ASK — LET'S GET RESTARTED/, '<b>⚡ ONE ASK — LET\'S GET RESTARTED</b>');
 
   } else {
-    // ── ACTIVE TEMPLATE ──
-    const wellLines = activeModules.map(m =>
-      `• ${m.name} — ${m.wk0} events this week${m.wk1>0 ? ` (was ${m.wk1} last week)`:''}`
-    ).join('\n') || '• No active modules this week';
-
-    const dropLines = dropModules.map(m =>
-      `• ${m.name} — dropped from ${m.wk1} → 0 this week`
-    ).join('\n');
-
-    const zeroLines = zeroModules.map(m => `• ${m.name}`).join('\n');
-
+    // ── ACTIVE TEMPLATE (onboarding gap focus) ──
     const projActive = (acc.projects||[]).filter(p=>(p.wk0||0)>0).map(p=>p.name).join(', ') || '—';
+
+    // ✅ Active modules — what's going well
+    const wellLines = activeModules.length
+      ? activeModules.map(m =>
+          `• ${m.name} is live — ${m.wk0} event${m.wk0!==1?'s':''} this week${m.wk1>0?' ('+m.wk1+' last week)':''}${topProj?' on '+topProj.name:''}`
+        ).join('\n')
+      : `• ${acc.wk0} site actions recorded this week across ${projActive}`;
+
+    // ❗ Onboarding gap — modules with ZERO activity ever (never started)
+    const gapLines = zeroModules.map(m => `• ${m.name}`).join('\n');
+
+    // ⚠️ Attention — modules active last week but dropped this week
+    let attentionBlock = '';
+    if (dropProj) {
+      attentionBlock = `\n⚠️ ONE AREA NEEDS ATTENTION\n${dropProj.name} — activity dropped from ${dropProj.wk1} → ${dropProj.wk0} this week. A quick check-in with the site team will get this back on track.\n`;
+    } else if (dropModules.length > 0) {
+      attentionBlock = `\n⚠️ ONE AREA NEEDS ATTENTION\nThese modules were active last week but went quiet this week:\n${dropModules.map(m=>`• ${m.name} — was ${m.wk1} event${m.wk1!==1?'s':''}, now 0`).join('\n')}\nA quick 15-min check-in with the team will fix this.\n`;
+    }
+
+    // 📋 Next steps
+    const step1 = zeroModules.length > 0
+      ? `Start ${zeroModules[0].name} on one project — ${trainerFirst} can guide the team in just 10 minutes`
+      : dropModules.length > 0
+        ? `Restart ${dropModules[0].name} on ${dropProj?.name||'your site'} — quick 10-min check-in with site team`
+        : `Expand ${activeModules[0]?.name||'active modules'} to all remaining projects`;
+    const step2 = activeModules.length > 0
+      ? `Keep ${activeModules[0].name} consistent across all ${projCount} project${projCount!==1?'s':''}`
+      : 'Resume daily activity logging on your active projects';
 
     plain = `Hi ${orgFirst} Sir & Team,
 
-Hope everyone is doing well! It's been a few weeks since we went live on Powerplay, and we wanted to share a quick progress update — what's working well and where we can unlock more value together.
+Hope everyone is doing well! Here's a quick progress update on how your team is using Powerplay.
 
 ✅ WHAT'S GOING WELL
-Active projects this week: ${projActive}
-Activity: ${acc.wk0} actions this week (${acc.wk0 >= acc.wk1 ? '↑ up' : `↓ down ${totalDrop}%`} from last week's ${acc.wk1})
-
-Modules running:
+At the time of onboarding, you highlighted key challenges around site tracking and visibility. Great news — your team has started making real progress:
 ${wellLines}
 
-${dropLines ? `⚠️ ONE AREA NEEDS ATTENTION
-${dropProj ? `${dropProj.name} has dropped — was ${dropProj.wk1} actions last week, now ${dropProj.wk0}. A quick 15-minute check-in with the team will fix this.` : ''}
+Active projects this week: ${projActive}
+Total activity: ${acc.wk0} action${acc.wk0!==1?'s':''} this week${acc.wk1>0?' (was '+acc.wk1+' last week)':''}
+${gapLines ? `
+❗ ONBOARDING GAP — NOT YET STARTED
+These modules were part of your onboarding plan but haven't seen any activity yet:
+${gapLines}
 
-Modules that stopped this week:
-${dropLines}` : ''}
-${zeroLines ? `❗ NOT YET STARTED
-These modules were part of the plan but have no activity yet:
-${zeroLines}
-
-Starting even one of these this week will unlock significant visibility for you.` : ''}
-
+Starting even one of these this week will directly unlock more value from your investment.
+` : ''}${attentionBlock}
 📋 SUGGESTED NEXT STEPS
-1. ${dropModules.length ? `Restart ${dropModules[0].name} on ${dropProj?.name||'your site'} — quick 10-min check-in with site team` : `Continue building on ${activeModules[0]?.name||'active modules'}`}
-2. ${zeroModules.length ? `Pilot ${zeroModules[0].name} on one project this week` : 'Expand active modules to all projects'}
+1. ${step1}
+2. ${step2}
 3. Schedule a review call with ${trainerFirst} — we'll take it from there
 
 Warm regards,
@@ -1547,12 +1579,22 @@ Powerplay — Customer Success`;
 
     html = plain
       .replace(/✅ WHAT'S GOING WELL/, '<b>✅ WHAT\'S GOING WELL</b>')
+      .replace(/❗ ONBOARDING GAP — NOT YET STARTED/, '<b>❗ ONBOARDING GAP — NOT YET STARTED</b>')
       .replace(/⚠️ ONE AREA NEEDS ATTENTION/, '<b>⚠️ ONE AREA NEEDS ATTENTION</b>')
-      .replace(/❗ NOT YET STARTED/, '<b>❗ NOT YET STARTED</b>')
       .replace(/📋 SUGGESTED NEXT STEPS/, '<b>📋 SUGGESTED NEXT STEPS</b>');
   }
 
-  return { html, plain, priority: acc.priority };
+  // ── Subject line ──
+  let subject;
+  if (isInactive) {
+    subject = `Action Required: Your Powerplay Onboarding — Let's Get Back on Track | ${orgShort}`;
+  } else if (zeroModules.length > 0) {
+    subject = `Powerplay Progress Update — ${zeroModules.length} Module${zeroModules.length>1?'s':''} Yet to Start | ${orgShort}`;
+  } else {
+    subject = `Your Powerplay Progress Update | ${orgShort}`;
+  }
+
+  return { html, plain, priority: acc.priority, subject };
 }
 // ── End Email Generator ───────────────────────────────────────
 
