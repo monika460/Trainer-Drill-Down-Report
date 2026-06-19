@@ -1569,19 +1569,28 @@ Powerplay — Customer Success`;
     // ── ACTIVE TEMPLATE ──
     const projActive = (acc.projects||[]).filter(p=>(p.wk0||0)>0).map(p=>p.name).join(', ') || '—';
 
-    // OB pain point intro
-    const obIntro = acc.ob_notes && acc.ob_notes.length > 5
-      ? `At the time of onboarding, the core problem discussed was: ${acc.ob_notes.substring(0,180)}${acc.ob_notes.length>180?'…':''}\n\nGreat news — your team has started making real progress:`
-      : 'At the time of onboarding, the team highlighted challenges around real-time site visibility and documentation. Great news — your team has started making real progress:';
+    // OB pain point intro — don't quote setup notes verbatim; use as context
+    const obRaw = acc.ob_notes || '';
+    const isSetupNote = obRaw.toLowerCase().includes('configuration') || obRaw.toLowerCase().includes('finalized') || obRaw.toLowerCase().includes('setup');
+    const obIntro = obRaw.length > 5 && !isSetupNote
+      ? `At the time of onboarding, the core problem discussed was: ${obRaw.substring(0,200)}${obRaw.length>200?'…':''}`
+      : 'At the time of onboarding, the core challenge discussed was real-time visibility into site activities — material consumption, labour, and task progress — all tracked in one place instead of WhatsApp/Excel.';
 
-    // ✅ Active modules with project context
-    const wellLines = activeModules.length
-      ? activeModules.map(m => {
-          const projCtx = m.projs.length > 0 ? ` across ${m.projs.join(', ')}` : '';
-          const trend   = m.wk1 > 0 ? ` (${m.wk1} last week)` : '';
-          return `• ${modDisp(m.name)} is live — ${m.wk0} entries this week${projCtx}${trend}`;
-        }).join('\n')
-      : `• ${acc.wk0} actions recorded this week across ${projActive}`;
+    // ✅ Narrative paragraph per active module (not bullet list)
+    const primaryMod  = activeModules.slice().sort((a,b)=>b.wk0-a.wk0)[0];
+    const bonusMods   = activeModules.filter(m=>m!==primaryMod);
+    let wellNarrative = '';
+    if (primaryMod) {
+      const allProjNames = [...new Set(activeModules.flatMap(m=>m.projs))];
+      const projStr = allProjNames.length > 0 ? `all ${allProjNames.length} project${allProjNames.length>1?'s':''} — ${allProjNames.join(', ')}` : projActive;
+      wellNarrative += `The ${modDisp(primaryMod.name)} is now live and active across ${projStr}. The team has logged ${primaryMod.wk0} entries this week${primaryMod.wk1>0?' ('+primaryMod.wk1+' last week)':''} — this is exactly the visibility we aimed for.`;
+      bonusMods.forEach(m => {
+        const mProjs = m.projs.join(', ') || projActive;
+        wellNarrative += `\n\nThe ${modDisp(m.name)} is also active in ${mProjs} with ${m.wk0} entries this week${m.wk1>0?' ('+m.wk1+' last week)':''}.`;
+      });
+    } else {
+      wellNarrative = `${acc.wk0} actions recorded this week across ${projActive}.`;
+    }
 
     // ❗ Onboarding gap block
     let gapBlock = '';
@@ -1633,22 +1642,26 @@ A quick 15-min check-in with the team will fix this.
       ? `Schedule a walkthrough with ${trainerName} for ${gapModules[1].display} — 15 mins is all it takes`
       : `Schedule a review call with ${trainerName} — we'll take it from there`;
 
-    plain = `Hi ${orgFirst} Sir & Team,
+    // Greeting — use poc_name if available, otherwise org name
+    const greeting = acc.poc_name && acc.poc_name.length > 2
+      ? `Hi ${acc.poc_name} & Team,`
+      : `Hi ${orgFirst} Sir & Team,`;
 
-Hope everyone is doing well! Here's a quick progress update on how your team is using Powerplay.
+    plain = `${greeting}
+
+Hope everyone is doing well! It's been a few weeks since we went live on Powerplay, and we wanted to share a quick progress update — what's working well and where we can unlock more value together.
 
 ✅ What's Going Well
 ${obIntro}
 
-${wellLines}
-
-Active projects this week: ${projActive}
-Total: ${acc.wk0} action${acc.wk0!==1?'s':''} this week${acc.wk1>0?' (was '+acc.wk1+' last week)':''}
+${wellNarrative}
 ${gapBlock}${attBlock}
 📋 Suggested Next Steps
 1. ${s1}
 2. ${s2}
 3. ${s3}
+
+We're excited about the progress and want to make sure you're getting full value before your next projects go live. Please share a convenient time this week — ${trainerName} will take it from there!
 
 Warm regards,
 ${trainerName} & Monika
