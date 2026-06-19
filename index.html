@@ -426,11 +426,18 @@ wk3        : find('wk_3','wk3','week_3'),
     new_drops  : find('acct_new_drops_w0','new_drops_w0'),
     connected  : find('acct_connected_w0','connected_w0'),
     coverage   : find('acct_coverage_pct','coverage_pct'),
-    cold_users : find('acct_cold_user_names','cold_user_names'),
+    cold_users  : find('acct_cold_user_names','cold_user_names'),
+    ob_notes    : find('ob_notes','notes'),
+    mat_plan    : find('mat_ic_sub_value','mat_ic'),
+    tsk_plan    : find('tsk_ic_sub_value','tsk_ic'),
+    att_plan    : find('att_ic_sub_value','att_ic'),
+    exp_plan    : find('exp_ic_sub_value','exp_ic'),
+    others_plan : find('others_ic_sub_value','others_ic'),
+    poc_name    : find('poc_name','owner_name'),
   };
 }
 
-const TRAINER_NAMES = {'digvijay':'Digvijay','farid':'S Farid','sfarid':'S Farid','s farid':'S Farid','divya':'Divya'};
+const TRAINER_NAMES = {'digvijay':'Digvijay','farid':'S Farid','sfarid':'S Farid','s farid':'S Farid','divya':'Divya','ipsita':'Ipsita Tripathy','tripathy':'Ipsita Tripathy'};
 function trainerDisplay(email) {
   if (!email) return email;
   const low = email.toLowerCase();
@@ -460,12 +467,19 @@ function processRows(rows, cols) {
     const wk3 = parseInt(row[cols.wk3] || 0);
     if (!trainers[trainer]) trainers[trainer] = {};
     const tMap = trainers[trainer];
-    if (!tMap[org]) tMap[org] = { renewal, projects: {}, activeW0: 
-    parseInt(row[cols.active_w0]||0), coldPool: parseInt(row[cols.cold_pool]||0),                       
-    newDrops: parseInt(row[cols.new_drops]||0), connected: 
-    parseInt(row[cols.connected]||0), coverage: row[cols.coverage]!=null?
-    Number(row[cols.coverage]):null, coldUsers: (cols.cold_users && 
-    Array.isArray(row[cols.cold_users])) ? row[cols.cold_users] : [] };                                            
+    if (!tMap[org]) tMap[org] = { renewal, projects: {},
+    activeW0: parseInt(row[cols.active_w0]||0), coldPool: parseInt(row[cols.cold_pool]||0),
+    newDrops: parseInt(row[cols.new_drops]||0), connected: parseInt(row[cols.connected]||0),
+    coverage: row[cols.coverage]!=null ? Number(row[cols.coverage]) : null,
+    coldUsers: (cols.cold_users && Array.isArray(row[cols.cold_users])) ? row[cols.cold_users] : [],
+    obNotes:   cols.ob_notes    ? (row[cols.ob_notes]   ||'') : '',
+    matPlan:   cols.mat_plan    ? (row[cols.mat_plan]   ||'') : '',
+    tskPlan:   cols.tsk_plan    ? (row[cols.tsk_plan]   ||'') : '',
+    attPlan:   cols.att_plan    ? (row[cols.att_plan]   ||'') : '',
+    expPlan:   cols.exp_plan    ? (row[cols.exp_plan]   ||'') : '',
+    othersPlan:cols.others_plan ? (row[cols.others_plan]||'') : '',
+    pocName:   cols.poc_name    ? (row[cols.poc_name]   ||'') : '',
+    };                                            
     const orgObj = tMap[org];
     if (!orgObj.projects[project]) orgObj.projects[project] = { modules: {} };
     const projObj = orgObj.projects[project];
@@ -515,7 +529,9 @@ function processRows(rows, cols) {
         num: ai+1, name:orgName, renewal:orgData.renewal, trainer: tName,
         wk0:accWk0, wk1:accWk1, wk2:accWk2, wk3:accWk3,
   diff, pct:pctStr, priority: effP, projects,
-        activeW0:orgData.activeW0, coldPool:orgData.coldPool, newDrops:orgData.newDrops, connected:orgData.connected, coverage:orgData.coverage, coldUsers:orgData.coldUsers||[]
+        activeW0:orgData.activeW0, coldPool:orgData.coldPool, newDrops:orgData.newDrops, connected:orgData.connected, coverage:orgData.coverage, coldUsers:orgData.coldUsers||[],
+        ob_notes:orgData.obNotes||'', mat_plan:orgData.matPlan||'', tsk_plan:orgData.tskPlan||'',
+        att_plan:orgData.attPlan||'', exp_plan:orgData.expPlan||'', others_plan:orgData.othersPlan||'', poc_name:orgData.pocName||''
       });   
     });
     result[tName] = { accounts };
@@ -1456,143 +1472,201 @@ function copySubjectLine() {
 
 function generateEmail(acc) {
   const isInactive = acc.priority === 'INACTIVE';
-  const trainerFirst = acc.trainer ? acc.trainer.split('@')[0].split('.').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ') : 'Your Trainer';
+
+  // Trainer name — handle both "Ipsita Tripathy" (already formatted) and "ipsitatripathy" (no dot)
+  const trainerName = (function() {
+    const t = acc.trainer || '';
+    if (t.includes(' ')) return t; // already has space — formatted correctly
+    return t.split('.').filter(Boolean).map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+  })();
+
   const orgFirst = acc.name.split(' ')[0];
   const orgShort = acc.name.length > 28 ? acc.name.substring(0,26)+'…' : acc.name;
 
-  // ── gather module activity ──
-  const activeModules = [], dropModules = [], zeroModules = [];
-  const allModules = {};
-  (acc.projects || []).forEach(p => {
-    (p.modules || []).forEach(m => {
-      if (!allModules[m.name]) allModules[m.name] = {wk0:0, wk1:0};
-      allModules[m.name].wk0 += (m.wk0||0);
-      allModules[m.name].wk1 += (m.wk1||0);
+  const projCount = (acc.projects||[]).length;
+
+  // Module display name map
+  const MOD_NAMES = {
+    'material':'Material Module','task':'Task Module','attendance':'Attendance Module',
+    'expense':'Expense Module','drive':'Drive Module','boq':'BOQ/Cost Module',
+    'material payable':'Vendor Payables','material payable payment':'Payment Module',
+  };
+  function modDisp(n) { return MOD_NAMES[n.toLowerCase()] || (n.charAt(0).toUpperCase()+n.slice(1)); }
+
+  // Gather module activity across all projects, with project context
+  const allMods = {};
+  (acc.projects||[]).forEach(p => {
+    (p.modules||[]).forEach(m => {
+      if (!allMods[m.name]) allMods[m.name] = {wk0:0, wk1:0, projs:[]};
+      allMods[m.name].wk0 += (m.wk0||0);
+      allMods[m.name].wk1 += (m.wk1||0);
+      if ((m.wk0||0)>0) allMods[m.name].projs.push(p.name);
     });
   });
-  Object.entries(allModules).forEach(([name, d]) => {
-    if (d.wk0 > 0) activeModules.push({name, wk0: d.wk0, wk1: d.wk1});
-    else if (d.wk1 > 0) dropModules.push({name, wk0: 0, wk1: d.wk1});
+  const activeModules=[], dropModules=[], zeroModules=[];
+  Object.entries(allMods).forEach(([name,d])=>{
+    if(d.wk0>0) activeModules.push({name, wk0:d.wk0, wk1:d.wk1, projs:[...new Set(d.projs)]});
+    else if(d.wk1>0) dropModules.push({name, wk0:0, wk1:d.wk1});
     else zeroModules.push({name});
   });
 
-  // top active project
-  const topProj = (acc.projects||[]).slice().sort((a,b)=>(b.wk0||0)-(a.wk0||0))[0];
-  // biggest drop project
+  // OB planned modules from ob_org_details IC fields
+  const obPlanned = [];
+  if(acc.mat_plan)    obPlanned.push({display:'Material Module',   plan:acc.mat_plan});
+  if(acc.tsk_plan)    obPlanned.push({display:'Task Module',       plan:acc.tsk_plan});
+  if(acc.att_plan)    obPlanned.push({display:'Attendance Module', plan:acc.att_plan});
+  if(acc.exp_plan)    obPlanned.push({display:'Expense/BOQ Module',plan:acc.exp_plan});
+  if(acc.others_plan && acc.others_plan.length>1) obPlanned.push({display:acc.others_plan, plan:acc.others_plan});
+
+  // Gap = planned at OB but not yet active; fallback to zero-activity modules
+  const activeSet = new Set(activeModules.map(m=>modDisp(m.name)));
+  const obGaps    = obPlanned.filter(pm=>!activeSet.has(pm.display));
+  const gapModules = obGaps.length>0 ? obGaps : zeroModules.map(m=>({display:modDisp(m.name), plan:''}));
+
+  // Drop project + its worst-dropped module
   const dropProj = (acc.projects||[]).filter(p=>(p.wk0||0)<(p.wk1||0)).sort((a,b)=>((b.wk1||0)-(b.wk0||0))-((a.wk1||0)-(a.wk0||0)))[0];
-  const totalDrop = acc.wk1 > 0 ? Math.round((1 - acc.wk0/acc.wk1)*100) : 0;
+  const topProj  = (acc.projects||[]).slice().sort((a,b)=>(b.wk0||0)-(a.wk0||0))[0];
 
   let plain = '', html = '';
-  const projCount = (acc.projects||[]).length;
 
   if (isInactive) {
-    // ── INACTIVE TEMPLATE (onboarding gap focus) ──
+    // ── INACTIVE TEMPLATE ──
+    const obReminder = acc.ob_notes && acc.ob_notes.length > 5
+      ? acc.ob_notes.substring(0, 300) + (acc.ob_notes.length > 300 ? '…' : '')
+      : '• Tracking material issues at the site level\n• Monitoring daily labour and attendance\n• Reducing project delays due to poor documentation';
+
     plain = `Hi ${orgFirst} Sir & Team,
 
 Hope you're doing well. We noticed that Powerplay hasn't been active since our onboarding session, and we wanted to check in — because we genuinely want to make sure the problems you came to us with actually get solved.
 
-💡 WHY YOU SIGNED UP — A QUICK REMINDER
+💡 Why You Signed Up — A Quick Reminder
 
 At the time of onboarding, you highlighted these key challenges:
-• Tracking material issues at the site level
-• Monitoring daily labour and attendance
-• Reducing project delays due to poor documentation
+${obReminder}
 
 These problems don't go away on their own. The risk of repeating the same challenges at a larger scale is very real.
 
-📋 WHAT'S ALREADY READY FOR YOU
+📋 What's Already Ready For You
 • System is configured and waiting
-• ${trainerFirst} is ready to resume right where we left off
-• All ${projCount} project(s) are set up on Powerplay
+• ${trainerName} is ready to resume right where we left off
+• All ${projCount} project(s) are set up on Powerplay${obPlanned.length>0?'\n• Modules committed at onboarding: '+obPlanned.map(m=>m.display).join(', '):''}
 
-⚡ ONE ASK — LET'S GET RESTARTED
+⚡ One Ask — Let's Get Restarted
 Can we schedule a 30-minute session this week? The goal is simple — get the site team logging daily updates on Powerplay before more time passes.
 
 Please share a convenient time and we'll take it from there immediately.
 
 Warm regards,
-${trainerFirst} & Monika
+${trainerName} & Monika
 Powerplay — Customer Success`;
 
     html = plain
-      .replace(/💡 WHY YOU SIGNED UP — A QUICK REMINDER/, '<b>💡 WHY YOU SIGNED UP — A QUICK REMINDER</b>')
-      .replace(/📋 WHAT'S ALREADY READY FOR YOU/, '<b>📋 WHAT\'S ALREADY READY FOR YOU</b>')
-      .replace(/⚡ ONE ASK — LET'S GET RESTARTED/, '<b>⚡ ONE ASK — LET\'S GET RESTARTED</b>');
+      .replace(/💡 Why You Signed Up — A Quick Reminder/, '<b>💡 Why You Signed Up — A Quick Reminder</b>')
+      .replace(/📋 What's Already Ready For You/, "<b>📋 What's Already Ready For You</b>")
+      .replace(/⚡ One Ask — Let's Get Restarted/, "<b>⚡ One Ask — Let's Get Restarted</b>");
 
   } else {
-    // ── ACTIVE TEMPLATE (onboarding gap focus) ──
+    // ── ACTIVE TEMPLATE ──
     const projActive = (acc.projects||[]).filter(p=>(p.wk0||0)>0).map(p=>p.name).join(', ') || '—';
 
-    // ✅ Active modules — what's going well
+    // OB pain point intro
+    const obIntro = acc.ob_notes && acc.ob_notes.length > 5
+      ? `At the time of onboarding, the core problem discussed was: ${acc.ob_notes.substring(0,180)}${acc.ob_notes.length>180?'…':''}\n\nGreat news — your team has started making real progress:`
+      : 'At the time of onboarding, the team highlighted challenges around real-time site visibility and documentation. Great news — your team has started making real progress:';
+
+    // ✅ Active modules with project context
     const wellLines = activeModules.length
-      ? activeModules.map(m =>
-          `• ${m.name} is live — ${m.wk0} event${m.wk0!==1?'s':''} this week${m.wk1>0?' ('+m.wk1+' last week)':''}${topProj?' on '+topProj.name:''}`
-        ).join('\n')
-      : `• ${acc.wk0} site actions recorded this week across ${projActive}`;
+      ? activeModules.map(m => {
+          const projCtx = m.projs.length > 0 ? ` across ${m.projs.join(', ')}` : '';
+          const trend   = m.wk1 > 0 ? ` (${m.wk1} last week)` : '';
+          return `• ${modDisp(m.name)} is live — ${m.wk0} entries this week${projCtx}${trend}`;
+        }).join('\n')
+      : `• ${acc.wk0} actions recorded this week across ${projActive}`;
 
-    // ❗ Onboarding gap — modules with ZERO activity ever (never started)
-    const gapLines = zeroModules.map(m => `• ${m.name}`).join('\n');
+    // ❗ Onboarding gap block
+    let gapBlock = '';
+    if (gapModules.length > 0) {
+      const gapLines = gapModules.map(gm => {
+        const planCtx = gm.plan && gm.plan.length > 2 ? ` — ${gm.plan}` : '';
+        return `• ${gm.display}${planCtx}`;
+      }).join('\n');
+      gapBlock = `
+❗ Not Yet Started — Onboarding Gap
+These modules were part of the plan from your onboarding discussion but haven't been set up yet:
+${gapLines}
 
-    // ⚠️ Attention — modules active last week but dropped this week
-    let attentionBlock = '';
+Starting even one of these this week will directly address the original challenges you signed up to solve.
+`;
+    }
+
+    // ⚠️ Attention block with specific project+module numbers
+    let attBlock = '';
     if (dropProj) {
-      attentionBlock = `\n⚠️ ONE AREA NEEDS ATTENTION\n${dropProj.name} — activity dropped from ${dropProj.wk1} → ${dropProj.wk0} this week. A quick check-in with the site team will get this back on track.\n`;
+      const dropMods = (dropProj.modules||[]).filter(m=>(m.wk0||0)<(m.wk1||0)).sort((a,b)=>((b.wk1||0)-(b.wk0||0))-((a.wk1||0)-(a.wk0||0)));
+      const dm = dropMods[0];
+      const dropDesc = dm
+        ? `${modDisp(dm.name)} entries dropped from ${dm.wk1} → ${dm.wk0} this week`
+        : `activity dropped from ${dropProj.wk1} → ${dropProj.wk0} this week`;
+      attBlock = `
+⚠️ One Area Needs Attention — ${dropProj.name}
+${dropProj.name}: ${dropDesc}. This usually means the team has shifted back to WhatsApp/Excel, or there's a small process gap to close. A quick 15-min call with the site team will fix this.
+`;
     } else if (dropModules.length > 0) {
-      attentionBlock = `\n⚠️ ONE AREA NEEDS ATTENTION\nThese modules were active last week but went quiet this week:\n${dropModules.map(m=>`• ${m.name} — was ${m.wk1} event${m.wk1!==1?'s':''}, now 0`).join('\n')}\nA quick 15-min check-in with the team will fix this.\n`;
+      attBlock = `
+⚠️ One Area Needs Attention
+These modules went quiet this week:
+${dropModules.map(m=>`• ${modDisp(m.name)} — was ${m.wk1} entries last week, now 0`).join('\n')}
+A quick 15-min check-in with the team will fix this.
+`;
     }
 
     // 📋 Next steps
-    const step1 = zeroModules.length > 0
-      ? `Start ${zeroModules[0].name} on one project — ${trainerFirst} can guide the team in just 10 minutes`
-      : dropModules.length > 0
-        ? `Restart ${dropModules[0].name} on ${dropProj?.name||'your site'} — quick 10-min check-in with site team`
-        : `Expand ${activeModules[0]?.name||'active modules'} to all remaining projects`;
-    const step2 = activeModules.length > 0
-      ? `Keep ${activeModules[0].name} consistent across all ${projCount} project${projCount!==1?'s':''}`
-      : 'Resume daily activity logging on your active projects';
+    const s1 = gapModules.length > 0
+      ? `Share the required data with ${trainerName} to complete ${gapModules[0].display} setup — this week`
+      : dropProj
+        ? `Quick connect with the ${dropProj.name} site team to understand the drop and restart daily entries`
+        : `Expand ${activeModules[0] ? modDisp(activeModules[0].name) : 'active modules'} to all projects`;
+    const s2 = dropProj
+      ? `Schedule a 15-min call with ${trainerName} to review the ${dropProj.name} drop`
+      : `Keep ${activeModules[0] ? modDisp(activeModules[0].name) : 'current modules'} consistent across all ${projCount} project${projCount!==1?'s':''}`;
+    const s3 = gapModules.length > 1
+      ? `Schedule a walkthrough with ${trainerName} for ${gapModules[1].display} — 15 mins is all it takes`
+      : `Schedule a review call with ${trainerName} — we'll take it from there`;
 
     plain = `Hi ${orgFirst} Sir & Team,
 
 Hope everyone is doing well! Here's a quick progress update on how your team is using Powerplay.
 
-✅ WHAT'S GOING WELL
-At the time of onboarding, you highlighted key challenges around site tracking and visibility. Great news — your team has started making real progress:
+✅ What's Going Well
+${obIntro}
+
 ${wellLines}
 
 Active projects this week: ${projActive}
-Total activity: ${acc.wk0} action${acc.wk0!==1?'s':''} this week${acc.wk1>0?' (was '+acc.wk1+' last week)':''}
-${gapLines ? `
-❗ ONBOARDING GAP — NOT YET STARTED
-These modules were part of your onboarding plan but haven't seen any activity yet:
-${gapLines}
-
-Starting even one of these this week will directly unlock more value from your investment.
-` : ''}${attentionBlock}
-📋 SUGGESTED NEXT STEPS
-1. ${step1}
-2. ${step2}
-3. Schedule a review call with ${trainerFirst} — we'll take it from there
+Total: ${acc.wk0} action${acc.wk0!==1?'s':''} this week${acc.wk1>0?' (was '+acc.wk1+' last week)':''}
+${gapBlock}${attBlock}
+📋 Suggested Next Steps
+1. ${s1}
+2. ${s2}
+3. ${s3}
 
 Warm regards,
-${trainerFirst} & Monika
+${trainerName} & Monika
 Powerplay — Customer Success`;
 
     html = plain
-      .replace(/✅ WHAT'S GOING WELL/, '<b>✅ WHAT\'S GOING WELL</b>')
-      .replace(/❗ ONBOARDING GAP — NOT YET STARTED/, '<b>❗ ONBOARDING GAP — NOT YET STARTED</b>')
-      .replace(/⚠️ ONE AREA NEEDS ATTENTION/, '<b>⚠️ ONE AREA NEEDS ATTENTION</b>')
-      .replace(/📋 SUGGESTED NEXT STEPS/, '<b>📋 SUGGESTED NEXT STEPS</b>');
+      .replace(/✅ What's Going Well/, "<b>✅ What's Going Well</b>")
+      .replace(/❗ Not Yet Started — Onboarding Gap/, '<b>❗ Not Yet Started — Onboarding Gap</b>')
+      .replace(/⚠️ One Area Needs Attention[^\n]*/, m => '<b>'+m+'</b>')
+      .replace(/📋 Suggested Next Steps/, '<b>📋 Suggested Next Steps</b>');
   }
 
-  // ── Subject line ──
-  let subject;
-  if (isInactive) {
-    subject = `Action Required: Your Powerplay Onboarding — Let's Get Back on Track | ${orgShort}`;
-  } else if (zeroModules.length > 0) {
-    subject = `Powerplay Progress Update — ${zeroModules.length} Module${zeroModules.length>1?'s':''} Yet to Start | ${orgShort}`;
-  } else {
-    subject = `Your Powerplay Progress Update | ${orgShort}`;
-  }
+  // Subject line
+  const subject = isInactive
+    ? `Action Required: Your Powerplay Onboarding — Let's Get Back on Track | ${orgShort}`
+    : gapModules.length > 0
+      ? `Powerplay Progress Update — ${gapModules.length} Module${gapModules.length>1?'s':''} Yet to Start | ${orgShort}`
+      : `Your Powerplay Progress Update | ${orgShort}`;
 
   return { html, plain, priority: acc.priority, subject };
 }
