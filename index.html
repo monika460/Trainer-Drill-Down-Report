@@ -485,6 +485,8 @@ function processRows(rows, cols) {
 
       // Conn W0 = cold pool users who had a disposition logged in the last 7 days
       const connW0 = [...coldPool].filter(u => usersWithRecentDisp.has(u)).length;
+      const connW0List = [...coldPool].filter(u => usersWithRecentDisp.has(u)).map(u => ({ user: u.split('|')[0], mobile: u.split('|')[1] }));
+      const activeW0List = [...usersActiveWk0].map(u => ({ user: u.split('|')[0], mobile: u.split('|')[1] }));
 
       // Cov W0 = Connected ÷ Cold Pool × 100
       // Red <30%, Amber 30–60%, Green 60%+, Dash if no cold pool
@@ -501,7 +503,7 @@ function processRows(rows, cols) {
         modSummary,
         // user-level metrics
         activeW0, dropW0, dropW0IsAlert, dropX, dropY, connW0, covW0, covPct,
-        droppedXList, coldPoolList,
+        droppedXList, coldPoolList, activeW0List, connW0List,
         // financial / renewal
         arr: accountArr
       });
@@ -600,7 +602,7 @@ function renderPanel(tName, tData, tid) {
 
     const dropCell = acc.dropW0 === '—'
       ? `<td class="nr neu sm">—</td>`
-      : `<td class="nr sm" style="white-space:nowrap"><span style="color:${acc.dropX>0?'#ed8936':'#48bb78'};cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();toggleDropRow('${aId}')" title="Click to show drop users">${acc.dropX}</span><span style="color:#4a5568">/</span><span style="color:#4a9edd;cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();toggleDropRow('${aId}')" title="Click to show cold pool">${acc.dropY}</span></td>`;
+      : `<td class="nr sm" style="white-space:nowrap"><span style="color:${acc.dropX>0?'#ed8936':'#48bb78'};cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();showUserPopup('${aId}','dropx',event)" title="Newly dropped this week">${acc.dropX}</span><span style="color:#4a5568">/</span><span style="color:#4a9edd;cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();showUserPopup('${aId}','dropy',event)" title="Full cold pool">${acc.dropY}</span></td>`;
     const covCell = acc.covW0 === '—'
       ? `<td class="nr neu sm">—</td>`
       : `<td><span class="cvbadge ${acc.covPct<30?'cv0':acc.covPct<60?'cv50':'cvok'}">${acc.covW0}</span></td>`;
@@ -614,9 +616,9 @@ function renderPanel(tName, tData, tid) {
       ${dTD(acc.diff)}${pTD(acc.pct)}
       <td>${trend(acc.wk0,acc.wk1,acc.wk2,acc.wk3)}</td>
       <td>${pb(acc.priority)} <button class="send-btn" onclick="event.stopPropagation();openSendModal('${aId}')" title="Send email to account owner">✉</button></td>
-      ${nTD(acc.activeW0)}
+      <td class="nr">${acc.activeW0>0?`<span style="cursor:pointer;text-decoration:underline dotted;color:#48bb78" onclick="event.stopPropagation();showUserPopup('${aId}','active',event)" title="Active users this week">${acc.activeW0}</span>`:(acc.activeW0??'—')}</td>
       ${dropCell}
-      ${nTD(acc.connW0)}
+      <td class="nr">${acc.connW0>0?`<span style="cursor:pointer;text-decoration:underline dotted;color:#68d391" onclick="event.stopPropagation();showUserPopup('${aId}','conn',event)" title="Connected drop users">${acc.connW0}</span>`:(acc.connW0??'—')}</td>
       ${covCell}
       <td style="text-align:center;white-space:nowrap"><button class="snap-btn" onclick="event.stopPropagation();openSnapModal('${aId}')" title="View snap report">📸 Snap</button><button class="email-row-btn" onclick="event.stopPropagation();openProgressEmail('${aId}')" title="Generate progress email">📧</button></td>
       <td class="nr" style="font-size:11px;color:#a0aec0;white-space:nowrap">${acc.arr != null ? (isNaN(+acc.arr) ? acc.arr : (+acc.arr).toLocaleString('en-IN')) : '—'}</td>
@@ -2158,41 +2160,59 @@ function closeDropPopup() {
 
 <!-- ── Drop users floating popup ── -->
 <div id="dropFloatPopup" style="display:none;position:fixed;z-index:3000;background:#0d1424;border:1px solid #2a3550;border-radius:8px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.75);max-width:720px" onclick="event.stopPropagation()">
-  <div style="font-size:9px;color:#7C8AA3;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:7px">Drop users (W0) — call queue</div>
+  <div id="dropFloatTitle" style="font-size:9px;color:#7C8AA3;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:7px">Users</div>
   <div id="dropFloatPills" style="display:flex;flex-wrap:wrap;gap:5px"></div>
 </div>
 
 <script>
-// ── Toggle drop users floating popup ─────────────────────────
-function toggleDropRow(aId) {
+// ── Show user popup (active / dropx / dropy / conn) ──────────
+function showUserPopup(aId, type, evt) {
   const popup = document.getElementById('dropFloatPopup');
   if (!popup) return;
-  if (popup.dataset.aid === aId && popup.style.display !== 'none') {
-    popup.style.display = 'none'; popup.dataset.aid = ''; return;
+  const key = aId + ':' + type;
+  if (popup.dataset.key === key && popup.style.display !== 'none') {
+    popup.style.display = 'none'; popup.dataset.key = ''; return;
   }
   const entry = window.accRegistry && window.accRegistry[aId];
   if (!entry) return;
   const acc = entry.acc;
-  const dropUsers = acc.coldPoolList || acc.droppedXList || [];
-  if (!dropUsers.length) return;
-  const pills = dropUsers.map(u => {
+  const listMap = {
+    dropx: acc.droppedXList || [],
+    dropy: acc.coldPoolList || [],
+    active: acc.activeW0List || [],
+    conn:   acc.connW0List  || []
+  };
+  const titleMap = {
+    dropx:  '↓ Newly dropped this week (W1→W0)',
+    dropy:  '❄ Full cold pool (silent this week)',
+    active: '✅ Active users this week (W0)',
+    conn:   '📞 Connected drop users (called this week)'
+  };
+  const colorMap = { dropx:'#F0997B', dropy:'#4a9edd', active:'#68d391', conn:'#68d391' };
+  const bgMap    = { dropx:'#2A1810', dropy:'#0d1f2d', active:'#0d2210', conn:'#0d2210' };
+  const users = listMap[type] || [];
+  if (!users.length) return;
+  const pills = users.map(u => {
     const userId = (typeof u === 'object' ? (u.user || '') : u) || '';
     const mobile = typeof u === 'object' ? (u.mobile || '') : '';
     const nameDisplay = /^USR[a-zA-Z0-9]{6,}$/.test(userId) ? `User ${userId.substring(3,9).toUpperCase()}` : (userId || '—');
     const mobDisplay = mobile ? ` · ${mobile}` : '';
-    return `<span style="font-size:11px;background:#2A1810;color:#F0997B;padding:4px 10px;border-radius:4px;white-space:nowrap">${nameDisplay}${mobDisplay}</span>`;
+    return `<span style="font-size:11px;background:${bgMap[type]};color:${colorMap[type]};padding:4px 10px;border-radius:4px;white-space:nowrap">${nameDisplay}${mobDisplay}</span>`;
   }).join('');
+  document.getElementById('dropFloatTitle').textContent = titleMap[type] || 'Users';
   document.getElementById('dropFloatPills').innerHTML = pills;
-  popup.dataset.aid = aId;
+  popup.dataset.key = key;
   popup.style.display = 'block';
-  const el = event.target;
+  const el = (evt||event).target;
   const rect = el.getBoundingClientRect();
   popup.style.top = (rect.bottom + 6) + 'px';
   popup.style.left = Math.max(10, Math.min(rect.left - 10, window.innerWidth - 660)) + 'px';
 }
+// keep old name as alias so any existing calls still work
+function toggleDropRow(aId){ showUserPopup(aId,'dropy',event); }
 document.addEventListener('click', function() {
   const p = document.getElementById('dropFloatPopup');
-  if (p) { p.style.display = 'none'; p.dataset.aid = ''; }
+  if (p) { p.style.display = 'none'; p.dataset.key = ''; }
 });
 
 // ── Progress Email Generator ─────────────────────────────────
