@@ -634,7 +634,7 @@ function renderPanel(tName, tData, tid) {
         const mobDisplay = mobile ? ` · ${mobile}` : '';
         return `<span style="font-size:10px;background:#2A1810;color:#F0997B;padding:3px 8px;border-radius:3px;display:inline-block">${nameDisplay}${mobDisplay}</span>`;
       }).join('');
-      html += `<tr class="row-drop-users" id="drop-${aId}" style="display:none"><td colspan="20"><div style="font-size:9px;color:#7C8AA3;letter-spacing:0.4px;margin-bottom:5px;text-transform:uppercase">Drop users (W0) — call queue</div><div style="display:flex;flex-wrap:wrap;gap:4px">${pills}</div></td></tr>`;
+      html += `<tr class="row-drop-users" id="drop-${aId}" style="display:none"><td colspan="20"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:9px;color:#7C8AA3;letter-spacing:0.4px;text-transform:uppercase;white-space:nowrap">Drop users (W0):</span><div style="display:flex;flex-wrap:nowrap;gap:4px;overflow-x:auto;padding-bottom:2px">${pills}</div></div></td></tr>`;
     }
 
     // Sort projects: DROP first → STABLE DROP → STABLE (same status sorted by name)
