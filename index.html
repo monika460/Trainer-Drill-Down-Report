@@ -2191,7 +2191,21 @@ function showUserPopup(aId, type, evt) {
   const colorMap = { dropx:'#F0997B', dropy:'#4a9edd', active:'#68d391', conn:'#68d391' };
   const bgMap    = { dropx:'#2A1810', dropy:'#0d1f2d', active:'#0d2210', conn:'#0d2210' };
   const users = listMap[type] || [];
-  if (!users.length) return;
+  // Count fallback for when raw metrics are used (no individual user rows)
+  const countFallback = { active: entry.acc.activeW0, conn: entry.acc.connW0, dropx: entry.acc.dropX, dropy: entry.acc.dropY };
+  if (!users.length) {
+    const cnt = countFallback[type];
+    if (!cnt || cnt === 0 || cnt === '—') return;
+    document.getElementById('dropFloatTitle').textContent = titleMap[type] || 'Users';
+    document.getElementById('dropFloatPills').innerHTML = `<span style="font-size:11px;color:#7C8AA3;font-style:italic">${cnt} user${cnt>1?'s':''} active — individual user details not available in query data</span>`;
+    popup.dataset.key = key;
+    popup.style.display = 'block';
+    const el2 = (evt||event).target;
+    const rect2 = el2.getBoundingClientRect();
+    popup.style.top = (rect2.bottom + 6) + 'px';
+    popup.style.left = Math.max(10, Math.min(rect2.left - 10, window.innerWidth - 660)) + 'px';
+    return;
+  }
   const pills = users.map(u => {
     const userId = (typeof u === 'object' ? (u.user || '') : u) || '';
     const mobile = typeof u === 'object' ? (u.mobile || '') : '';
