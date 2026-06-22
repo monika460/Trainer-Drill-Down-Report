@@ -624,18 +624,7 @@ function renderPanel(tName, tData, tid) {
       <td></td><td></td>
     </tr>`;
 
-    // Drop users horizontal inline row
-    const dropUsers = acc.coldPoolList || acc.droppedXList || [];
-    if (dropUsers.length > 0) {
-      const pills = dropUsers.map(u => {
-        const userId = (typeof u === 'object' ? (u.user || '') : u) || '';
-        const mobile = typeof u === 'object' ? (u.mobile || '') : '';
-        const nameDisplay = /^USR[a-zA-Z0-9]{6,}$/.test(userId) ? `User ${userId.substring(3,9).toUpperCase()}` : (userId || '—');
-        const mobDisplay = mobile ? ` · ${mobile}` : '';
-        return `<span style="font-size:10px;background:#2A1810;color:#F0997B;padding:3px 8px;border-radius:3px;display:inline-block">${nameDisplay}${mobDisplay}</span>`;
-      }).join('');
-      html += `<tr class="row-drop-users" id="drop-${aId}" style="display:none"><td colspan="20"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:9px;color:#7C8AA3;letter-spacing:0.4px;text-transform:uppercase;white-space:nowrap">Drop users (W0):</span><div style="display:flex;flex-wrap:nowrap;gap:4px;overflow-x:auto;padding-bottom:2px">${pills}</div></div></td></tr>`;
-    }
+    // Drop users shown in floating popup (see toggleDropRow)
 
     // Sort projects: DROP first → STABLE DROP → STABLE (same status sorted by name)
     const projSortOrder = p => p.isDrop ? 0 : (!p.isDrop && p.wk0===0) ? 1 : 2;
@@ -2167,12 +2156,44 @@ function closeDropPopup() {
   </div>
 </div>
 
+<!-- ── Drop users floating popup ── -->
+<div id="dropFloatPopup" style="display:none;position:fixed;z-index:3000;background:#0d1424;border:1px solid #2a3550;border-radius:8px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.75);max-width:720px" onclick="event.stopPropagation()">
+  <div style="font-size:9px;color:#7C8AA3;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:7px">Drop users (W0) — call queue</div>
+  <div id="dropFloatPills" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+</div>
+
 <script>
-// ── Toggle drop users inline row ─────────────────────────────
+// ── Toggle drop users floating popup ─────────────────────────
 function toggleDropRow(aId) {
-  const row = document.getElementById('drop-'+aId);
-  if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+  const popup = document.getElementById('dropFloatPopup');
+  if (!popup) return;
+  if (popup.dataset.aid === aId && popup.style.display !== 'none') {
+    popup.style.display = 'none'; popup.dataset.aid = ''; return;
+  }
+  const entry = window.accRegistry && window.accRegistry[aId];
+  if (!entry) return;
+  const acc = entry.acc;
+  const dropUsers = acc.coldPoolList || acc.droppedXList || [];
+  if (!dropUsers.length) return;
+  const pills = dropUsers.map(u => {
+    const userId = (typeof u === 'object' ? (u.user || '') : u) || '';
+    const mobile = typeof u === 'object' ? (u.mobile || '') : '';
+    const nameDisplay = /^USR[a-zA-Z0-9]{6,}$/.test(userId) ? `User ${userId.substring(3,9).toUpperCase()}` : (userId || '—');
+    const mobDisplay = mobile ? ` · ${mobile}` : '';
+    return `<span style="font-size:11px;background:#2A1810;color:#F0997B;padding:4px 10px;border-radius:4px;white-space:nowrap">${nameDisplay}${mobDisplay}</span>`;
+  }).join('');
+  document.getElementById('dropFloatPills').innerHTML = pills;
+  popup.dataset.aid = aId;
+  popup.style.display = 'block';
+  const el = event.target;
+  const rect = el.getBoundingClientRect();
+  popup.style.top = (rect.bottom + 6) + 'px';
+  popup.style.left = Math.max(10, Math.min(rect.left - 10, window.innerWidth - 660)) + 'px';
 }
+document.addEventListener('click', function() {
+  const p = document.getElementById('dropFloatPopup');
+  if (p) { p.style.display = 'none'; p.dataset.aid = ''; }
+});
 
 // ── Progress Email Generator ─────────────────────────────────
 function openProgressEmail(aId) {
