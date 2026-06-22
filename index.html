@@ -602,7 +602,7 @@ function renderPanel(tName, tData, tid) {
 
     const dropCell = acc.dropW0 === '—'
       ? `<td class="nr neu sm">—</td>`
-      : `<td class="nr sm" style="white-space:nowrap"><span style="color:${acc.dropX>0?'#ed8936':'#48bb78'};cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();showUserPopup('${aId}','dropx',event)" title="Newly dropped this week">${acc.dropX}</span><span style="color:#4a5568">/</span><span style="color:#4a9edd;cursor:pointer;text-decoration:underline dotted" onclick="event.stopPropagation();showUserPopup('${aId}','dropy',event)" title="Full cold pool">${acc.dropY}</span></td>`;
+      : `<td class="nr sm" style="white-space:nowrap"><span style="color:${acc.dropX>0?'#ed8936':'#48bb78'};cursor:pointer;text-decoration:underline dotted" onclick="showDropPopup('${aId}','dropx',event)" title="Newly dropped this week">${acc.dropX}</span><span style="color:#4a5568">/</span><span style="color:#4a9edd;cursor:pointer;text-decoration:underline dotted" onclick="showDropPopup('${aId}','dropy',event)" title="Full cold pool">${acc.dropY}</span></td>`;
     const covCell = acc.covW0 === '—'
       ? `<td class="nr neu sm">—</td>`
       : `<td><span class="cvbadge ${acc.covPct<30?'cv0':acc.covPct<60?'cv50':'cvok'}">${acc.covW0}</span></td>`;
@@ -616,9 +616,9 @@ function renderPanel(tName, tData, tid) {
       ${dTD(acc.diff)}${pTD(acc.pct)}
       <td>${trend(acc.wk0,acc.wk1,acc.wk2,acc.wk3)}</td>
       <td>${pb(acc.priority)} <button class="send-btn" onclick="event.stopPropagation();openSendModal('${aId}')" title="Send email to account owner">✉</button></td>
-      <td class="nr">${acc.activeW0>0?`<span style="cursor:pointer;text-decoration:underline dotted;color:#48bb78" onclick="event.stopPropagation();showUserPopup('${aId}','active',event)" title="Active users this week">${acc.activeW0}</span>`:(acc.activeW0??'—')}</td>
+      <td class="nr">${acc.activeW0>0?`<span style="cursor:pointer;text-decoration:underline dotted;color:#48bb78" onclick="showDropPopup('${aId}','active',event)" title="Active users this week">${acc.activeW0}</span>`:(acc.activeW0??'—')}</td>
       ${dropCell}
-      <td class="nr">${acc.connW0>0?`<span style="cursor:pointer;text-decoration:underline dotted;color:#68d391" onclick="event.stopPropagation();showUserPopup('${aId}','conn',event)" title="Connected drop users">${acc.connW0}</span>`:(acc.connW0??'—')}</td>
+      <td class="nr">${acc.connW0>0?`<span style="cursor:pointer;text-decoration:underline dotted;color:#68d391" onclick="showDropPopup('${aId}','conn',event)" title="Connected drop users">${acc.connW0}</span>`:(acc.connW0??'—')}</td>
       ${covCell}
       <td style="text-align:center;white-space:nowrap"><button class="snap-btn" onclick="event.stopPropagation();openSnapModal('${aId}')" title="View snap report">📸 Snap</button><button class="email-row-btn" onclick="event.stopPropagation();openProgressEmail('${aId}')" title="Generate progress email">📧</button></td>
       <td class="nr" style="font-size:11px;color:#a0aec0;white-space:nowrap">${acc.arr != null ? (isNaN(+acc.arr) ? acc.arr : (+acc.arr).toLocaleString('en-IN')) : '—'}</td>
@@ -2022,50 +2022,67 @@ function closeSnapModal() {
   snapAcc = null;
 }
 
-// ── Drop W0 inline expansion — opens BELOW the account row ────
+// ── User list inline expansion — opens BELOW the account row ────
 let _dropExpand = null; // { row: HTMLElement, aId, type }
 
 function showDropPopup(aId, type, evt) {
-  evt.stopPropagation();
+  if (evt) evt.stopPropagation();
 
   // Toggle: clicking the same button again closes the panel
   if (_dropExpand && _dropExpand.aId === aId && _dropExpand.type === type) {
     closeDropPopup();
     return;
   }
-
   closeDropPopup();
 
   const entry = window.accRegistry[aId];
   if (!entry) return;
+  const acc = entry.acc;
 
-  const isX = type === 'x';
-  const users = isX ? (entry.acc.droppedXList || []) : (entry.acc.coldPoolList || []);
+  // Config per type
+  const cfg = {
+    dropx:  { list: acc.droppedXList||[],  count: acc.dropX,    title:'↓ Newly dropped this week (Active W1 → Silent W0)', color:'#ed8936', label:'newly dropped' },
+    dropy:  { list: acc.coldPoolList||[],   count: acc.dropY,    title:'❄ Full cold pool (Silent W0, active any prior week)',  color:'#4a9edd', label:'in cold pool' },
+    active: { list: acc.activeW0List||[],   count: acc.activeW0, title:'✅ Active users this week (W0)',                        color:'#48bb78', label:'active this week' },
+    conn:   { list: acc.connW0List||[],     count: acc.connW0,   title:'📞 Connected drop users (called this week)',            color:'#68d391', label:'connected' },
+    // legacy aliases
+    x:      { list: acc.droppedXList||[],   count: acc.dropX,    title:'↓ Newly dropped this week (Active W1 → Silent W0)', color:'#ed8936', label:'newly dropped' },
+    y:      { list: acc.coldPoolList||[],   count: acc.dropY,    title:'❄ Full cold pool (Silent W0, active any prior week)',  color:'#4a9edd', label:'in cold pool' },
+  };
+  const c = cfg[type] || cfg.dropy;
+  const users = c.list;
+  const accentColor = c.color;
 
-  const titleStr = isX
-    ? '↓ Newly dropped this week (active W1 → silent W0)'
-    : '❄ Full cold pool (active any W1/W2/W3, silent W0)';
-  const countStr = `${users.length} user${users.length!==1?'s':''} ${isX?'newly dropped':'in cold pool'}`;
+  // Fallback: raw count available but no individual rows
+  let userRowsHtml;
+  if (users.length === 0) {
+    const cnt = c.count;
+    if (!cnt || cnt === 0 || cnt === '—') return;
+    userRowsHtml = `<div style="color:#718096;font-style:italic;font-size:12px;padding:8px 0">${cnt} user${cnt>1?'s':''} ${c.label} — individual details not available in query data</div>`;
+  } else {
+    userRowsHtml = users.map(u =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;gap:20px;padding:5px 0;border-bottom:1px solid #1a2535">
+        <span style="color:#c8d8e8;font-size:12px">👤 ${u.user||'—'}</span>
+        <span style="color:${accentColor};font-family:monospace;font-size:12px;white-space:nowrap">${u.mobile||''}</span>
+      </div>`
+    ).join('');
+  }
 
-  // Find the account row in the DOM
+  const countStr = users.length
+    ? `${users.length} user${users.length!==1?'s':''} ${c.label}`
+    : `${c.count||0} ${c.label}`;
+
+  // Find account row
   const tr = document.querySelector(`tr.row-account[data-aid="${aId}"]`);
   if (!tr) return;
 
-  // Build user grid (multi-column for large lists)
-  const userRowsHtml = users.length
-    ? users.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:20px;padding:5px 0;border-bottom:1px solid #1a2535">
-        <span style="color:#c8d8e8;font-size:12px">👤 ${u.user||'—'}</span>
-        <span style="color:#4a9edd;font-family:monospace;font-size:12px;white-space:nowrap">${u.mobile||''}</span>
-      </div>`).join('')
-    : `<div style="color:#718096;font-style:italic;font-size:12px;padding:8px 0">No users in this list</div>`;
-
   const newTr = document.createElement('tr');
   newTr.id = 'drop-expand-row';
-  newTr.style.cssText = 'border-bottom:2px solid ' + (isX?'#ed8936':'#4a9edd');
+  newTr.style.cssText = `border-bottom:2px solid ${accentColor}`;
   newTr.innerHTML = `<td colspan="20" style="padding:0;background:#0d1220">
-    <div style="padding:12px 24px 14px;background:#111827;border-top:2px solid ${isX?'#ed8936':'#4a9edd'};border-bottom:1px solid #1e2535">
+    <div style="padding:12px 24px 14px;background:#111827;border-top:2px solid ${accentColor};border-bottom:1px solid #1e2535">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="font-size:10px;color:${isX?'#ed8936':'#4a9edd'};text-transform:uppercase;letter-spacing:.6px;font-weight:700">${titleStr}</span>
+        <span style="font-size:10px;color:${accentColor};text-transform:uppercase;letter-spacing:.6px;font-weight:700">${c.title}</span>
         <div style="display:flex;align-items:center;gap:12px">
           <span style="font-size:10px;color:#4a5568">${countStr}</span>
           <button onclick="closeDropPopup()" style="background:#1e2535;border:1px solid #2d3748;border-radius:5px;color:#a0aec0;cursor:pointer;font-size:11px;padding:3px 10px;transition:all .15s" onmouseover="this.style.background='#2d3748'" onmouseout="this.style.background='#1e2535'">✕ Close</button>
@@ -2077,16 +2094,11 @@ function showDropPopup(aId, type, evt) {
 
   tr.after(newTr);
   _dropExpand = { row: newTr, aId, type };
-
-  // Scroll smoothly to show the expansion
   newTr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function closeDropPopup() {
-  if (_dropExpand) {
-    _dropExpand.row.remove();
-    _dropExpand = null;
-  }
+  if (_dropExpand) { _dropExpand.row.remove(); _dropExpand = null; }
 }
 </script>
 
