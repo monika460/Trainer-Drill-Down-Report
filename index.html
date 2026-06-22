@@ -628,8 +628,11 @@ function renderPanel(tName, tData, tid) {
     const dropUsers = acc.coldPoolList || acc.droppedXList || [];
     if (dropUsers.length > 0) {
       const pills = dropUsers.map(u => {
-        const display = /^USR[a-zA-Z0-9]{6,}$/.test(u) ? `User ${u.substring(3,9).toUpperCase()}` : u;
-        return `<span style="font-size:10px;background:#2A1810;color:#F0997B;padding:3px 8px;border-radius:3px;display:inline-block">${display}</span>`;
+        const userId = (typeof u === 'object' ? (u.user || '') : u) || '';
+        const mobile = typeof u === 'object' ? (u.mobile || '') : '';
+        const nameDisplay = /^USR[a-zA-Z0-9]{6,}$/.test(userId) ? `User ${userId.substring(3,9).toUpperCase()}` : (userId || '—');
+        const mobDisplay = mobile ? ` · ${mobile}` : '';
+        return `<span style="font-size:10px;background:#2A1810;color:#F0997B;padding:3px 8px;border-radius:3px;display:inline-block">${nameDisplay}${mobDisplay}</span>`;
       }).join('');
       html += `<tr class="row-drop-users" id="drop-${aId}" style="display:none"><td colspan="20"><div style="font-size:9px;color:#7C8AA3;letter-spacing:0.4px;margin-bottom:5px;text-transform:uppercase">Drop users (W0) — call queue</div><div style="display:flex;flex-wrap:wrap;gap:4px">${pills}</div></td></tr>`;
     }
