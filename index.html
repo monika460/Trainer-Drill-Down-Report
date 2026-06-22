@@ -1899,10 +1899,15 @@ async function downloadSnapPDF() {
       tx('[!] NEEDS ATTENTION',M+6,y+6,{sz:8,bold:true,col:'#d97706'});
       let ay=y+11;
       for(const b of blocks){
-        const lw=strW(b.label,8);
-        const [r1,g1,b1]=hr(b.col); pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(r1,g1,b1); pdf.text(safe(b.label),M+6,ay);
+        const [r1,g1,b1]=hr(b.col);
+        // Set bold BEFORE measuring so lw reflects actual bold glyph widths (bold is wider than normal)
+        pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(r1,g1,b1);
+        const lw=strW(b.label,8)+1; // +1mm buffer for safety
+        pdf.text(safe(b.label),M+6,ay);
+        // Draw body in normal weight
+        pdf.setFont('helvetica','normal'); pdf.setTextColor(30,30,30);
         const bodyLines=pdf.splitTextToSize(safe(b.text),CW-14-lw);
-        pdf.setFont('helvetica','normal'); pdf.setTextColor(30,30,30); pdf.text(bodyLines,M+6+lw,ay);
+        pdf.text(bodyLines,M+6+lw,ay);
         ay+=bodyLines.length*4.5+2;
       }
       y+=attH+6;
@@ -1926,9 +1931,21 @@ async function downloadSnapPDF() {
       const visRows=sortedMods.filter(m=>!(m.wk0===0&&m.wk1===0)).length;
       chk(10+6+visRows*5.5+8);
       tx((isSilent?'[!] ':'')+proj.name,M,y+6,{sz:10,bold:true,col:isSilent?'#ea580c':'#111827',mw:CW*0.60});
-      tx(proj.wk1+' -> '+proj.wk0,PW-M-3,y+6,{sz:8.5,col:'#374151',align:'right'});
-      if(pNum!==null){ const pw=strW(pStr,8)+6; rr(PW-M-3-strW(proj.wk1+' -> '+proj.wk0,8.5)-pw-4,y+1.5,pw,5.5,2,pNum>=0?'#dcfce7':'#fee2e2'); tx(pStr,PW-M-3-strW(proj.wk1+' -> '+proj.wk0,8.5)-pw/2-4,y+5.2,{sz:8,bold:true,col:pCol,align:'center'}); }
-      else if(proj.wk0>0&&proj.wk1===0){ const pw=strW('new',7.5)+6; rr(PW-M-3-pw-4,y+1.5,pw,5.5,2,'#dbeafe'); tx('new',PW-M-3-pw/2-4,y+5.2,{sz:7.5,bold:true,col:'#1d4ed8',align:'center'}); }
+      // Layout: [project name]  ....  [wk1 -> wk0]  [pct pill]
+      // Pill at far right, numbers to its left (matching reference design)
+      if(pNum!==null){
+        const pw=strW(pStr,8)+6;
+        rr(PW-M-3-pw,y+1.5,pw,5.5,2,pNum>=0?'#dcfce7':'#fee2e2');
+        tx(pStr,PW-M-3-pw/2,y+5.2,{sz:8,bold:true,col:pCol,align:'center'});
+        tx(proj.wk1+' -> '+proj.wk0,PW-M-3-pw-5,y+6,{sz:8.5,col:'#374151',align:'right'});
+      } else if(proj.wk0>0&&proj.wk1===0){
+        const pw=strW('new',7.5)+6;
+        rr(PW-M-3-pw,y+1.5,pw,5.5,2,'#dbeafe');
+        tx('new',PW-M-3-pw/2,y+5.2,{sz:7.5,bold:true,col:'#1d4ed8',align:'center'});
+        tx(proj.wk1+' -> '+proj.wk0,PW-M-3-pw-5,y+6,{sz:8.5,col:'#374151',align:'right'});
+      } else {
+        tx(proj.wk1+' -> '+proj.wk0,PW-M-3,y+6,{sz:8.5,col:'#374151',align:'right'});
+      }
       y+=8;
       const barMods=sortedMods.filter(m=>m.wk0>0); const totalBar=barMods.reduce((s,m)=>s+m.wk0,0); const BH=5.5;
       if(barMods.length>0){ let bx=M; for(const bm of barMods){ const bw=(bm.wk0/totalBar)*CW; fr(bx,y,bw,BH,mCol(bm.name)); if(bw>10)tx(String(bm.wk0),bx+bw/2,y+4,{sz:7,bold:true,col:'#ffffff',align:'center'}); bx+=bw; } }
@@ -1972,14 +1989,37 @@ async function downloadSnapPDF() {
     if(topMover||watchOut){
       chk(34); y+=2;
       tx('THIS WEEK\'S HIGHLIGHTS',M,y+4,{sz:8,bold:true,col:'#6b7280'}); y+=8;
-      const hw=(CW-4)/2, hh=24;
-      if(topMover){ rr(M,y,hw,hh,3,'#f0fdf4'); sr(M,y,hw,hh,'#bbf7d0',0.3); tx('TOP MOVER',M+4,y+6,{sz:7.5,bold:true,col:'#15803d'}); tx(safe(topMover.user||''),M+4,y+13,{sz:10,bold:true,col:'#111827',mw:hw-8}); tx(safe(topMover.project)+' . '+safe(topMover.module)+'  +'+(topMover.pct||0)+'%',M+4,y+20,{sz:7.5,col:'#374151',mw:hw-8}); }
-      if(watchOut){ const wx=M+hw+4; rr(wx,y,hw,hh,3,'#fff5f5'); sr(wx,y,hw,hh,'#fca5a5',0.3); tx('[!] WATCH OUT',wx+4,y+6,{sz:7.5,bold:true,col:'#dc2626'}); tx(safe(watchOut.project||''),wx+4,y+13,{sz:10,bold:true,col:'#111827',mw:hw-8}); tx(safe(watchOut.issue||''),wx+4,y+20,{sz:7.5,col:'#374151',mw:hw-8}); }
+      const hh=24;
+      if(topMover&&watchOut){
+        // Two boxes side-by-side
+        const hw=(CW-4)/2;
+        rr(M,y,hw,hh,3,'#f0fdf4'); sr(M,y,hw,hh,'#bbf7d0',0.3);
+        tx('TOP MOVER',M+4,y+6,{sz:7.5,bold:true,col:'#15803d'});
+        tx(safe(topMover.user||''),M+4,y+13,{sz:10,bold:true,col:'#111827',mw:hw-8});
+        tx(safe(topMover.project)+' . '+safe(topMover.module)+'  +'+(topMover.pct||0)+'%',M+4,y+20,{sz:7.5,col:'#374151',mw:hw-8});
+        const wx=M+hw+4;
+        rr(wx,y,hw,hh,3,'#fff5f5'); sr(wx,y,hw,hh,'#fca5a5',0.3);
+        tx('WATCH OUT',wx+4,y+6,{sz:7.5,bold:true,col:'#dc2626'});
+        tx(safe(watchOut.project||''),wx+4,y+13,{sz:10,bold:true,col:'#111827',mw:hw-8});
+        tx(safe(watchOut.issue||''),wx+4,y+20,{sz:7.5,col:'#374151',mw:hw-8});
+      } else if(topMover){
+        // Full-width top mover
+        rr(M,y,CW,hh,3,'#f0fdf4'); sr(M,y,CW,hh,'#bbf7d0',0.3);
+        tx('TOP MOVER',M+4,y+6,{sz:7.5,bold:true,col:'#15803d'});
+        tx(safe(topMover.user||''),M+4,y+13,{sz:10,bold:true,col:'#111827',mw:CW-8});
+        tx(safe(topMover.project)+' . '+safe(topMover.module)+'  +'+(topMover.pct||0)+'%',M+4,y+20,{sz:7.5,col:'#374151',mw:CW-8});
+      } else {
+        // Full-width watch out
+        rr(M,y,CW,hh,3,'#fff5f5'); sr(M,y,CW,hh,'#fca5a5',0.3);
+        tx('WATCH OUT',M+4,y+6,{sz:7.5,bold:true,col:'#dc2626'});
+        tx(safe(watchOut.project||''),M+4,y+13,{sz:10,bold:true,col:'#111827',mw:CW-8});
+        tx(safe(watchOut.issue||''),M+4,y+20,{sz:7.5,col:'#374151',mw:CW-8});
+      }
       y+=hh+6;
     }
 
     // ══ READY-TO-SEND MESSAGE ════════════════════════════════════
-    const msgParts=['[!] Hi '+safe(acc.name.split(' ')[0]||acc.name)+' Sir,'];
+    const msgParts=['Hi '+safe(acc.name.split(' ')[0]||acc.name)+' Sir,'];
     if(pctChange!==null&&pctChange<0) msgParts.push(' activity dropped to '+acc.wk0+' this week (down '+Math.abs(pctChange)+'%).');
     else if(pctChange!==null) msgParts.push(' activity increased to '+acc.wk0+' this week (up '+pctChange+'%).');
     if(watchOut) msgParts.push(' '+safe(watchOut.project)+' needs attention -- '+safe(watchOut.issue||'')+'.');
