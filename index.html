@@ -2,30 +2,35 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Trainer DrillDown — Live</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trainer DrillDown — Live Dashboard</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh;font-size:13px}
-.header{background:linear-gradient(135deg,#1a1f2e,#16213e);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2d3748;position:sticky;top:0;z-index:300}
+
+/* ── Header ── */
+.header{background:linear-gradient(135deg,#1a1f2e,#16213e);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2d3748;position:sticky;top:0;z-index:300;flex-wrap:wrap;gap:10px}
 .header h1{font-size:17px;font-weight:700;color:#fff}
 .header-sub{font-size:11px;color:#718096;margin-top:2px}
-.sync-bar{display:flex;align-items:center;gap:14px}
-.sync-dot{width:8px;height:8px;border-radius:50%;background:#48bb78;animation:pulse 1.5s infinite}
+.sync-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#48bb78;animation:pulse 1.5s infinite;flex-shrink:0}
 .sync-dot.error{background:#fc5353;animation:none}
-.sync-dot.loading{background:#ecc94b}
+.sync-dot.loading{background:#ecc94b;animation:pulse .5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .sync-label{font-size:11px;color:#718096}
-.countdown{font-size:11px;color:#4299e1;font-weight:600;width:20px;text-align:right}
+.countdown{font-size:13px;color:#4299e1;font-weight:700;min-width:18px;text-align:right}
 .last-sync{font-size:10px;color:#4a5568}
-.gstats{display:flex;gap:16px}
-.gs{text-align:center}.gs .v{font-size:18px;font-weight:700}.gs .l{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.4px}
+.gstats{display:flex;gap:14px;flex-wrap:wrap}
+.gs{text-align:center}.gs .v{font-size:16px;font-weight:700}.gs .l{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.4px}
+
+/* ── Tabs ── */
 .tabs{display:flex;background:#1a1f2e;border-bottom:2px solid #2d3748;padding:0 24px;position:sticky;top:57px;z-index:200;overflow-x:auto}
 .tab{padding:11px 18px;cursor:pointer;font-size:13px;font-weight:500;color:#718096;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;display:flex;align-items:center;gap:7px;white-space:nowrap}
 .tab:hover{color:#e2e8f0}.tab.active{color:#fff;border-bottom-color:#4299e1}
 .tab .cnt{background:#2d3748;border-radius:10px;padding:1px 7px;font-size:11px;color:#a0aec0}
 .tab.active .cnt{background:#4299e1;color:#fff}
+
+/* ── Controls ── */
 .controls{padding:10px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #1a2033;background:#12161f;position:sticky;top:103px;z-index:190}
 .pf-btn{padding:4px 11px;border-radius:20px;border:1px solid #2d3748;background:transparent;color:#a0aec0;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .pf-btn:hover{color:#fff;border-color:#4a5568}
@@ -38,10 +43,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pf-btn.active[data-p="STABLE"]{background:#48bb78;border-color:#48bb78;color:#1a1a1a}
 .pf-btn.active[data-p="INACTIVE"]{background:#718096;border-color:#718096;color:#fff}
 .search-wrap{margin-left:auto;position:relative}
-.search-wrap::before{content:"\1F50D";position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;pointer-events:none}
+.search-wrap::before{content:"🔍";position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;pointer-events:none}
 .search-wrap input{background:#1a1f2e;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:5px 10px 5px 28px;font-size:12px;width:200px;outline:none}
 .search-wrap input:focus{border-color:#4299e1}
+
+/* ── Summary cards ── */
 .sumcards{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:12px 24px;background:#12161f;border-bottom:1px solid #1a2033}
+@media(max-width:900px){.sumcards{grid-template-columns:repeat(4,1fr)}}
 .sc{background:#1a1f2e;border:1px solid #2d3748;border-radius:8px;padding:8px 12px;text-align:center}
 .sc .sv{font-size:20px;font-weight:700}.sc .sl{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
 .sc.crit{border-color:#fc5353;background:#1e0c0c}.sc.crit .sv{color:#fc5353}
@@ -51,12 +59,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sc.stbdrop{border-color:#ff6b6b;background:#1e0a0a}.sc.stbdrop .sv{color:#ff6b6b}
 .sc.stb{border-color:#48bb78;background:#0a1e12}.sc.stb .sv{color:#48bb78}
 .sc.inact .sv{color:#718096}
+
+/* ── Tree table ── */
 .tree-wrap{overflow-x:auto}
 .tree-table{width:100%;border-collapse:collapse;min-width:900px}
 .tree-table th{padding:8px 10px;text-align:left;color:#4a5568;font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1a2033;background:#10141c;white-space:nowrap}
 .tree-table th.r{text-align:right}
+
+/* section rows */
 .row-section td{background:#0d1218;color:#3a5070;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;padding:6px 12px;border-bottom:1px solid #1a2033}
 .row-section.sd td{background:#1e0c0c;color:#ff6b6b;border-left:3px solid #ff6b6b}
+
+/* account rows */
 .row-account{border-bottom:1px solid #1e2535;cursor:pointer;transition:background .1s}
 .row-account:hover{background:#1a2030}
 .row-account td{padding:8px 10px;vertical-align:middle}
@@ -65,8 +79,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .acc-tog{width:18px;height:18px;background:#252d3d;margin-right:5px}.acc-tog:hover{background:#4299e1;color:#fff}
 .acc-name{font-weight:600;color:#e2e8f0}
 .acc-sub{font-size:10px;color:#4a5568;margin-left:5px}
-.snap-row-btn{background:#4299e1;color:#fff;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background .15s}
-.snap-row-btn:hover{background:#2b6cb0}
+
+/* project rows */
 .row-project{display:none;border-bottom:1px solid #161d2a;cursor:pointer;transition:background .1s}
 .row-project:hover{background:#161d28}.row-project.vis{display:table-row}
 .row-project td{padding:6px 10px 6px 32px;vertical-align:middle;background:#0f1420}
@@ -75,17 +89,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .proj-name{color:#c0cfe0;font-size:12px}
 .bdrop{background:#2d0f0f;color:#fc5353;border:1px solid #fc535355;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:5px;font-weight:600}
 .bstable{background:#0d2018;color:#48bb78;border:1px solid #48bb7855;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:5px}
-.bstabledrop{background:#2d0f0f;color:#ff6b6b;border:1px solid #ff6b6b;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:5px;font-weight:700}
+.bstabledrop{background:#2d0f0f;color:#ff6b6b;border:1px solid #ff6b6b55;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:5px;font-weight:700}
+
+/* module rows */
 .row-module{display:none;border-bottom:1px solid #131822}.row-module.vis{display:table-row}
 .row-module td{padding:5px 10px 5px 56px;vertical-align:middle;background:#0b1018}
 .mod-tog{width:14px;height:14px;background:#1a2030;margin-right:4px}.mod-tog:hover{background:#1a3a5a;color:#fff}
 .mod-name{color:#7a9ab0;font-size:11px}
+
+/* event/user rows */
 .row-event{display:none;border-bottom:1px solid #10151f}.row-event.vis{display:table-row}
 .row-event td{padding:5px 10px 5px 78px;vertical-align:middle;background:#080c14}
 .evt-name{color:#5a7090;font-size:11px;font-family:monospace}
-.ubox{margin-top:3px;display:inline-flex;align-items:center;gap:8px;background:#0f1828;border:1px solid #1e3050;border-radius:5px;padding:3px 8px}
+.ubox{margin-top:3px;display:inline-flex;align-items:center;gap:6px;background:#0f1828;border:1px solid #1e3050;border-radius:5px;padding:3px 8px;flex-wrap:wrap}
 .uname{color:#7eb8e0;font-size:12px;font-weight:600}
 .uphone{color:#4a9edd;font-size:12px;font-weight:700;letter-spacing:.4px}
+
+/* priority badge */
 .pb{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600}
 .pb.CRITICAL{background:#2d0f0f;color:#fc5353;border:1px solid #fc5353}
 .pb.HIGH{background:#2d1a0a;color:#ed8936;border:1px solid #ed8936}
@@ -94,196 +114,161 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pb.STABLE{background:#0d2d18;color:#48bb78;border:1px solid #48bb78}
 .pb.STABLE_DROP{background:#2d0f0f;color:#ff6b6b;border:1px solid #ff6b6b}
 .pb.INACTIVE{background:#1a1a1a;color:#718096;border:1px solid #718096}
+
+/* numbers */
 .nr{text-align:right;font-variant-numeric:tabular-nums;font-size:12px;white-space:nowrap}
 .neg{color:#fc5353}.pos{color:#48bb78}.neu{color:#4a5568}.zred{color:#fc535355}
 .sm{font-size:11px}
+
+/* trend bars */
 .trend{display:flex;align-items:flex-end;gap:2px;height:18px;min-width:40px}
 .tbar{flex:1;border-radius:1px 1px 0 0;min-height:2px;min-width:5px}
+
+/* loading overlay */
 .overlay{position:fixed;inset:0;background:#0f1117ee;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
 .spinner{width:40px;height:40px;border:3px solid #2d3748;border-top-color:#4299e1;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.err-box{background:#1e0c0c;border:1px solid #fc5353;border-radius:10px;padding:20px 28px;max-width:480px;text-align:center}
-.err-box h3{color:#fc5353;margin-bottom:8px}
-.err-box p{color:#a0aec0;font-size:12px;line-height:1.6}
+.err-box{background:#1e0c0c;border:1px solid #fc5353;border-radius:10px;padding:24px 32px;max-width:500px;text-align:center}
+.err-box h3{color:#fc5353;margin-bottom:10px;font-size:15px}
+.err-box p{color:#a0aec0;font-size:12px;line-height:1.7}
 .panel{display:none}.panel.active{display:block}
 .last-disp{font-size:10px;color:#4a6080;white-space:nowrap}
 .dispo{font-size:10px;color:#556070;font-style:italic;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.snap-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;align-items:flex-start;justify-content:center;z-index:1000;padding:30px 20px;overflow-y:auto}
-.snap-modal-bg.show{display:flex}
-.snap-modal{background:#fff;color:#1F2937;border-radius:16px;padding:24px;max-width:680px;width:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-.snap-modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-.snap-modal-head h2{font-size:17px;font-weight:600;color:#1F2937}
-.snap-close-btn{background:none;border:none;font-size:24px;cursor:pointer;color:#6B7280;line-height:1}
-.snap-card{background:#fff;border-radius:16px;padding:22px;max-width:580px;margin:0 auto;border:0.5px solid #E5E7EB}
-.snap-header{text-align:center;padding-bottom:14px;border-bottom:0.5px solid #ECECE6}
-.snap-brand{font-size:11px;color:#2563EB;letter-spacing:1.5px;font-weight:600}
-.snap-acct{font-size:18px;font-weight:600;margin-top:6px;color:#1F2937}
-.snap-meta{font-size:12px;color:#6B6B68;margin-top:2px}
-.hero-vs{padding:18px 0 16px}
-.hero-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
-.hero-side{text-align:center}
-.hero-side-label{font-size:11px;letter-spacing:0.5px;font-weight:500}
-.hero-side-num{font-size:44px;font-weight:700;line-height:1.1}
-.yest-label{color:#6B7280}.yest-num{color:#6B7280}
-.today-label{color:#16A34A;font-weight:600}.today-num{color:#16A34A}
-.today-label.down{color:#DC2626}.today-num.down{color:#DC2626}
-.hero-arrow{font-size:32px;color:#16A34A}
-.hero-arrow.down{color:#DC2626}
-.hero-strip{margin-top:12px;padding:8px;border-radius:8px;text-align:center;font-size:13px;font-weight:600}
-.hero-strip.up{background:#DCFCE7;color:#14532D}
-.hero-strip.down{background:#FEE2E2;color:#7F1D1D}
-.hero-strip.flat{background:#F3F4F6;color:#374151}
-.watchlist{margin:14px 0 4px;padding:12px 14px;border-radius:10px;border-left:3px solid #F59E0B;background:#FEF3C7}
-.watchlist.danger{border-left-color:#DC2626;background:#FEE2E2}
-.watchlist.clear{border-left-color:#16A34A;background:#DCFCE7}
-.wl-title{font-size:11px;font-weight:700;color:#7C2D12;letter-spacing:0.6px;margin-bottom:6px}
-.watchlist.danger .wl-title{color:#7F1D1D}
-.watchlist.clear .wl-title{color:#14532D}
-.wl-item{font-size:12px;line-height:1.6;color:#1F2937}
-.wl-item+.wl-item{margin-top:2px}
-.wl-item b{font-weight:700}
-.wl-item .lbl{font-weight:700;color:#7C2D12;margin-right:4px}
-.watchlist.danger .wl-item .lbl{color:#7F1D1D}
-.collapsed-summary{font-size:11.5px;color:#4B5563;margin-top:6px;line-height:1.5}
-.collapsed-summary b{color:#1F2937;font-weight:600}
-.collapsed-summary .cs-mod{color:#4B5563}
-.detail-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#4B5563;cursor:pointer;padding:6px 10px;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:999px;margin-bottom:14px;user-select:none}
-.detail-toggle input{margin:0;cursor:pointer}
-.size-hint{display:inline-block;margin-left:10px;font-size:11px;color:#92400E;background:#FEF3C7;padding:4px 10px;border-radius:999px}
-.size-hint.ok{color:#14532D;background:#DCFCE7}
-.legend-wrap{padding-top:14px;border-top:0.5px solid #ECECE6}
-.legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-bottom:14px;font-size:11px;color:#1F2937}
-.legend-box{display:inline-block;width:12px;height:9px;border-radius:3px;vertical-align:middle;margin-right:5px}
-.project-row{margin-bottom:14px;padding-bottom:12px;border-bottom:0.5px dashed #ECECE6}
-.project-row:last-child{border-bottom:none;padding-bottom:0}
-.project-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.project-name{font-size:13px;font-weight:600;color:#1F2937}
-.project-name.warn{color:#991B1B}
-.project-delta{font-size:12px}
-.delta-from{color:#6B7280}
-.delta-pill{font-weight:700;padding:2px 8px;border-radius:999px;font-size:11px;margin-left:4px}
-.delta-pill.up{background:#DCFCE7;color:#14532D}
-.delta-pill.down{background:#FEE2E2;color:#991B1B}
-.delta-pill.flat{background:#F3F4F6;color:#4B5563}
-.stack-bar{display:flex;height:22px;border-radius:6px;overflow:hidden}
-.stopped-line{font-size:10px;color:#991B1B;margin-top:6px;line-height:1.4}
-.stopped-line strong{font-weight:600}
-.stopped-pill{display:inline-block;background:#FEE2E2;color:#991B1B;padding:1px 7px;border-radius:999px;margin-right:4px;margin-top:2px;font-weight:500}
-.breakdown{margin-top:8px;font-size:11.5px;line-height:1.65;display:grid;gap:4px}
-.bd-line{display:grid;grid-template-columns:10px 1fr;gap:7px;align-items:baseline}
-.bd-dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-top:4px}
-.bd-text{color:#1F2937}
-.bd-mod{font-weight:700;color:#111827}
-.bd-cnt-big{font-weight:700;color:#111827;font-variant-numeric:tabular-nums;margin-left:2px}
-.bd-em-dash{color:#D1D5DB;margin:0 2px}
-.bd-sep{color:#D1D5DB;margin:0 5px}
-.user-name{color:#1F2937;font-weight:500}
-.user-name.drop{color:#991B1B;font-weight:700}
-.user-cnt{color:#111827;font-weight:700;font-variant-numeric:tabular-nums;margin-left:2px}
-.user-badge{font-size:9.5px;padding:1px 5px;border-radius:999px;font-weight:700;margin-left:3px;vertical-align:1px}
-.user-badge.up{background:#DCFCE7;color:#15803D}
-.user-badge.down{background:#FEE2E2;color:#991B1B}
-.user-badge.new{background:#DBEAFE;color:#1D4ED8}
-.mod-badge{font-size:10px;padding:1px 6px;border-radius:999px;font-weight:700;margin-left:5px;vertical-align:1px}
-.mod-badge.up{background:#DCFCE7;color:#15803D}
-.mod-badge.down{background:#FEE2E2;color:#991B1B}
-.mod-badge.new{background:#DBEAFE;color:#1D4ED8}
-.bd-unassigned{color:#9CA3AF;font-style:italic}
-.mod-seg{display:flex;border-right:2px solid #fff;min-width:0;overflow:hidden}
-.mod-seg:last-child{border-right:none}
-.user-cell{text-align:center;line-height:28px;color:#fff;font-size:10px;font-weight:600;border-right:1px solid rgba(255,255,255,0.4);min-width:0;overflow:hidden;white-space:nowrap;padding:0 4px;text-overflow:clip}
-.user-cell:last-child{border-right:none}
-.highlights{margin-top:16px;padding-top:14px;border-top:0.5px solid #ECECE6}
-.highlights-title{font-size:11px;font-weight:600;color:#6B6B68;letter-spacing:1px;margin-bottom:10px}
-.highlights-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.highlight-card{border-radius:10px;padding:10px 12px}
-.highlight-card.good{background:#DCFCE7}
-.highlight-card.warn{background:#FEF2F2}
-.h-label{font-size:10px;font-weight:700;letter-spacing:0.5px}
-.highlight-card.good .h-label{color:#15803D}
-.highlight-card.warn .h-label{color:#991B1B}
-.h-name{font-size:14px;font-weight:700;margin-top:4px}
-.highlight-card.good .h-name{color:#14532D}
-.highlight-card.warn .h-name{color:#7F1D1D}
-.h-sub{font-size:11px}
-.highlight-card.good .h-sub{color:#15803D}
-.highlight-card.warn .h-sub{color:#991B1B}
-.caption-strip{margin-top:14px;padding:12px 14px;border-radius:0 8px 8px 0}
-.caption-strip.healthy{background:#DCFCE7;border-left:3px solid #16A34A;color:#14532D}
-.caption-strip.risk{background:#FEF3C7;border-left:3px solid #F59E0B;color:#78350F}
-.caption-strip.declining{background:#FEE2E2;border-left:3px solid #DC2626;color:#7F1D1D}
-.caption-strip .ct{font-size:13px;line-height:1.5}
-.caption-editor{margin-top:16px;padding:12px 14px;border:1px dashed #B5B5AE;border-radius:10px;background:#FAFAF7}
-.caption-editor-label{font-size:11px;font-weight:600;color:#4B5563;margin-bottom:6px;letter-spacing:0.4px}
-.caption-textarea{width:100%;border:none;background:transparent;resize:vertical;min-height:60px;font-family:inherit;font-size:13px;line-height:1.6;outline:none;color:#1F2937}
-.snap-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
-.snap-btn-action{flex:1;min-width:140px;padding:12px 8px;border-radius:10px;border:none;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px}
-.snap-btn-primary{background:#2563EB;color:#fff}
-.snap-btn-primary:hover{background:#1D4ED8}
-.snap-btn-secondary{background:#fff;color:#1F2937;border:1px solid #E5E7EB}
-.snap-btn-secondary:hover{background:#F9FAFB}
-.snap-btn-action svg{width:16px;height:16px}
-.snap-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1F2937;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity 0.2s;z-index:2000}
-.snap-toast.show{opacity:1}
+
+/* ── Email feature ── */
+.send-btn{background:transparent;border:1px solid #2d4a6a;border-radius:5px;color:#4a8ab0;cursor:pointer;font-size:11px;padding:2px 6px;margin-left:6px;transition:all .15s;vertical-align:middle}
+.send-btn:hover{background:#1a3a5a;color:#7eb8e0;border-color:#4a8ab0}
+/* Snap button */
+.snap-btn{background:#1a3050;border:1px solid #2d5080;border-radius:6px;color:#4a90d0;cursor:pointer;font-size:11px;padding:3px 9px;transition:all .15s;white-space:nowrap}
+.snap-btn:hover{background:#1e4a7a;color:#7eb8f0;border-color:#4a90d0}
+.email-row-btn{background:#1a3828;border:1px solid #276749;border-radius:6px;color:#68d391;cursor:pointer;font-size:12px;padding:3px 7px;transition:all .15s;margin-left:4px;display:inline-block}
+.email-row-btn:hover{background:#22543d;color:#9ae6b4}
+/* Email progress modal */
+.email-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:flex-start;justify-content:center;z-index:2000;padding:30px 20px;overflow-y:auto}
+.email-modal-bg.show{display:flex}
+.email-modal{background:#fff;color:#1a202c;border-radius:16px;padding:24px;max-width:720px;width:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.email-modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.email-modal-head h2{font-size:17px;font-weight:600}
+.email-close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:#718096}
+.email-subj-row{display:flex;align-items:center;gap:8px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;margin-bottom:10px}
+.email-subj-lbl{font-size:11px;color:#718096;font-weight:600;white-space:nowrap}
+.email-subj-txt{flex:1;font-size:12px;color:#2d3748;font-weight:500}
+.email-subj-copy{background:#e2e8f0;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:#4a5568;font-weight:600}
+.email-subj-copy:hover{background:#cbd5e0}
+.email-status-pill-wrap{margin-bottom:8px}
+.email-status-pill{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700}
+.pill-inactive{background:#2d3748;color:#a0aec0}.pill-drop{background:#742a2a;color:#fc8181}.pill-active{background:#1a365d;color:#63b3ed}.pill-stable{background:#1c4532;color:#68d391}
+.email-body-box{background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:13px;line-height:1.7;color:#2d3748;white-space:pre-wrap;max-height:400px;overflow-y:auto;margin-bottom:10px}
+.email-actions-row{display:flex;gap:8px}
+.email-copy-body-btn{flex:1;background:#3182ce;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer}
+.email-copy-body-btn:hover{background:#2b6cb0}
+/* Drop users horizontal row */
+.row-drop-users{border-bottom:1px solid #131822}
+.row-drop-users td{padding:7px 12px 8px 56px;background:#0a0e16}
+/* Coverage badge */
+.cvbadge{display:inline-block;padding:2px 6px;border-radius:8px;font-size:10px;font-weight:600}
+.cvbadge.cv0{background:#2d0f0f;color:#fc5353;border:1px solid #fc5353}
+.cvbadge.cv50{background:#2d1a00;color:#ed8936;border:1px solid #ed8936}
+.cvbadge.cvok{background:#0a2818;color:#48bb78;border:1px solid #48bb78}
+/* Snap modal — light themed to match card design */
+#snap-modal .modal{width:780px;background:#f3f4f6;border:1px solid #e5e7eb}
+#snap-modal .modal-head{background:#f3f4f6;border-bottom:1px solid #e5e7eb}
+#snap-modal .modal-head h2{color:#111827;font-size:14px}
+#snap-modal .modal-close{color:#6b7280}
+#snap-modal .modal-close:hover{color:#111827;background:#e5e7eb}
+#snap-modal .modal-body{background:#f3f4f6;padding:16px 20px 4px;overflow-x:auto}
+#snap-modal .modal-foot{background:#f3f4f6;border-top:1px solid #e5e7eb}
+.tmpl-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#1a2535;border:1px solid #2d3f55;border-radius:8px;color:#a0aec0;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s}
+.tmpl-btn:hover{background:#1e2e45;color:#e2e8f0;border-color:#4299e1}
+
+/* Modal overlay */
+.modal-bg{position:fixed;inset:0;background:#000c;z-index:600;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;width:620px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px #000a}
+#send-modal .modal{width:940px}
+.modal-head{padding:18px 22px 14px;border-bottom:1px solid #2d3748;display:flex;align-items:center;justify-content:space-between}
+.modal-head h2{font-size:15px;font-weight:600;color:#e2e8f0}
+.modal-close{background:transparent;border:none;color:#718096;font-size:18px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px}
+.modal-close:hover{color:#e2e8f0;background:#2d3748}
+.modal-body{padding:20px 22px}
+.modal-foot{padding:14px 22px;border-top:1px solid #2d3748;display:flex;gap:10px;justify-content:flex-end}
+
+/* Template tabs */
+.tmpl-tabs{display:flex;gap:4px;margin-bottom:16px}
+.ttab{padding:6px 14px;border-radius:6px;border:1px solid #2d3748;background:transparent;color:#718096;font-size:12px;cursor:pointer;transition:all .15s}
+.ttab:hover{color:#e2e8f0;background:#252d3d}
+.ttab.active{background:#0a2040;border-color:#4299e1;color:#4299e1}
+.ttab.active.drop{background:#2d0f0f;border-color:#fc5353;color:#fc5353}
+.ttab.active.inactive{background:#1a1a1a;border-color:#718096;color:#a0aec0}
+
+/* Form fields */
+.frow{margin-bottom:14px}
+.frow label{display:block;font-size:11px;color:#718096;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.frow input,.frow textarea{width:100%;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:8px 10px;font-size:12px;outline:none;resize:vertical}
+.frow input:focus,.frow textarea:focus{border-color:#4299e1}
+.frow textarea{min-height:120px;font-family:inherit;line-height:1.6}
+.ph-hint{font-size:10px;color:#4a5568;margin-top:4px}
+
+/* Send preview */
+.preview-field{background:#0f1420;border:1px solid #2d3748;border-radius:6px;padding:10px 12px;margin-bottom:10px}
+.preview-label{font-size:10px;color:#4a5568;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.preview-val{font-size:12px;color:#e2e8f0;white-space:pre-wrap;line-height:1.6}
+.preview-val.subject{color:#7eb8e0;font-weight:600}
+
+.btn-primary{padding:8px 18px;background:#4299e1;border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-primary:hover{background:#3182ce}
+.btn-secondary{padding:8px 18px;background:transparent;border:1px solid #2d3748;border-radius:7px;color:#a0aec0;font-size:13px;cursor:pointer;transition:all .2s}
+.btn-secondary:hover{color:#e2e8f0;border-color:#4a5568}
+.email-input-row{display:flex;gap:8px;margin-bottom:14px}
+.email-input-row input{flex:1;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:7px 10px;font-size:12px;outline:none}
+.email-input-row input:focus{border-color:#4299e1}
 </style>
 </head>
 <body>
+
+<!-- Loading overlay -->
 <div class="overlay" id="overlay">
   <div class="spinner"></div>
   <div style="color:#718096;font-size:13px">Connecting to Redash...</div>
 </div>
+
+<!-- Header -->
 <div class="header">
   <div>
     <div style="display:flex;align-items:center;gap:10px">
-      <span style="font-size:22px">&#128202;</span>
+      <span style="font-size:22px">📊</span>
       <div>
-        <h1>Trainer DrillDown &mdash; Live Dashboard</h1>
-        <div class="header-sub">Auto-syncing via Vercel &middot; Query #1468 &middot; Account &rarr; Project &rarr; Module &rarr; Event &rarr; User &middot; &#128248; Snap per account</div>
+        <h1>Trainer DrillDown Dashboard</h1>
+        <div class="header-sub">Redash Query #1454 · Account → Project → Module → Event → User · 📸 Snap per account</div>
       </div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:20px">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div class="last-sync" id="last-sync">Not yet synced</div>
     <div class="sync-bar">
       <div class="sync-dot" id="sync-dot"></div>
-      <span class="sync-label">Next sync in</span>
-      <span class="countdown" id="countdown">5</span>
-      <span class="sync-label">s</span>
+      <span class="sync-label" id="sync-label">Ready</span>
     </div>
-    <div class="last-sync" id="last-sync">Never synced</div>
+    <button class="tmpl-btn" onclick="openTemplateModal()">✉ Email Templates</button>
+    <button id="sync-btn" onclick="manualSync()" style="display:flex;align-items:center;gap:7px;padding:7px 16px;background:#4299e1;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">
+      🔄 Sync Now
+    </button>
     <div class="gstats" id="gstats"></div>
   </div>
 </div>
+
 <div class="tabs" id="tabs"></div>
 <div id="app"></div>
-<div class="snap-modal-bg" id="snapModal">
-  <div class="snap-modal">
-    <div class="snap-modal-head">
-      <h2>&#128248; Snap preview &middot; Weekly Activity</h2>
-      <button class="snap-close-btn" onclick="closeSnapModal()">&times;</button>
-    </div>
-    <div style="display:flex;align-items:center;flex-wrap:wrap">
-      <label class="detail-toggle"><input type="checkbox" id="fullDetailToggle" onchange="toggleFullDetail()" /> Show all projects in full detail</label>
-      <span id="sizeHint" class="size-hint" style="display:none"></span>
-    </div>
-    <div id="snapCardContainer"></div>
-    <div class="caption-editor">
-      <div class="caption-editor-label">CAPTION TO SEND (edit before posting)</div>
-      <textarea class="caption-textarea" id="captionText"></textarea>
-    </div>
-    <div class="snap-actions">
-      <button class="snap-btn-action snap-btn-secondary" onclick="copyCaption()">Copy caption</button>
-      <button class="snap-btn-action snap-btn-secondary" onclick="downloadSnapPNG()">PNG (for WhatsApp)</button>
-      <button class="snap-btn-action snap-btn-primary" onclick="downloadSnapPDF()">PDF (full report)</button>
-    </div>
-  </div>
-</div>
-<div class="snap-toast" id="snapToast"></div>
+
 <script>
-const REDASH_URL  = "https://redashv3.getpowerplay.in";
-const API_KEY     = "yxqnSo7sT97kxbSPTFKDI0OvjRnMGroE1NGyySTc";
-const QUERY_ID    = "1468";
-const PARAMS      = {"p_renewal_start": "2026-04-01", "p_renewal_end": "2030-04-30"};
-const REFRESH_SEC = 5;
+// ─────────────────────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────────────────────
+const PARAMS = { p_renewal_start: '2026-04-01', p_renewal_end: '2030-04-30' };
+
+// ─────────────────────────────────────────────────────────────
+// COLUMN DETECTION (flexible — works even if Redash renames cols)
+// ─────────────────────────────────────────────────────────────
 function detectCols(columns) {
   const names = columns.map(c => c.name.toLowerCase());
   const find = (...opts) => {
@@ -304,279 +289,448 @@ function detectCols(columns) {
     renewal    : find('renewal_date','renewal'),
     last_disp  : find('last_disposition_date','last_disposition','last_disp'),
     disposition: find('disposition','notes'),
+    ob_notes   : find('ob_notes','onboarding_notes','ob_note','ob_summary'),
     wk0        : find('wk_0','wk0','week_0'),
     wk1        : find('wk_1','wk1','week_1'),
     wk2        : find('wk_2','wk2','week_2'),
     wk3        : find('wk_3','wk3','week_3'),
-    active_w0  : find('acct_active_w0','active_w0'),
-    cold_pool  : find('acct_cold_pool','cold_pool'),
-    new_drops  : find('acct_new_drops_w0','new_drops_w0'),
-    connected  : find('acct_connected_w0','connected_w0'),
-    coverage   : find('acct_coverage_pct','coverage_pct')
+    // Extra metric columns (present in some query versions)
+    active_w0  : find('active_w0','active_users_w0','active_users_wk0','active_wk0'),
+    drop_w0    : find('drop_w0','dropped_w0','drop_users_w0','dropped_wk0'),
+    conn_w0    : find('conn_w0','connected_w0','connections_w0','new_w0','connected_wk0'),
+    cov_w0     : find('cov_w0','coverage_w0','coverage_pct_w0','cov_pct_wk0'),
+    // Financial / renewal columns
+    arr        : find('arr','annual_recurring_revenue','arr_value','contract_value','total_arr','arr_inr'),
   };
 }
-const TRAINER_NAMES = {'digvijay':'Digvijay','farid':'S Farid','sfarid':'S Farid','s farid':'S Farid','divya':'Divya'};
+
+// ─────────────────────────────────────────────────────────────
+// TRAINER NAME MAPPING
+// ─────────────────────────────────────────────────────────────
+const TRAINER_MAP = {
+  'digvijay': 'Digvijay',
+  'farid'   : 'S Farid',
+  'sfarid'  : 'S Farid',
+  's farid' : 'S Farid',
+  'divya'   : 'Divya',
+};
 function trainerDisplay(email) {
-  if (!email) return email;
+  if (!email) return 'Unknown';
   const low = email.toLowerCase();
-  const prefix = low.split('@')[0];
-  for (const [k,v] of Object.entries(TRAINER_NAMES)) {
-    if (prefix.includes(k) || low.includes(k)) return v;
+  for (const [k, v] of Object.entries(TRAINER_MAP)) {
+    if (low.includes(k)) return v;
   }
   return email.split('@')[0];
 }
+
+// ─────────────────────────────────────────────────────────────
+// PRIORITY LOGIC
+// ─────────────────────────────────────────────────────────────
+const PRIO_ORDER = ['CRITICAL','HIGH','MEDIUM','LOW','STABLE_DROP','STABLE','INACTIVE'];
+
+function calcPriority(wk0, wk1) {
+  if (wk0 === 0 && wk1 > 0)  return 'CRITICAL';
+  const pct = wk1 > 0 ? ((wk0 - wk1) / wk1) * 100 : 0;
+  if (pct <= -75)             return 'HIGH';
+  if (pct <= -25)             return 'MEDIUM';
+  if (pct < 0)                return 'LOW';
+  if (wk0 === 0)              return 'INACTIVE';
+  return 'STABLE';
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROCESS RAW ROWS → TRAINER HIERARCHY
+// ─────────────────────────────────────────────────────────────
 function processRows(rows, cols) {
-  const trainers = {};
-  rows.forEach(row => {
-    const trainer  = trainerDisplay(row[cols.trainer] || '');
-    const org      = row[cols.org]     || 'Unknown';
-    const project  = row[cols.project] || 'Unknown';
-    const module   = row[cols.module]  || 'Unknown';
-    const event    = row[cols.event]   || '';
-    const user     = row[cols.user]    || '';
-    const mobile   = row[cols.mobile]  || '';
-    const renewal  = row[cols.renewal] || '';
-    const lastDisp = row[cols.last_disp] || '';
-    const dispo    = row[cols.disposition] || '';
-    const wk0 = parseInt(row[cols.wk0] || 0);
-    const wk1 = parseInt(row[cols.wk1] || 0);
-    const wk2 = parseInt(row[cols.wk2] || 0);
-    const wk3 = parseInt(row[cols.wk3] || 0);
-    const activeW0  = cols.active_w0  ? parseInt(row[cols.active_w0]  || 0) : 0;
-    const coldPool  = cols.cold_pool  ? parseInt(row[cols.cold_pool]  || 0) : 0;
-    const newDrops  = cols.new_drops  ? parseInt(row[cols.new_drops]  || 0) : 0;
-    const connected = cols.connected  ? parseInt(row[cols.connected]  || 0) : 0;
-    const coverage  = cols.coverage && row[cols.coverage] != null ? Number(row[cols.coverage]) : null;
-    if (!trainers[trainer]) trainers[trainer] = {};
-    const tMap = trainers[trainer];
-    if (!tMap[org]) tMap[org] = { renewal, projects: {}, activeW0, coldPool, newDrops, connected, coverage };
-    const orgObj = tMap[org];
+  const trainerMap = {};
+
+  for (const row of rows) {
+    const trainer = trainerDisplay(row[cols.trainer] || '');
+    const org     = row[cols.org]     || 'Unknown';
+    const project = row[cols.project] || 'Unknown';
+    const module  = row[cols.module]  || 'Unknown';
+
+    if (!trainerMap[trainer]) trainerMap[trainer] = {};
+    if (!trainerMap[trainer][org]) trainerMap[trainer][org] = { renewal: row[cols.renewal] || '', projects: {} };
+    const orgObj = trainerMap[trainer][org];
+
     if (!orgObj.projects[project]) orgObj.projects[project] = { modules: {} };
-    const projObj = orgObj.projects[project];
-    if (!projObj.modules[module]) projObj.modules[module] = { events: [] };
-    const modObj = projObj.modules[module];
-    modObj.events.push({ event, user, mobile, wk0, wk1, wk2, wk3, lastDisp, dispo });
-  });
-  const result = {};
-  Object.entries(trainers).forEach(([tName, tMap]) => {
-    const accounts = [];
-    Object.entries(tMap).forEach(([orgName, orgData], ai) => {
-      const projects = [];
-      let accWk0=0, accWk1=0, accWk2=0, accWk3=0;
-      Object.entries(orgData.projects).forEach(([projName, projData]) => {
-        const modules = [];
-        let pWk0=0, pWk1=0, pWk2=0, pWk3=0;
-        Object.entries(projData.modules).forEach(([modName, modData]) => {
-          let mWk0=0, mWk1=0, mWk2=0, mWk3=0;
-          const events = modData.events.map(e => {
-            mWk0+=e.wk0; mWk1+=e.wk1; mWk2+=e.wk2; mWk3+=e.wk3;
-            return e;
-          });
-          const mDiff = mWk0 - mWk1;
-          const mPct  = mWk1 > 0 ? ((mDiff/mWk1)*100).toFixed(1)+'%' : '';
-          pWk0+=mWk0; pWk1+=mWk1; pWk2+=mWk2; pWk3+=mWk3;
-          modules.push({ name:modName, wk0:mWk0, wk1:mWk1, wk2:mWk2, wk3:mWk3, diff:mDiff, pct:mPct, events });
-        });
-        const pDiff = pWk0 - pWk1;
-        const pPct  = pWk1 > 0 ? ((pDiff/pWk1)*100).toFixed(1)+'%' : '';
-        const isDrop = pWk0 < pWk1;
-        accWk0+=pWk0; accWk1+=pWk1; accWk2+=pWk2; accWk3+=pWk3;
-        projects.push({ name:projName, wk0:pWk0, wk1:pWk1, wk2:pWk2, wk3:pWk3, diff:pDiff, pct:pPct, isDrop, modules });
-      });
-      const diff = accWk0 - accWk1;
-      const pct  = accWk1 > 0 ? (diff/accWk1)*100 : 0;
-      const pctStr = accWk1 > 0 ? pct.toFixed(1)+'%' : '';
-      let priority;
-      if (accWk0 === 0 && accWk1 > 0) priority = 'CRITICAL';
-      else if (pct <= -75)             priority = 'HIGH';
-      else if (pct <= -25)             priority = 'MEDIUM';
-      else if (pct < 0)                priority = 'LOW';
-      else if (accWk0 === 0)           priority = 'INACTIVE';
-      else                             priority = 'STABLE';
-      const effP = (priority === 'STABLE' && accWk0 === 0) ? 'STABLE_DROP' : priority;
-      accounts.push({
-        num: ai+1, name:orgName, renewal:orgData.renewal, trainer: tName,
-        wk0:accWk0, wk1:accWk1, wk2:accWk2, wk3:accWk3,
-        diff, pct:pctStr, priority: effP, projects,
-        activeW0: orgData.activeW0,
-        coldPool: orgData.coldPool,
-        newDrops: orgData.newDrops,
-        connected: orgData.connected,
-        coverage: orgData.coverage
-      });
+    if (!orgObj.projects[project].modules[module]) orgObj.projects[project].modules[module] = { events: [] };
+
+    orgObj.projects[project].modules[module].events.push({
+      event   : row[cols.event]       || '',
+      user    : row[cols.user]        || '',
+      mobile  : row[cols.mobile]      || '',
+      lastDisp: row[cols.last_disp]   || '',
+      dispo   : row[cols.disposition] || '',
+      obNotes : cols.ob_notes ? (row[cols.ob_notes] || '') : '',
+      arr     : cols.arr     ? (row[cols.arr]     || null) : null,
+      wk0: +row[cols.wk0] || 0,
+      wk1: +row[cols.wk1] || 0,
+      wk2: +row[cols.wk2] || 0,
+      wk3: +row[cols.wk3] || 0,
+      // store raw metric columns if present (used for account-level rollup)
+      raw_active_w0: cols.active_w0 ? (+row[cols.active_w0] || 0) : null,
+      raw_drop_w0  : cols.drop_w0   ? (+row[cols.drop_w0]   || 0) : null,
+      raw_conn_w0  : cols.conn_w0   ? (+row[cols.conn_w0]   || 0) : null,
+      raw_cov_w0   : cols.cov_w0    ? (+row[cols.cov_w0]    || 0) : null,
     });
+  }
+
+  // Aggregate sums upward: event → module → project → account
+  const result = {};
+  let tIdx = 0;
+
+  for (const [tName, orgMap] of Object.entries(trainerMap)) {
+    const accounts = [];
+    let aIdx = 0;
+
+    for (const [orgName, orgData] of Object.entries(orgMap)) {
+      let aWk0=0, aWk1=0, aWk2=0, aWk3=0;
+      const projects = [];
+
+      for (const [projName, projData] of Object.entries(orgData.projects)) {
+        let pWk0=0, pWk1=0, pWk2=0, pWk3=0;
+        const modules = [];
+
+        for (const [modName, modData] of Object.entries(projData.modules)) {
+          let mWk0=0, mWk1=0, mWk2=0, mWk3=0;
+          for (const e of modData.events) { mWk0+=e.wk0; mWk1+=e.wk1; mWk2+=e.wk2; mWk3+=e.wk3; }
+          pWk0+=mWk0; pWk1+=mWk1; pWk2+=mWk2; pWk3+=mWk3;
+          modules.push({
+            name: modName, wk0:mWk0, wk1:mWk1, wk2:mWk2, wk3:mWk3,
+            diff: mWk0-mWk1,
+            pct: mWk1>0 ? ((mWk0-mWk1)/mWk1*100).toFixed(1)+'%' : '',
+            events: modData.events
+          });
+        }
+
+        aWk0+=pWk0; aWk1+=pWk1; aWk2+=pWk2; aWk3+=pWk3;
+        projects.push({
+          name: projName, wk0:pWk0, wk1:pWk1, wk2:pWk2, wk3:pWk3,
+          diff: pWk0-pWk1,
+          pct: pWk1>0 ? ((pWk0-pWk1)/pWk1*100).toFixed(1)+'%' : '',
+          isDrop: pWk0 < pWk1, modules
+        });
+      }
+
+      const basePrio = calcPriority(aWk0, aWk1);
+      const priority = (basePrio === 'STABLE' && aWk0 === 0) ? 'STABLE_DROP' : basePrio;
+      const diff = aWk0 - aWk1;
+      const pctStr = aWk1 > 0 ? (diff/aWk1*100).toFixed(1)+'%' : '';
+
+      // Aggregate last disposition, OB notes, module summary, and user-level metrics
+      let bestDispDate = '', bestDispo = '', accountObNotes = '', accountArr = null;
+      const modSummary = {};
+      // User-level sets for computing ACTIVE/DROP/CONN/COV
+      const usersActiveWk0 = new Set();
+      const usersActiveWk1 = new Set();
+      const usersActiveWk2 = new Set();
+      const usersActiveWk3 = new Set();
+      const usersWithRecentDisp = new Set();
+      let hasRawMetrics = false;
+      let rawActiveW0 = 0, rawConnW0 = 0, rawCovW0 = null;
+      const sevenDaysAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+
+      for (const proj of projects) {
+        for (const mod of proj.modules) {
+          if (!modSummary[mod.name]) modSummary[mod.name] = { wk0: 0, wk1: 0 };
+          modSummary[mod.name].wk0 += mod.wk0;
+          modSummary[mod.name].wk1 += mod.wk1;
+          for (const evt of (mod.events || [])) {
+            if (!accountObNotes && evt.obNotes) accountObNotes = evt.obNotes;
+            if (accountArr === null && evt.arr !== null) accountArr = evt.arr;
+            const ld = (evt.lastDisp || '').slice(0, 10);
+            if (ld && ld > bestDispDate) { bestDispDate = ld; bestDispo = evt.dispo || ''; }
+            // Track per-user activity for metrics
+            const uKey = (evt.user || '') + '|' + (evt.mobile || '');
+            if (uKey !== '|') {
+              if (evt.wk0 > 0) usersActiveWk0.add(uKey);
+              if (evt.wk1 > 0) usersActiveWk1.add(uKey);
+              if (evt.wk2 > 0) usersActiveWk2.add(uKey);
+              if (evt.wk3 > 0) usersActiveWk3.add(uKey);
+              const ld2 = (evt.lastDisp || '').slice(0, 10);
+              if (ld2 && ld2 >= sevenDaysAgo) usersWithRecentDisp.add(uKey);
+            }
+            // If query provides raw metric columns directly, accumulate max (not sum)
+            if (evt.raw_active_w0 !== null) { hasRawMetrics = true; rawActiveW0 = Math.max(rawActiveW0, evt.raw_active_w0); }
+            if (evt.raw_conn_w0   !== null) rawConnW0 = Math.max(rawConnW0, evt.raw_conn_w0);
+            if (evt.raw_cov_w0    !== null) rawCovW0  = Math.max(rawCovW0 ?? 0, evt.raw_cov_w0);
+          }
+        }
+      }
+
+      // ── Compute metrics ──────────────────────────────────────
+      const activeW0 = hasRawMetrics ? rawActiveW0 : usersActiveWk0.size;
+
+      // Cold pool: users active in ANY prior week (W1/W2/W3) but silent this week (W0)
+      const coldPool = new Set();
+      for (const u of [...usersActiveWk1, ...usersActiveWk2, ...usersActiveWk3]) {
+        if (!usersActiveWk0.has(u)) coldPool.add(u);
+      }
+
+      // X = newly dropped this week (active W1 → silent W0)
+      const droppedXList = [...usersActiveWk1]
+        .filter(u => !usersActiveWk0.has(u))
+        .map(u => ({ user: u.split('|')[0], mobile: u.split('|')[1] }));
+
+      // Y = full cold pool list (active any W1/W2/W3, silent W0)
+      const coldPoolList = [...coldPool]
+        .map(u => ({ user: u.split('|')[0], mobile: u.split('|')[1] }));
+
+      const dropX = droppedXList.length;
+      const dropY = coldPool.size;
+      const dropW0 = dropY > 0 ? `${dropX}/${dropY}` : '—';
+      const dropW0IsAlert = dropX > 0;
+
+      // Conn W0 = cold pool users who had a disposition logged in the last 7 days
+      const connW0 = [...coldPool].filter(u => usersWithRecentDisp.has(u)).length;
+      const connW0List = [...coldPool].filter(u => usersWithRecentDisp.has(u)).map(u => ({ user: u.split('|')[0], mobile: u.split('|')[1] }));
+      const activeW0List = [...usersActiveWk0].map(u => ({ user: u.split('|')[0], mobile: u.split('|')[1] }));
+
+      // Cov W0 = Connected ÷ Cold Pool × 100
+      // Red <30%, Amber 30–60%, Green 60%+, Dash if no cold pool
+      const covPct = dropY > 0 ? Math.round(connW0 / dropY * 100) : -1;
+      const covW0  = dropY > 0 ? covPct + '%' : '—';
+
+      accounts.push({
+        num: ++aIdx, name: orgName, renewal: orgData.renewal,
+        wk0:aWk0, wk1:aWk1, wk2:aWk2, wk3:aWk3,
+        diff, pct: pctStr, priority, projects,
+        lastDispDate: bestDispDate,
+        lastDispo: bestDispo,
+        obNotes: accountObNotes,
+        modSummary,
+        // user-level metrics
+        activeW0, dropW0, dropW0IsAlert, dropX, dropY, connW0, covW0, covPct,
+        droppedXList, coldPoolList, activeW0List, connW0List,
+        // financial / renewal
+        arr: accountArr
+      });
+    }
+
     result[tName] = { accounts };
-  });
+  }
+
   return result;
 }
-const PRIO_ORDER = ['CRITICAL','HIGH','MEDIUM','LOW','STABLE_DROP','STABLE','INACTIVE'];
-function pb(p){ return '<span class="pb '+p+'">'+p.replace('_',' ')+'</span>'; }
-function coveragePill(pct){
-  if (pct == null || isNaN(pct)) return '<span style="color:#4a5568">—</span>';
-  const p = Math.round(Number(pct));
-  if (p < 30)  return '<span class="pb" style="background:#2d0f0f;color:#fc5353;border:1px solid #fc5353">'+p+'%</span>';
-  if (p < 60)  return '<span class="pb" style="background:#2d1a0a;color:#ed8936;border:1px solid #ed8936">'+p+'%</span>';
-  return '<span class="pb" style="background:#0d2d18;color:#48bb78;border:1px solid #48bb78">'+p+'%</span>';
-}
+
+// ─────────────────────────────────────────────────────────────
+// RENDER HELPERS
+// ─────────────────────────────────────────────────────────────
+function pb(p){ return `<span class="pb ${p}">${p.replace('_',' ')}</span>`; }
+
 function trend(w0,w1,w2,w3){
-  const v=[w3,w2,w1,w0], mx=Math.max.apply(null,v.concat([1]));
-  const c=['#3a4a5a','#4a5a6a','#8899aa',w0===0?'#fc5353':(w0>=w1?'#48bb78':'#ed8936')];
-  return '<div class="trend">'+v.map(function(n,i){return '<div class="tbar" style="height:'+Math.max(2,Math.round(n/mx*18))+'px;background:'+c[i]+'"></div>';}).join('')+'</div>';
+  const v=[w3,w2,w1,w0], mx=Math.max(...v,1);
+  const col = ['#3a4a5a','#4a5a6a','#8899aa', w0===0?'#fc5353':(w0>=w1?'#48bb78':'#ed8936')];
+  return `<div class="trend">${v.map((n,i)=>`<div class="tbar" style="height:${Math.max(2,Math.round(n/mx*18))}px;background:${col[i]}"></div>`).join('')}</div>`;
 }
-function nTD(v, zr){
-  if(v===null||v===undefined) return '<td class="nr neu">—</td>';
-  return '<td class="nr '+(zr&&v===0?'zred':'')+'">'+v+'</td>';
-}
-function dTD(v){
-  if(!v&&v!==0) return '<td class="nr neu">—</td>';
-  return '<td class="nr '+(v<0?'neg':v>0?'pos':'neu')+'">'+(v>0?'+':'')+v+'</td>';
-}
-function pTD(v){
-  if(!v) return '<td class="nr neu sm">—</td>';
-  return '<td class="nr '+(v.charAt(0)==='-'?'neg':'pos')+' sm">'+v+'</td>';
-}
-const ACCOUNT_REGISTRY = {};
-function renderPanel(tName, tData, tid){
+
+const nTD = (v,zr=false) => `<td class="nr ${zr&&v===0?'zred':''}">${v??'—'}</td>`;
+const dTD = v => (!v&&v!==0) ? `<td class="nr neu">—</td>` : `<td class="nr ${v<0?'neg':v>0?'pos':'neu'}">${v>0?'+':''}${v}</td>`;
+const pTD = v => !v ? `<td class="nr neu sm">—</td>` : `<td class="nr ${v.startsWith('-')?'neg':'pos'} sm">${v}</td>`;
+
+// ─────────────────────────────────────────────────────────────
+// RENDER TRAINER PANEL
+// ─────────────────────────────────────────────────────────────
+const SECT_LABELS = {
+  CRITICAL   : '🔴 CRITICAL — Immediate Action Required',
+  HIGH       : '🟠 HIGH — Act This Week',
+  MEDIUM     : '🟡 MEDIUM — Monitor Closely',
+  LOW        : '🔵 LOW DROP — Watch',
+  STABLE_DROP: '🔴 STABLE — Zero Activity This Week',
+  STABLE     : '✅ STABLE — Active This Week',
+  INACTIVE   : '⚫ INACTIVE ACCOUNTS',
+};
+
+function renderPanel(tName, tData, tid) {
   const accs = tData.accounts;
-  const cnt={};
-  PRIO_ORDER.forEach(function(p){cnt[p]=0;});
-  accs.forEach(function(a){cnt[a.priority]=(cnt[a.priority]||0)+1;});
-  let html = '<div class="sumcards">'+
-    '<div class="sc crit"><div class="sv">'+(cnt.CRITICAL||0)+'</div><div class="sl">Critical</div></div>'+
-    '<div class="sc high"><div class="sv">'+(cnt.HIGH||0)+'</div><div class="sl">High</div></div>'+
-    '<div class="sc med"><div class="sv">'+(cnt.MEDIUM||0)+'</div><div class="sl">Medium</div></div>'+
-    '<div class="sc low"><div class="sv">'+(cnt.LOW||0)+'</div><div class="sl">Low</div></div>'+
-    '<div class="sc stbdrop"><div class="sv">'+(cnt.STABLE_DROP||0)+'</div><div class="sl">Stable Drop</div></div>'+
-    '<div class="sc stb"><div class="sv">'+(cnt.STABLE||0)+'</div><div class="sl">Stable</div></div>'+
-    '<div class="sc inact"><div class="sv">'+(cnt.INACTIVE||0)+'</div><div class="sl">Inactive</div></div>'+
-  '</div>'+
-  '<div class="controls" id="ctrl-'+tid+'">'+
-    '<button class="pf-btn active" data-t="'+tid+'" data-p="ALL">All ('+accs.length+')</button>'+
-    '<button class="pf-btn" data-t="'+tid+'" data-p="CRITICAL">Critical</button>'+
-    '<button class="pf-btn" data-t="'+tid+'" data-p="HIGH">High</button>'+
-    '<button class="pf-btn" data-t="'+tid+'" data-p="MEDIUM">Medium</button>'+
-    '<button class="pf-btn" data-t="'+tid+'" data-p="LOW">Low</button>'+
-    '<button class="pf-btn" data-t="'+tid+'" data-p="STABLE_DROP">Stable Drop</button>'+
-    '<button class="pf-btn" data-t="'+tid+'" data-p="STABLE">Stable</button>'+
-    '<button class="pf-btn" data-t="'+tid+'" data-p="INACTIVE">Inactive</button>'+
-    '<div class="search-wrap"><input type="text" placeholder="Search account..." data-t="'+tid+'" class="acc-search"></div>'+
-  '</div>'+
-  '<div class="tree-wrap"><table class="tree-table">'+
-    '<thead><tr>'+
-      '<th style="width:22px"></th><th>#</th>'+
-      '<th>Account / Project / Module / Event</th>'+
-      '<th class="r">Wk 0</th><th class="r">Wk 1</th><th class="r">Wk 2</th><th class="r">Wk 3</th>'+
-      '<th class="r">Diff</th><th class="r">%</th><th>Trend</th>'+
-      '<th>Priority</th>'+
-      '<th class="r">Active W0</th><th class="r">Drop W0</th><th class="r">Conn. W0</th><th class="r">Cov. W0</th>'+
-      '<th>Snap</th><th>Last Dispos.</th><th>Note</th>'+
-    '</tr></thead><tbody id="tbody-'+tid+'">';
-  const SECT = {
-    CRITICAL:'CRITICAL - Immediate Action Required',
-    HIGH:'HIGH - Act This Week',
-    MEDIUM:'MEDIUM - Monitor Closely',
-    LOW:'LOW DROP - Watch',
-    STABLE_DROP:'STABLE - Zero Activity This Week',
-    STABLE:'STABLE - Active This Week',
-    INACTIVE:'INACTIVE ACCOUNTS'
-  };
-  const sorted = [].concat(accs).sort(function(a,b){return PRIO_ORDER.indexOf(a.priority)-PRIO_ORDER.indexOf(b.priority);});
+  const cnt = {};
+  PRIO_ORDER.forEach(p => cnt[p] = 0);
+  accs.forEach(a => cnt[a.priority] = (cnt[a.priority]||0)+1);
+
+  let html = `
+  <div class="sumcards">
+    <div class="sc crit"><div class="sv">${cnt.CRITICAL||0}</div><div class="sl">🔴 Critical</div></div>
+    <div class="sc high"><div class="sv">${cnt.HIGH||0}</div><div class="sl">🟠 High</div></div>
+    <div class="sc med"><div class="sv">${cnt.MEDIUM||0}</div><div class="sl">🟡 Medium</div></div>
+    <div class="sc low"><div class="sv">${cnt.LOW||0}</div><div class="sl">🔵 Low</div></div>
+    <div class="sc stbdrop"><div class="sv">${cnt.STABLE_DROP||0}</div><div class="sl">🔴 Stable Drop</div></div>
+    <div class="sc stb"><div class="sv">${cnt.STABLE||0}</div><div class="sl">✅ Stable</div></div>
+    <div class="sc inact"><div class="sv">${cnt.INACTIVE||0}</div><div class="sl">⚫ Inactive</div></div>
+  </div>
+  <div class="controls" id="ctrl-${tid}">
+    <button class="pf-btn active" data-t="${tid}" data-p="ALL">All (${accs.length})</button>
+    <button class="pf-btn" data-t="${tid}" data-p="CRITICAL">🔴 Critical</button>
+    <button class="pf-btn" data-t="${tid}" data-p="HIGH">🟠 High</button>
+    <button class="pf-btn" data-t="${tid}" data-p="MEDIUM">🟡 Medium</button>
+    <button class="pf-btn" data-t="${tid}" data-p="LOW">🔵 Low</button>
+    <button class="pf-btn" data-t="${tid}" data-p="STABLE_DROP">🔴 Stable Drop</button>
+    <button class="pf-btn" data-t="${tid}" data-p="STABLE">✅ Stable</button>
+    <button class="pf-btn" data-t="${tid}" data-p="INACTIVE">⚫ Inactive</button>
+    <div class="search-wrap"><input type="text" placeholder="Search account…" data-t="${tid}" class="acc-search"></div>
+  </div>
+  <div class="tree-wrap"><table class="tree-table">
+    <thead><tr>
+      <th style="width:22px"></th><th>#</th>
+      <th>Account / Project / Module / Event</th>
+      <th class="r">Wk 0</th><th class="r">Wk 1</th><th class="r">Wk 2</th><th class="r">Wk 3</th>
+      <th class="r">Diff</th><th class="r">%</th><th>Trend</th>
+      <th>Priority</th>
+      <th class="r" title="Active users in Wk0">Active W0</th>
+      <th class="r" title="Dropped users / was-active users (Wk1→Wk0)">Drop W0</th>
+      <th class="r" title="New connected users in Wk0 (active now, not last week)">Conn. W0</th>
+      <th class="r" title="Coverage: active users / total users">Cov. W0</th>
+      <th style="text-align:center">Snap</th>
+      <th class="r" title="Annual Recurring Revenue">ARR</th>
+      <th title="Renewal Date">Renewal</th>
+      <th>Last Dispos.</th><th>Note</th>
+    </tr></thead><tbody id="tbody-${tid}">`;
+
+  const sorted = [...accs].sort((a,b) => PRIO_ORDER.indexOf(a.priority) - PRIO_ORDER.indexOf(b.priority));
   let lastSect = null;
-  sorted.forEach(function(acc, ai) {
-    const aId = tid+'-a'+ai;
-    ACCOUNT_REGISTRY[aId] = acc;
-    const ep = acc.priority;
-    if (ep !== lastSect) {
-      html += '<tr class="row-section'+(ep==='STABLE_DROP'?' sd':'')+'" data-sect="'+ep+'"><td colspan="18">'+(SECT[ep]||ep)+'</td></tr>';
-      lastSect = ep;
+
+  for (const [ai, acc] of sorted.entries()) {
+    const aId = `${tid}-a${ai}`;
+    // Register account for email modal lookup
+    window.accRegistry[aId] = { acc, trainer: tName };
+    if (acc.priority !== lastSect) {
+      const isSD = acc.priority === 'STABLE_DROP';
+      html += `<tr class="row-section${isSD?' sd':''}" data-sect="${acc.priority}"><td colspan="20">${SECT_LABELS[acc.priority]||acc.priority}</td></tr>`;
+      lastSect = acc.priority;
     }
-    const hasProj = acc.projects.length > 0;
-    const newDropsVal = (acc.newDrops != null ? acc.newDrops : 0);
-    const coldPoolVal = (acc.coldPool != null ? acc.coldPool : 0);
-    html += '<tr class="row-account" data-p="'+ep+'" data-name="'+acc.name.toLowerCase()+'" data-aid="'+aId+'" onclick="toggleAcc(\''+aId+'\',event)">'+
-      '<td><button class="tog acc-tog" id="btn-'+aId+'">'+(hasProj?'+':'.')+'</button></td>'+
-      '<td style="color:#4a5568;font-size:11px">'+acc.num+'</td>'+
-      '<td><span class="acc-name">'+acc.name+'</span><span class="acc-sub">'+acc.projects.length+'p</span>'+
-        (acc.renewal?'<span style="font-size:10px;color:#4a5568;margin-left:5px">'+acc.renewal+'</span>':'')+'</td>'+
-      nTD(acc.wk0,true)+nTD(acc.wk1)+nTD(acc.wk2)+nTD(acc.wk3)+
-      dTD(acc.diff)+pTD(acc.pct)+
-      '<td>'+trend(acc.wk0,acc.wk1,acc.wk2,acc.wk3)+'</td>'+
-      '<td>'+pb(ep)+'</td>'+
-      '<td class="nr">'+(acc.activeW0!=null?acc.activeW0:'—')+'</td>'+
-      '<td class="nr" style="color:#ed8936;font-weight:500" title="'+newDropsVal+' just dropped / '+coldPoolVal+' total cold">'+newDropsVal+'/'+coldPoolVal+'</td>'+
-      '<td class="nr">'+(acc.connected!=null?acc.connected:'—')+'</td>'+
-      '<td>'+coveragePill(acc.coverage)+'</td>'+
-      '<td><button class="snap-row-btn" onclick="event.stopPropagation();openSnap(\''+aId+'\')">Snap</button></td>'+
-      '<td></td><td></td>'+
-    '</tr>';
-    acc.projects.forEach(function(proj, pi) {
-      const pId = aId+'-p'+pi;
-      const isSD = !proj.isDrop && proj.wk0 === 0;
-      const sym  = proj.isDrop ? '<span style="color:#fc5353;margin-right:3px">!</span>' : isSD ? '<span style="color:#ff6b6b;margin-right:3px">!</span>' : '<span style="color:#48bb78;margin-right:3px">^</span>';
-      const bdg  = proj.isDrop ? '<span class="bdrop">DROP</span>' : isSD ? '<span class="bstabledrop">STABLE DROP</span>' : '<span class="bstable">STABLE</span>';
-      const hasMod = proj.modules.length > 0;
-      html += '<tr class="row-project'+(isSD?' sdp':'')+'" data-acc="'+aId+'" id="proj-'+pId+'" onclick="toggleProj(\''+pId+'\',event)">'+
-        '<td><button class="tog proj-tog" id="btn-'+pId+'">'+(hasMod?'+':'.')+'</button></td>'+
-        '<td></td>'+
-        '<td><div style="display:flex;align-items:center">'+sym+'<span class="proj-name">'+proj.name+'</span>'+bdg+'</div></td>'+
-        nTD(proj.wk0,true)+nTD(proj.wk1)+nTD(proj.wk2)+nTD(proj.wk3)+
-        dTD(proj.diff)+pTD(proj.pct)+
-        '<td>'+trend(proj.wk0,proj.wk1,proj.wk2,proj.wk3)+'</td>'+
-        '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>'+
-      '</tr>';
-      proj.modules.forEach(function(mod, mi) {
-        const mId = pId+'-m'+mi;
-        const hasEvt = mod.events.length > 0;
-        html += '<tr class="row-module" data-proj="'+pId+'" id="mod-'+mId+'" onclick="toggleMod(\''+mId+'\',event)">'+
-          '<td><button class="tog mod-tog" id="btn-'+mId+'">'+(hasEvt?'+':'.')+'</button></td>'+
-          '<td></td>'+
-          '<td><span class="mod-name">'+mod.name+'</span></td>'+
-          nTD(mod.wk0,true)+nTD(mod.wk1)+nTD(mod.wk2)+nTD(mod.wk3)+
-          dTD(mod.diff)+pTD(mod.pct)+
-          '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>'+
-        '</tr>';
-        mod.events.forEach(function(evt) {
-          const userBlock = '<div class="ubox"><span class="uname">'+(evt.user||'—')+'</span>'+
-            (evt.mobile?'<span style="color:#2d3f50">|</span><span class="uphone">'+evt.mobile+'</span>':'')+'</div>';
-          const dispoSafe = (evt.dispo||'').replace(/"/g,"'");
-          html += '<tr class="row-event" data-mod="'+mId+'">'+
-            '<td></td><td></td>'+
-            '<td>'+
-              '<div class="evt-name">'+evt.event+'</div>'+
-              userBlock+
-            '</td>'+
-            nTD(evt.wk0,true)+nTD(evt.wk1)+nTD(evt.wk2)+nTD(evt.wk3)+
-            dTD(evt.wk0-evt.wk1)+
-            '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>'+
-            '<td class="last-disp">'+(evt.lastDisp||'—').slice(0,10)+'</td>'+
-            '<td class="dispo" title="'+dispoSafe+'">'+(evt.dispo||'—')+'</td>'+
-          '</tr>';
-        });
-      });
+
+    const dropCell = acc.dropW0 === '—'
+      ? `<td class="nr neu sm">—</td>`
+      : `<td class="nr sm" style="white-space:nowrap"><span style="color:${acc.dropX>0?'#ed8936':'#48bb78'};cursor:pointer;text-decoration:underline dotted" onclick="showDropPopup('${aId}','dropx',event)" title="Newly dropped this week">${acc.dropX}</span><span style="color:#4a5568">/</span><span style="color:#4a9edd;cursor:pointer;text-decoration:underline dotted" onclick="showDropPopup('${aId}','dropy',event)" title="Full cold pool">${acc.dropY}</span></td>`;
+    const covCell = acc.covW0 === '—'
+      ? `<td class="nr neu sm">—</td>`
+      : `<td><span class="cvbadge ${acc.covPct<30?'cv0':acc.covPct<60?'cv50':'cvok'}">${acc.covW0}</span></td>`;
+
+    html += `<tr class="row-account" data-p="${acc.priority}" data-name="${acc.name.toLowerCase()}" data-aid="${aId}" onclick="toggleAcc('${aId}',event)">
+      <td><button class="tog acc-tog" id="btn-${aId}">${acc.projects.length?'+':'·'}</button></td>
+      <td style="color:#4a5568;font-size:11px">${acc.num}</td>
+      <td><span class="acc-name">${acc.name}</span><span class="acc-sub">${acc.projects.length}p</span>
+        ${acc.renewal?`<span style="font-size:10px;color:#4a5568;margin-left:5px">🗓 ${acc.renewal}</span>`:''}</td>
+      ${nTD(acc.wk0,true)}${nTD(acc.wk1)}${nTD(acc.wk2)}${nTD(acc.wk3)}
+      ${dTD(acc.diff)}${pTD(acc.pct)}
+      <td>${trend(acc.wk0,acc.wk1,acc.wk2,acc.wk3)}</td>
+      <td>${pb(acc.priority)} <button class="send-btn" onclick="event.stopPropagation();openSendModal('${aId}')" title="Send email to account owner">✉</button></td>
+      <td class="nr">${acc.activeW0>0?`<span style="cursor:pointer;text-decoration:underline dotted;color:#48bb78" onclick="showDropPopup('${aId}','active',event)" title="Active users this week">${acc.activeW0}</span>`:(acc.activeW0??'—')}</td>
+      ${dropCell}
+      <td class="nr">${acc.connW0>0?`<span style="cursor:pointer;text-decoration:underline dotted;color:#68d391" onclick="showDropPopup('${aId}','conn',event)" title="Connected drop users">${acc.connW0}</span>`:(acc.connW0??'—')}</td>
+      ${covCell}
+      <td style="text-align:center;white-space:nowrap"><button class="snap-btn" onclick="event.stopPropagation();openSnapModal('${aId}')" title="View snap report">📸 Snap</button><button class="email-row-btn" onclick="event.stopPropagation();openProgressEmail('${aId}')" title="Generate progress email">📧</button></td>
+      <td class="nr" style="font-size:11px;color:#a0aec0;white-space:nowrap">${acc.arr != null ? (isNaN(+acc.arr) ? acc.arr : (+acc.arr).toLocaleString('en-IN')) : '—'}</td>
+      <td style="font-size:10px;color:#4a8070;white-space:nowrap">${acc.renewal || '—'}</td>
+      <td></td><td></td>
+    </tr>`;
+
+    // Drop users shown in floating popup (see toggleDropRow)
+
+    // Sort projects: DROP first → STABLE DROP → STABLE (same status sorted by name)
+    const projSortOrder = p => p.isDrop ? 0 : (!p.isDrop && p.wk0===0) ? 1 : 2;
+    const sortedProjects = [...acc.projects].sort((a,b) => {
+      const diff = projSortOrder(a) - projSortOrder(b);
+      return diff !== 0 ? diff : a.name.localeCompare(b.name);
     });
-  });
-  html += '</tbody></table></div>';
+
+    for (const [pi, proj] of sortedProjects.entries()) {
+      const pId = `${aId}-p${pi}`;
+      const isSD = !proj.isDrop && proj.wk0 === 0;
+      const sym  = proj.isDrop ? '⚠' : isSD ? '⚠' : '▲';
+      const symColor = proj.isDrop ? '#fc5353' : isSD ? '#ff6b6b' : '#48bb78';
+      const bdg  = proj.isDrop
+        ? `<span class="bdrop">DROP</span>`
+        : isSD
+        ? `<span class="bstabledrop">STABLE DROP</span>`
+        : `<span class="bstable">STABLE</span>`;
+
+      html += `<tr class="row-project${isSD?' sdp':''}" data-acc="${aId}" id="proj-${pId}" onclick="toggleProj('${pId}',event)">
+        <td><button class="tog proj-tog" id="btn-${pId}">${proj.modules.length?'+':'·'}</button></td>
+        <td></td>
+        <td><div style="display:flex;align-items:center;gap:4px"><span style="color:${symColor}">${sym}</span><span class="proj-name">${proj.name}</span>${bdg}</div></td>
+        ${nTD(proj.wk0,true)}${nTD(proj.wk1)}${nTD(proj.wk2)}${nTD(proj.wk3)}
+        ${dTD(proj.diff)}${pTD(proj.pct)}
+        <td>${trend(proj.wk0,proj.wk1,proj.wk2,proj.wk3)}</td>
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+      </tr>`;
+
+      for (const [mi, mod] of proj.modules.entries()) {
+        const mId = `${pId}-m${mi}`;
+        html += `<tr class="row-module" data-proj="${pId}" id="mod-${mId}" onclick="toggleMod('${mId}',event)">
+          <td><button class="tog mod-tog" id="btn-${mId}">${mod.events.length?'+':'·'}</button></td>
+          <td></td>
+          <td><span class="mod-name">📦 ${mod.name}</span></td>
+          ${nTD(mod.wk0,true)}${nTD(mod.wk1)}${nTD(mod.wk2)}${nTD(mod.wk3)}
+          ${dTD(mod.diff)}${pTD(mod.pct)}
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>`;
+
+        for (const evt of mod.events) {
+          html += `<tr class="row-event" data-mod="${mId}">
+            <td></td><td></td>
+            <td>
+              <div class="evt-name">⚡ ${evt.event||'—'}</div>
+              <div class="ubox">
+                <span>👤</span><span class="uname">${evt.user||'—'}</span>
+                ${evt.mobile ? `<span style="color:#2d3f50">|</span><span>📞</span><span class="uphone">${evt.mobile}</span>` : ''}
+              </div>
+            </td>
+            ${nTD(evt.wk0,true)}${nTD(evt.wk1)}${nTD(evt.wk2)}${nTD(evt.wk3)}
+            ${dTD(evt.wk0-evt.wk1)}
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            <td class="last-disp">${(evt.lastDisp||'—').slice(0,10)}</td>
+            <td class="dispo" title="${(evt.dispo||'').replace(/"/g,"'")}">${evt.dispo||'—'}</td>
+          </tr>`;
+        }
+      }
+    }
+  }
+
+  html += `</tbody></table></div>`;
   return html;
 }
-let countdown = REFRESH_SEC;
+
+// ─────────────────────────────────────────────────────────────
+// FETCH + RENDER
+// ─────────────────────────────────────────────────────────────
 let currentTab = null;
 let initialized = false;
+
 async function fetchAndRender() {
   const dot = document.getElementById('sync-dot');
   dot.className = 'sync-dot loading';
+  document.getElementById('sync-label').textContent = 'Syncing...';
+
   try {
-    const paramStr = Object.entries(PARAMS).map(function(e){return e[0]+'='+encodeURIComponent(e[1]);}).join('&');
-    const url = '/api/redash?'+paramStr;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP '+res.status+': '+res.statusText);
-    const json = await res.json();
-    const qr = json.query_result || json;
-    const data = qr.data || qr;
-    const columns = data.columns || [];
-    const rows    = data.rows    || [];
-    if (!columns.length) throw new Error('No columns returned from Redash');
-    const cols = detectCols(columns);
-    const trainers = processRows(rows, cols);
+    const qs = new URLSearchParams(PARAMS).toString();
+    const res = await fetch(`/api/redash?${qs}`);
+    const rawText = await res.text();
+
+    if (!res.ok) throw new Error(`HTTP ${res.status} — Raw: ${rawText.slice(0,300)}`);
+
+    let json;
+    try { json = JSON.parse(rawText); }
+    catch(e) { throw new Error('Proxy returned non-JSON: ' + rawText.slice(0,300)); }
+
+    if (json.error) throw new Error('Proxy error: ' + json.error + (json.hint ? ' | ' + json.hint : ''));
+
+    // Try all known Redash response shapes
+    const qr   = json.query_result || json;
+    const data  = qr.data || qr;
+    const cols  = data.columns || [];
+    const rows  = data.rows   || [];
+
+    if (!cols.length) {
+      // Show raw for debugging
+      const preview = JSON.stringify(json, null, 2).slice(0, 600);
+      throw new Error('No columns in response. Raw preview:\n' + preview);
+    }
+
+    const detectedCols = detectCols(cols);
+    const trainers = processRows(rows, detectedCols);
+
     if (!initialized) {
       buildUI(trainers);
       initialized = true;
@@ -584,165 +738,1613 @@ async function fetchAndRender() {
     } else {
       updateUI(trainers);
     }
+
     dot.className = 'sync-dot';
+    document.getElementById('sync-label').textContent = 'Live';
     document.getElementById('last-sync').textContent = 'Last synced: ' + new Date().toLocaleTimeString();
+
   } catch (err) {
     dot.className = 'sync-dot error';
+    document.getElementById('sync-label').textContent = 'Error';
     if (!initialized) showError(err);
-    console.error('Redash fetch error:', err);
+    console.error('[DrillDown] Fetch error:', err);
   }
-  countdown = REFRESH_SEC;
+
 }
+
 function showError(err) {
-  document.getElementById('overlay').innerHTML =
-    '<div class="err-box">'+
-      '<h3>Cannot connect to Redash</h3>'+
-      '<p>'+err.message+'</p>'+
-      '<p style="margin-top:10px">This usually means <strong>CORS is blocked</strong>.</p>'+
-    '</div>';
+  document.getElementById('overlay').innerHTML = `
+    <div class="err-box">
+      <h3>⚠ Cannot connect to Redash</h3>
+      <pre style="background:#0a0a0a;border:1px solid #3a1515;border-radius:6px;padding:10px;font-size:10px;color:#fc9090;text-align:left;max-height:200px;overflow:auto;margin:10px 0;white-space:pre-wrap;word-break:break-all">${err.message}</pre>
+      <p style="font-size:11px;color:#718096">Screenshot this error and share with your developer to diagnose.<br>
+      Also visit <code style="color:#4299e1">/api/debug</code> on your Vercel URL for full diagnostics.</p>
+    </div>`;
 }
+
+// ─────────────────────────────────────────────────────────────
+// UI: BUILD + UPDATE
+// ─────────────────────────────────────────────────────────────
 function buildUI(trainers) {
-  const tabs = document.getElementById('tabs');
-  const app  = document.getElementById('app');
-  tabs.innerHTML = ''; app.innerHTML = '';
+  const tabsEl = document.getElementById('tabs');
+  const appEl  = document.getElementById('app');
+  tabsEl.innerHTML = ''; appEl.innerHTML = '';
   currentTab = null;
-  for (const k in ACCOUNT_REGISTRY) delete ACCOUNT_REGISTRY[k];
-  Object.entries(trainers).forEach(function(entry, i) {
-    const tName = entry[0], tData = entry[1];
-    const tid = tName.replace(/[^a-z0-9]/gi,'_');
-    const crit = tData.accounts.filter(function(a){return a.priority==='CRITICAL';}).length;
-    const high = tData.accounts.filter(function(a){return a.priority==='HIGH';}).length;
-    const sd   = tData.accounts.filter(function(a){return a.priority==='STABLE_DROP';}).length;
-    const urg  = crit>0?'<span style="color:#fc5353;font-weight:700"> '+crit+'</span>':high>0?'<span style="color:#ed8936"> '+high+'</span>':'';
-    const sdBadge = sd>0?'<span style="color:#ff6b6b;font-size:10px"> '+sd+'</span>':'';
+  window.accRegistry = {}; // reset registry on each rebuild
+
+  Object.entries(trainers).forEach(([tName, tData], i) => {
+    const tid  = tName.replace(/[^a-z0-9]/gi,'_');
+    const crit = tData.accounts.filter(a => a.priority==='CRITICAL').length;
+    const high = tData.accounts.filter(a => a.priority==='HIGH').length;
+    const sd   = tData.accounts.filter(a => a.priority==='STABLE_DROP').length;
+    const urg  = crit>0 ? `<span style="color:#fc5353;font-weight:700"> ${crit}🔴</span>`
+               : high>0 ? `<span style="color:#ed8936"> ${high}🟠</span>` : '';
+    const sdB  = sd>0 ? `<span style="color:#ff6b6b;font-size:10px"> ${sd}⚠</span>` : '';
+
     const tab = document.createElement('div');
-    tab.className = 'tab' + (i===0?' active':'');
+    tab.className = 'tab' + (i===0 ? ' active' : '');
     tab.dataset.tid = tid;
-    tab.innerHTML = tName+' <span class="cnt">'+tData.accounts.length+'</span>'+urg+sdBadge;
-    tab.addEventListener('click', function(){ switchTab(tid); });
-    tabs.appendChild(tab);
+    tab.innerHTML = `${tName} <span class="cnt">${tData.accounts.length}</span>${urg}${sdB}`;
+    tab.addEventListener('click', () => switchTab(tid));
+    tabsEl.appendChild(tab);
+
     const panel = document.createElement('div');
-    panel.className = 'panel' + (i===0?' active':'');
+    panel.className = 'panel' + (i===0 ? ' active' : '');
     panel.id = 'panel-' + tid;
     panel.innerHTML = renderPanel(tName, tData, tid);
-    app.appendChild(panel);
+    appEl.appendChild(panel);
+
     if (i===0) currentTab = tid;
   });
+
   updateGlobalStats(trainers);
 }
+
 function updateUI(trainers) {
-  const prevTab = currentTab;
+  const prev = currentTab;
   buildUI(trainers);
-  if (prevTab) {
-    const el = document.querySelector('[data-tid="'+prevTab+'"]');
-    if (el) { switchTab(prevTab); }
-  }
+  if (prev && document.querySelector(`[data-tid="${prev}"]`)) switchTab(prev);
 }
+
 function updateGlobalStats(trainers) {
-  const gc={};
-  Object.values(trainers).forEach(function(t){t.accounts.forEach(function(a){gc[a.priority]=(gc[a.priority]||0)+1;});});
-  const total = Object.values(gc).reduce(function(s,v){return s+v;},0);
-  document.getElementById('gstats').innerHTML =
-    '<div class="gs"><div class="v" style="color:#fc5353">'+(gc.CRITICAL||0)+'</div><div class="l">Critical</div></div>'+
-    '<div class="gs"><div class="v" style="color:#ed8936">'+(gc.HIGH||0)+'</div><div class="l">High</div></div>'+
-    '<div class="gs"><div class="v" style="color:#ff6b6b">'+(gc.STABLE_DROP||0)+'</div><div class="l">Stable Drop</div></div>'+
-    '<div class="gs"><div class="v" style="color:#48bb78">'+(gc.STABLE||0)+'</div><div class="l">Stable</div></div>'+
-    '<div class="gs"><div class="v" style="color:#a0aec0">'+total+'</div><div class="l">Total</div></div>';
+  const gc = {};
+  Object.values(trainers).forEach(t => t.accounts.forEach(a => gc[a.priority] = (gc[a.priority]||0)+1));
+  const total = Object.values(gc).reduce((s,v)=>s+v,0);
+  document.getElementById('gstats').innerHTML = `
+    <div class="gs"><div class="v" style="color:#fc5353">${gc.CRITICAL||0}</div><div class="l">Critical</div></div>
+    <div class="gs"><div class="v" style="color:#ed8936">${gc.HIGH||0}</div><div class="l">High</div></div>
+    <div class="gs"><div class="v" style="color:#ff6b6b">${gc.STABLE_DROP||0}</div><div class="l">Stable Drop</div></div>
+    <div class="gs"><div class="v" style="color:#48bb78">${gc.STABLE||0}</div><div class="l">Stable</div></div>
+    <div class="gs"><div class="v" style="color:#a0aec0">${total}</div><div class="l">Total</div></div>`;
 }
+
 function switchTab(tid) {
   currentTab = tid;
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active',t.dataset.tid===tid);});
-  document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('active',p.id==='panel-'+tid);});
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tid===tid));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id==='panel-'+tid));
 }
-function toggleAcc(aId,e) {
+
+// ─────────────────────────────────────────────────────────────
+// TREE TOGGLES
+// ─────────────────────────────────────────────────────────────
+function toggleAcc(aId, e) {
   e.stopPropagation();
-  const btn=document.getElementById('btn-'+aId);
-  if(!btn||btn.textContent==='.') return;
-  const open=btn.textContent==='+'; btn.textContent=open?'-':'+';
-  document.querySelectorAll('[data-acc="'+aId+'"]').forEach(function(r){
-    r.classList.toggle('vis',open);
-    if(!open){const pb=r.querySelector('.proj-tog');if(pb&&pb.textContent!=='.')pb.textContent='+';}
-  });
-  if(!open){
-    document.querySelectorAll('[data-acc="'+aId+'"]').forEach(function(r){
-      const pid=r.id&&r.id.replace('proj-','');
-      if(pid){
-        document.querySelectorAll('[data-proj="'+pid+'"]').forEach(function(m){
+  const btn = document.getElementById('btn-'+aId);
+  if (!btn || btn.textContent==='·') return;
+  const open = btn.textContent==='+';
+  btn.textContent = open ? '−' : '+';
+  document.querySelectorAll(`[data-acc="${aId}"]`).forEach(r => {
+    r.classList.toggle('vis', open);
+    if (!open) {
+      const pb = r.querySelector('.proj-tog');
+      if (pb && pb.textContent!=='·') pb.textContent = '+';
+      const pid = r.id?.replace('proj-','');
+      if (pid) {
+        document.querySelectorAll(`[data-proj="${pid}"]`).forEach(m => {
           m.classList.remove('vis');
-          const mb=m.querySelector('.mod-tog');if(mb&&mb.textContent!=='.')mb.textContent='+';
-          const mid=m.id&&m.id.replace('mod-','');
-          if(mid) document.querySelectorAll('[data-mod="'+mid+'"]').forEach(function(ev){ev.classList.remove('vis');});
+          const mb = m.querySelector('.mod-tog');
+          if (mb && mb.textContent!=='·') mb.textContent = '+';
+          const mid = m.id?.replace('mod-','');
+          if (mid) document.querySelectorAll(`[data-mod="${mid}"]`).forEach(ev => ev.classList.remove('vis'));
         });
       }
-    });
-  }
-}
-function toggleProj(pId,e) {
-  e.stopPropagation();
-  const btn=document.getElementById('btn-'+pId);
-  if(!btn||btn.textContent==='.') return;
-  const open=btn.textContent==='+'; btn.textContent=open?'-':'+';
-  document.querySelectorAll('[data-proj="'+pId+'"]').forEach(function(r){
-    r.classList.toggle('vis',open);
-    if(!open){const mb=r.querySelector('.mod-tog');if(mb&&mb.textContent!=='.')mb.textContent='+';
-      const mid=r.id&&r.id.replace('mod-','');
-      if(mid) document.querySelectorAll('[data-mod="'+mid+'"]').forEach(function(ev){ev.classList.remove('vis');});
     }
   });
 }
-function toggleMod(mId,e) {
+
+function toggleProj(pId, e) {
   e.stopPropagation();
-  const btn=document.getElementById('btn-'+mId);
-  if(!btn||btn.textContent==='.') return;
-  const open=btn.textContent==='+'; btn.textContent=open?'-':'+';
-  document.querySelectorAll('[data-mod="'+mId+'"]').forEach(function(r){r.classList.toggle('vis',open);});
+  const btn = document.getElementById('btn-'+pId);
+  if (!btn || btn.textContent==='·') return;
+  const open = btn.textContent==='+';
+  btn.textContent = open ? '−' : '+';
+  document.querySelectorAll(`[data-proj="${pId}"]`).forEach(r => {
+    r.classList.toggle('vis', open);
+    if (!open) {
+      const mb = r.querySelector('.mod-tog');
+      if (mb && mb.textContent!=='·') mb.textContent = '+';
+      const mid = r.id?.replace('mod-','');
+      if (mid) document.querySelectorAll(`[data-mod="${mid}"]`).forEach(ev => ev.classList.remove('vis'));
+    }
+  });
 }
-document.addEventListener('click',function(e){
-  if(!e.target.classList.contains('pf-btn')) return;
-  const tid=e.target.dataset.t, prio=e.target.dataset.p;
-  const panel=document.getElementById('panel-'+tid);
-  panel.querySelectorAll('.pf-btn').forEach(function(b){b.classList.remove('active');});
+
+function toggleMod(mId, e) {
+  e.stopPropagation();
+  const btn = document.getElementById('btn-'+mId);
+  if (!btn || btn.textContent==='·') return;
+  const open = btn.textContent==='+';
+  btn.textContent = open ? '−' : '+';
+  document.querySelectorAll(`[data-mod="${mId}"]`).forEach(r => r.classList.toggle('vis', open));
+}
+
+// ─────────────────────────────────────────────────────────────
+// FILTER + SEARCH (event delegation)
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+  if (!e.target.classList.contains('pf-btn')) return;
+  const tid  = e.target.dataset.t;
+  const prio = e.target.dataset.p;
+  const panel = document.getElementById('panel-'+tid);
+  panel.querySelectorAll('.pf-btn').forEach(b => b.classList.remove('active'));
   e.target.classList.add('active');
-  panel.querySelectorAll('.acc-tog').forEach(function(b){if(b.textContent!=='.')b.textContent='+';});
-  panel.querySelectorAll('.row-project,.row-module,.row-event').forEach(function(r){r.classList.remove('vis');});
-  panel.querySelectorAll('.row-account').forEach(function(r){r.classList.toggle('hidden',prio!=='ALL'&&r.dataset.p!==prio);});
-  panel.querySelectorAll('.row-section').forEach(function(s){s.style.display=prio==='ALL'||s.dataset.sect===prio?'':'none';});
+  // Collapse all
+  panel.querySelectorAll('.acc-tog').forEach(b => { if(b.textContent!=='·') b.textContent='+'; });
+  panel.querySelectorAll('.row-project,.row-module,.row-event').forEach(r => r.classList.remove('vis'));
+  // Show/hide accounts and section headers
+  panel.querySelectorAll('.row-account').forEach(r => r.classList.toggle('hidden', prio!=='ALL' && r.dataset.p!==prio));
+  panel.querySelectorAll('.row-section').forEach(s => s.style.display = (prio==='ALL' || s.dataset.sect===prio) ? '' : 'none');
 });
-document.addEventListener('input',function(e){
-  if(!e.target.classList.contains('acc-search')) return;
-  const tid=e.target.dataset.t, q=e.target.value.toLowerCase();
-  document.getElementById('panel-'+tid).querySelectorAll('.row-account').forEach(function(r){r.classList.toggle('hidden',!!q&&r.dataset.name.indexOf(q)===-1);});
+
+document.addEventListener('input', e => {
+  if (!e.target.classList.contains('acc-search')) return;
+  const tid = e.target.dataset.t;
+  const q   = e.target.value.toLowerCase();
+  document.getElementById('panel-'+tid).querySelectorAll('.row-account').forEach(r => {
+    r.classList.toggle('hidden', !!q && !r.dataset.name.includes(q));
+  });
 });
-setInterval(function() {
-  countdown--;
-  document.getElementById('countdown').textContent = Math.max(0, countdown);
-  if (countdown <= 0) fetchAndRender();
-}, 1000);
-function openSnap(aId) {
-  const acc = ACCOUNT_REGISTRY[aId];
-  if (!acc) { showSnapToast('Account not found'); return; }
-  showSnapToast('Snap for: '+acc.name);
+
+// ─────────────────────────────────────────────────────────────
+// MANUAL SYNC
+// ─────────────────────────────────────────────────────────────
+function manualSync() {
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Syncing...';
+  btn.style.background = '#2d6aa0';
+  fetchAndRender().finally(() => {
+    btn.disabled = false;
+    btn.innerHTML = '🔄 Sync Now';
+    btn.style.background = '#4299e1';
+  });
 }
+
+fetchAndRender(); // load on first open
+
+// ─────────────────────────────────────────────────────────────
+// EMAIL TEMPLATES — 4 types, AMG-style, stored in localStorage
+// ─────────────────────────────────────────────────────────────
+const DEFAULT_TEMPLATES = {
+  active: {
+    label: '✅ Active / Stable',
+    subject: 'What {{account}} set out to fix — and where it stands today',
+    body: `Hi,
+
+When you started on Powerplay, the goal was clear:
+"{{ob_notes}}"
+
+Here's where things stand this week.
+
+────────────────────────────────────
+  This week (Wk 0)   : {{wk0}}
+  Last week  (Wk 1)  : {{wk1}}
+  2 weeks ago (Wk 2) : {{wk2}}
+  3 weeks ago (Wk 3) : {{wk3}}
+
+Module activity this week:
+{{modules_status}}
+────────────────────────────────────
+
+{{wk0}} activities across {{projects}} project(s) this week — your team is building strong habits on the platform.
+
+The next phase is making sure every module delivers measurable value. There may also be features your team hasn't fully explored yet that could save significant time on site.
+
+Renewal: {{renewal}}
+
+Can we do 20 minutes this week — you and your team — to walk through the live reports and plan what comes next?
+
+{{trainer}}
+Customer Success — Powerplay`
+  },
+  drop: {
+    label: '🟠 Low Activity / Drop',
+    subject: 'Activity has dipped for {{account}} — let\'s get back on track',
+    body: `Hi,
+
+When you started on Powerplay, the goal was:
+"{{ob_notes}}"
+
+This week, activity has dropped:
+
+────────────────────────────────────
+  This week (Wk 0)   : {{wk0}}  ← {{diff}} ({{pct}}) vs last week
+  Last week  (Wk 1)  : {{wk1}}
+  2 weeks ago (Wk 2) : {{wk2}}
+  3 weeks ago (Wk 3) : {{wk3}}
+
+Module activity this week:
+{{modules_status}}
+
+Last note ({{last_disposition}}):
+"{{disposition}}"
+────────────────────────────────────
+
+A dip like this usually means one of two things — the team got busy on site, or there's a friction point in the workflow we haven't resolved yet. Either way, we'd like to understand and help.
+
+{{trainer}} can be on a 15-minute call this week. No agenda required — just a quick check-in.
+
+Renewal: {{renewal}}
+
+Would this week work for a catch-up? Just reply and we'll set it up.
+
+{{trainer}}
+Customer Success — Powerplay`
+  },
+  recent_inactive: {
+    label: '🔴 Recently Inactive',
+    subject: '{{account}} — no activity this week. One question.',
+    body: `Hi,
+
+Your Powerplay account shows no activity this week.
+
+────────────────────────────────────
+  This week (Wk 0)   : 0
+  Last week  (Wk 1)  : {{wk1}}
+  2 weeks ago (Wk 2) : {{wk2}}
+  3 weeks ago (Wk 3) : {{wk3}}
+
+Last note ({{last_disposition}}):
+"{{disposition}}"
+────────────────────────────────────
+
+When activity stops, it's usually one of these three:
+
+  A. Team is busy on site — we can reschedule training sessions around your timelines
+  B. Something in the workflow isn't working — one call is usually all it takes to fix it
+  C. Team needs a refresher — we can run a short session this week
+
+Just reply with A, B, or C — and {{trainer}} will set it up within 24 hours.
+
+Renewal: {{renewal}}
+
+{{trainer}}
+Customer Success — Powerplay`
+  },
+  long_inactive: {
+    label: '⚫ Long Inactive',
+    subject: '{{account}} — before your renewal, a quick conversation',
+    body: `Hi,
+
+Your Powerplay subscription renews on {{renewal}}.
+
+Before that date, I want to be direct with you.
+
+────────────────────────────────────
+  3 weeks ago (Wk 3) : {{wk3}}
+  2 weeks ago (Wk 2) : {{wk2}}
+  Last week  (Wk 1)  : {{wk1}}
+  This week  (Wk 0)  : {{wk0}}
+────────────────────────────────────
+
+When you started on Powerplay, the goal was:
+"{{ob_notes}}"
+
+We haven't fully got there yet — and we want to understand why before you make any decision about renewal.
+
+I'm not asking for a commitment. I'm asking for 30 minutes before you decide.
+
+In that call, {{trainer}} will:
+  — Walk through exactly what your team has built in Powerplay so far
+  — Be honest about what worked and what didn't
+  — Show you what's still possible with the time remaining
+
+Two options:
+  1. Book 30 minutes with {{trainer}} — reply and we'll send a slot within the hour
+  2. If you've already decided not to renew — tell us and we'll make the transition clean
+
+Last note ({{last_disposition}}): "{{disposition}}"
+
+{{trainer}}
+Customer Success — Powerplay`
+  }
+};
+
+let emailTemplates = JSON.parse(localStorage.getItem('pp_email_templates_v2') || 'null') || JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+let emailMap     = JSON.parse(localStorage.getItem('pp_email_map')      || '{}');
+let obNotesMap   = JSON.parse(localStorage.getItem('pp_ob_notes_map')   || '{}');
+let kamNotesMap  = JSON.parse(localStorage.getItem('pp_kam_notes_map')  || '{}');
+let snapDataMap  = JSON.parse(localStorage.getItem('pp_snap_data_map')  || '{}');
+let currentTmplTab = 'active';
+let pendingAcc     = null;
+
+// Global account registry — populated during render, reset on each rebuild
+window.accRegistry = {};
+
+// ── Module summary for email body ─────────────────────────────
+function buildModulesSummary(acc) {
+  const entries = Object.entries(acc.modSummary || {});
+  if (!entries.length) return '  (Module data not available)';
+  return entries.map(([name, d]) => {
+    const icon = d.wk0 === 0 ? '🔴' : d.wk0 >= d.wk1 ? '✅' : '🟡';
+    const detail = d.wk0 === 0
+      ? 'No activity this week'
+      : d.wk0 > d.wk1  ? `${d.wk0} events (+${d.wk0 - d.wk1} vs last week)`
+      : d.wk0 === d.wk1 ? `${d.wk0} events (stable)`
+      : `${d.wk0} events (↓ from ${d.wk1} last week)`;
+    const pad = Math.max(1, 26 - name.length);
+    return `  ${icon} ${name}${' '.repeat(pad)}: ${detail}`;
+  }).join('\n');
+}
+
+// ── Fill all placeholders ─────────────────────────────────────
+function fillTemplate(text, acc, trainer, obNotes) {
+  const ob = obNotes || acc.obNotes || '[Paste OB notes here — what the owner said they wanted to fix]';
+  return text
+    .replace(/\{\{account\}\}/g,         acc.name || '')
+    .replace(/\{\{trainer\}\}/g,         trainer || '')
+    .replace(/\{\{wk0\}\}/g,             acc.wk0 ?? 0)
+    .replace(/\{\{wk1\}\}/g,             acc.wk1 ?? 0)
+    .replace(/\{\{wk2\}\}/g,             acc.wk2 ?? 0)
+    .replace(/\{\{wk3\}\}/g,             acc.wk3 ?? 0)
+    .replace(/\{\{diff\}\}/g,            (acc.diff > 0 ? '+' : '') + (acc.diff ?? 0))
+    .replace(/\{\{pct\}\}/g,             acc.pct || '—')
+    .replace(/\{\{renewal\}\}/g,         acc.renewal || 'N/A')
+    .replace(/\{\{priority\}\}/g,        (acc.priority || '').replace('_', ' '))
+    .replace(/\{\{projects\}\}/g,        acc.projects?.length ?? 0)
+    .replace(/\{\{disposition\}\}/g,     acc.lastDispo || '—')
+    .replace(/\{\{last_disposition\}\}/g, acc.lastDispDate || '—')
+    .replace(/\{\{modules_status\}\}/g,  buildModulesSummary(acc))
+    .replace(/\{\{ob_notes\}\}/g,        ob);
+}
+
+// ── Pick template based on priority + 4-week data ────────────
+function pickTemplate(priority, acc) {
+  // All 4 weeks zero → long inactive
+  if (acc && acc.wk0 === 0 && acc.wk1 === 0 && acc.wk2 === 0 && acc.wk3 === 0) return 'long_inactive';
+  if (['CRITICAL', 'STABLE_DROP'].includes(priority)) return 'recent_inactive';
+  if (priority === 'INACTIVE') return 'recent_inactive';
+  if (['HIGH', 'MEDIUM', 'LOW'].includes(priority)) return 'drop';
+  return 'active';
+}
+
+// ─────────────────────────────────────────────────────────────
+// TEMPLATE SETTINGS MODAL
+// ─────────────────────────────────────────────────────────────
+function openTemplateModal() {
+  currentTmplTab = 'active';
+  renderTmplModal();
+  document.getElementById('tmpl-modal').classList.add('open');
+}
+function closeTemplateModal() { document.getElementById('tmpl-modal').classList.remove('open'); }
+function switchTmplTab(tab) { currentTmplTab = tab; renderTmplModal(); }
+
+function renderTmplModal() {
+  const tabs = ['active', 'drop', 'recent_inactive', 'long_inactive'];
+  const tabClass = { active:'', drop:'drop', recent_inactive:'inactive', long_inactive:'inactive' };
+  const tabHtml = tabs.map(t => `
+    <button class="ttab ${tabClass[t]} ${currentTmplTab===t?'active':''}" onclick="switchTmplTab('${t}')">
+      ${emailTemplates[t].label}
+    </button>`).join('');
+
+  const tpl = emailTemplates[currentTmplTab];
+  document.getElementById('tmpl-modal-body').innerHTML = `
+    <div class="tmpl-tabs">${tabHtml}</div>
+    <div class="frow">
+      <label>Subject line</label>
+      <input id="tpl-subj" type="text" value="${(tpl.subject||'').replace(/"/g,'&quot;')}">
+    </div>
+    <div class="frow">
+      <label>Email body</label>
+      <textarea id="tpl-body" rows="14">${tpl.body||''}</textarea>
+      <div class="ph-hint">Placeholders: {{account}} {{trainer}} {{wk0}} {{wk1}} {{wk2}} {{wk3}} {{diff}} {{pct}} {{renewal}} {{projects}} {{disposition}} {{last_disposition}} {{modules_status}} {{ob_notes}}</div>
+    </div>`;
+}
+function saveTmplCurrent() {
+  emailTemplates[currentTmplTab].subject = document.getElementById('tpl-subj').value;
+  emailTemplates[currentTmplTab].body    = document.getElementById('tpl-body').value;
+  localStorage.setItem('pp_email_templates_v2', JSON.stringify(emailTemplates));
+  const btn = document.getElementById('tmpl-save-btn');
+  btn.textContent = '✓ Saved!'; btn.style.background = '#276749';
+  setTimeout(() => { btn.textContent = 'Save Template'; btn.style.background = ''; }, 1500);
+}
+function resetTmpl() {
+  if (!confirm('Reset all 4 templates to default?')) return;
+  emailTemplates = JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+  localStorage.removeItem('pp_email_templates_v2');
+  renderTmplModal();
+}
+
+// ─────────────────────────────────────────────────────────────
+// SMART EMAIL GENERATOR — reads all 5 data sources
+// Goals by status:
+//   active       → maintain activity, expand modules, realize value, no churn
+//   drop         → drive adoption, kill parallel processes, recover usage
+//   recent_inact → identify blocker (A/B/C), restart the team fast
+//   long_inact   → honest 30-min conversation before renewal decision
+// ─────────────────────────────────────────────────────────────
+function generateSmartEmail(acc, trainer, inputs) {
+  const ob   = (inputs.obNotes  || acc.obNotes || '').trim();
+  const kam  = (inputs.kamNotes || '').trim();
+  const snap = (inputs.snapData || '').trim();
+  const tKey = pickTemplate(acc.priority, acc);
+  const D    = '─'.repeat(36);
+  const L    = [];
+
+  const subjects = {
+    long_inactive:   `${acc.name} — before your renewal on ${acc.renewal||'N/A'}, a quick conversation`,
+    recent_inactive: `${acc.name} — activity stopped this week. One question.`,
+    drop:            `Activity has dipped for ${acc.name} — a few specific things to flag`,
+    active:          `What ${acc.name} set out to fix — and where it stands today`
+  };
+  const subject = subjects[tKey] || subjects.active;
+
+  L.push('Hi,'); L.push('');
+
+  // OB anchor — owner's own words as the hook
+  if (ob && tKey !== 'recent_inactive') {
+    L.push('When you started on Powerplay, the goal was:');
+    L.push(`"${ob}"`); L.push('');
+  }
+
+  // Activity data table
+  L.push(D);
+  if (tKey === 'long_inactive') {
+    L.push(`  3 weeks ago (Wk 3) : ${acc.wk3 ?? 0}`);
+    L.push(`  2 weeks ago (Wk 2) : ${acc.wk2 ?? 0}`);
+    L.push(`  Last week  (Wk 1)  : ${acc.wk1 ?? 0}`);
+    L.push(`  This week  (Wk 0)  : ${acc.wk0 ?? 0}`);
+  } else {
+    const dropNote = (tKey === 'drop' && acc.pct) ? `  ← ${(acc.diff>0?'+':'')+acc.diff} (${acc.pct}) vs last week` : '';
+    L.push(`  This week (Wk 0)   : ${acc.wk0 ?? 0}${dropNote}`);
+    L.push(`  Last week  (Wk 1)  : ${acc.wk1 ?? 0}`);
+    L.push(`  2 weeks ago (Wk 2) : ${acc.wk2 ?? 0}`);
+    L.push(`  3 weeks ago (Wk 3) : ${acc.wk3 ?? 0}`);
+  }
+  L.push('');
+
+  // Module breakdown from dashboard data
+  const modEntries = Object.entries(acc.modSummary || {});
+  if (modEntries.length && tKey !== 'long_inactive') {
+    L.push('Module activity this week:');
+    modEntries.forEach(([name, d]) => {
+      const icon   = d.wk0 === 0 ? '🔴' : d.wk0 >= d.wk1 ? '✅' : '🟡';
+      const detail = d.wk0 === 0
+        ? (d.wk1 > 0 ? `No activity this week (was ${d.wk1} last week)` : 'No activity')
+        : d.wk0 > d.wk1 ? `${d.wk0} events (+${d.wk0-d.wk1} vs last week)`
+        : d.wk0 === d.wk1 ? `${d.wk0} events (stable)`
+        : `${d.wk0} events (↓ from ${d.wk1} last week)`;
+      const pad = Math.max(1, 22 - name.length);
+      L.push(`  ${icon} ${name}${' '.repeat(pad)}: ${detail}`);
+    });
+    L.push('');
+  }
+  L.push(D); L.push('');
+
+  // Trainer disposition (auto from Redash)
+  const dispLine = acc.lastDispo
+    ? `Last note${acc.lastDispDate ? ` (${acc.lastDispDate})` : ''}: "${acc.lastDispo}"`
+    : '';
+
+  // Weekly snap highlights — project/user-level detail
+  if (snap) {
+    L.push('From this week\'s snap:');
+    snap.split('\n').forEach(line => line.trim() && L.push(`  ${line.trim()}`));
+    L.push('');
+  }
+
+  // Status-specific narrative
+  if (tKey === 'long_inactive') {
+    L.push(ob
+      ? `You came in with a clear goal. We haven't fully got there — and we want to understand why before you make any renewal decision.`
+      : `Your account has been inactive for several weeks. Before your renewal, we want to be direct.`);
+    L.push('');
+    L.push(`I'm not asking for a commitment. I'm asking for 30 minutes before you decide.`);
+    L.push('');
+    L.push(`In that call, ${trainer} will:`);
+    L.push(`  — Show exactly what your team has built in Powerplay so far`);
+    L.push(`  — Be honest about what worked and what didn't`);
+    L.push(`  — Show what's still possible in the time remaining`);
+    L.push('');
+    if (dispLine) { L.push(dispLine); L.push(''); }
+    if (kam)      { L.push(`KAM note: ${kam}`); L.push(''); }
+    L.push('Two options:');
+    L.push(`  1. Book 30 minutes with ${trainer} — reply and we'll send a slot within the hour`);
+    L.push(`  2. If you've already decided not to renew — tell us and we'll make the transition clean`);
+
+  } else if (tKey === 'recent_inactive') {
+    L.push(`When activity stops, it's usually one of these three:`);
+    L.push('');
+    L.push(`  A. Team is busy on site — we reschedule training sessions around your timelines`);
+    L.push(`  B. Something in the workflow isn't working — one call is usually all it takes to fix it`);
+    L.push(`  C. Team needs a refresher — we'll run a short session this week`);
+    L.push('');
+    if (dispLine) { L.push(dispLine); L.push(''); }
+    if (kam)      { L.push(`KAM note: ${kam}`); L.push(''); }
+    if (ob) {
+      L.push(`Your original goal was: "${ob}"`);
+      L.push(`That's still achievable — but only if the team is back on the platform.`);
+      L.push('');
+    }
+    L.push(`Just reply with A, B, or C — and ${trainer} will set it up within 24 hours.`);
+
+  } else if (tKey === 'drop') {
+    const stopped = modEntries.filter(([,d]) => d.wk0 === 0 && d.wk1 > 0);
+    const growing = modEntries.filter(([,d]) => d.wk0 > d.wk1);
+    if (stopped.length) {
+      L.push(`Modules that stopped this week:`);
+      stopped.forEach(([n,d]) => L.push(`  — ${n} (was ${d.wk1} last week, 0 this week)`));
+      L.push('');
+    }
+    if (growing.length) {
+      L.push(`Still growing:`);
+      growing.forEach(([n,d]) => L.push(`  — ${n}: ${d.wk1} → ${d.wk0} this week`));
+      L.push('');
+    }
+    if (ob) { L.push(`Your original goal was: "${ob}"`); L.push(''); }
+    const stoppedNames = stopped.map(([n]) => n);
+    L.push(stoppedNames.length
+      ? `When ${stoppedNames.join(' and ')} ${stoppedNames.length > 1 ? 'drop' : 'drops'} like this, it usually means the team has gone back to a parallel process — Excel, WhatsApp, manual sheets. That's the gap we need to close.`
+      : `A dip like this usually means the team has reverted to a parallel process for some modules. That's what we need to address.`);
+    L.push('');
+    if (dispLine) { L.push(dispLine); L.push(''); }
+    if (kam)      { L.push(`KAM note: ${kam}`); L.push(''); }
+    L.push(`${trainer} can spend 20 minutes with your team lead this week — specifically on the modules that have dropped. No big session. Just that.`);
+    L.push(''); L.push(`Would this week work? Just reply and we'll set it up.`);
+
+  } else {
+    // ACTIVE — value realization, expand, no churn
+    const zeroMods   = modEntries.filter(([,d]) => d.wk0 === 0 && d.wk1 === 0);
+    const activeMods = modEntries.filter(([,d]) => d.wk0 > 0);
+    L.push(`${acc.wk0} activities across ${acc.projects?.length||0} project(s) this week — your team is building consistent habits on the platform.`);
+    L.push('');
+    if (activeMods.length) { L.push(`Running well: ${activeMods.map(([n])=>n).join(', ')}`); L.push(''); }
+    if (zeroMods.length) {
+      L.push(`Not yet active: ${zeroMods.map(([n])=>n).join(', ')}`);
+      L.push(`These modules are included in your subscription — activating even one more could eliminate a parallel process entirely.`);
+      L.push('');
+    }
+    if (ob) {
+      L.push(`Progress against your original goal:`);
+      L.push(`"${ob}"`);
+      activeMods.forEach(([n]) => L.push(`  ✅ ${n}: Active and running`));
+      zeroMods.forEach(([n])   => L.push(`  🔄 ${n}: Not yet started — potential next phase`));
+      L.push('');
+    }
+    if (dispLine) { L.push(dispLine); L.push(''); }
+    if (kam)      { L.push(`Note from ${trainer}: ${kam}`); L.push(''); }
+    L.push(`The next step is making sure every active module delivers measurable value — and that no parallel process remains running alongside Powerplay. The data your team is building grows in value every week.`);
+    L.push(''); L.push(`Can we do 20 minutes this week to walk through the live reports and plan the next phase?`);
+  }
+
+  L.push('');
+  L.push(`Renewal: ${acc.renewal || 'N/A'}`);
+  L.push(''); L.push(trainer); L.push('Customer Success — Powerplay');
+
+  return { subject, body: L.join('\n'), tKey };
+}
+
+// ─────────────────────────────────────────────────────────────
+// SEND EMAIL MODAL — two-panel: data sources | generated email
+// ─────────────────────────────────────────────────────────────
+function openSendModal(aId) {
+  const entry = window.accRegistry[aId];
+  if (!entry) return;
+  pendingAcc = entry;
+
+  const { acc, trainer } = entry;
+  const tKey  = pickTemplate(acc.priority, acc);
+  const tColors = { long_inactive:'#718096', recent_inactive:'#fc5353', drop:'#ed8936', active:'#48bb78' };
+  const tLabels = { long_inactive:'⚫ Long Inactive', recent_inactive:'🔴 Recently Inactive', drop:'🟠 Drop', active:'✅ Active / Stable' };
+  const col   = tColors[tKey] || '#4299e1';
+  const lbl   = tLabels[tKey] || tKey;
+
+  const savedEmail = emailMap[acc.name]    || '';
+  const savedOb    = obNotesMap[acc.name]  || acc.obNotes || '';
+  const savedKam   = kamNotesMap[acc.name] || '';
+  const savedSnap  = snapDataMap[acc.name] || '';
+
+  document.getElementById('send-modal-title').textContent = '✉  ' + acc.name;
+
+  const modRows = Object.entries(acc.modSummary || {}).map(([n,d]) => {
+    const ic = d.wk0===0?'🔴':d.wk0>=d.wk1?'✅':'🟡';
+    return `<div style="font-size:11px;color:#718096;margin-top:2px">${ic} ${n}: <b style="color:#a0aec0">${d.wk0}</b> this wk</div>`;
+  }).join('');
+
+  const esc = s => (s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  document.getElementById('send-modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:290px 1fr;margin:0 -22px -20px;min-height:500px">
+
+      <div style="border-right:1px solid #2d3748;padding:14px;overflow-y:auto;max-height:calc(90vh - 130px);display:flex;flex-direction:column;gap:12px">
+
+        <div style="background:#10141c;border:1px solid #1e2535;border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070;margin-bottom:7px">📊 Dashboard Data</div>
+          <div style="font-size:12px;color:#a0aec0;line-height:1.9">
+            <div>Status: <span style="color:${col};font-weight:600">${lbl}</span></div>
+            <div>Wk0: <b style="color:#e2e8f0">${acc.wk0}</b> · Wk1: ${acc.wk1} · Wk2: ${acc.wk2} · Wk3: ${acc.wk3}</div>
+            <div>Δ: <span style="color:${acc.diff<0?'#fc5353':'#48bb78'}">${(acc.diff>0?'+':'')+acc.diff} (${acc.pct||'—'})</span> · ${acc.projects?.length||0} projects</div>
+            <div>Renewal: <b style="color:#7eb8e0">${acc.renewal||'N/A'}</b></div>
+            ${modRows}
+            ${acc.lastDispDate?`<div style="margin-top:5px;font-size:11px;color:#4a6080">Last call: ${acc.lastDispDate}</div>`:''}
+            ${acc.lastDispo?`<div style="font-size:11px;color:#4a6080;font-style:italic" title="${esc(acc.lastDispo)}">"${acc.lastDispo.slice(0,80)}${acc.lastDispo.length>80?'...':''}"</div>`:''}
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070;margin-bottom:5px">📋 OB Notes — Owner's Goal</div>
+          <textarea id="inp-ob" rows="3" oninput="_refreshSmartEmail()"
+            placeholder="What did the owner say they wanted to fix? Paste OB form summary here."
+            style="width:100%;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:7px 9px;font-size:11.5px;outline:none;resize:vertical;min-height:70px;line-height:1.55;font-family:inherit"
+          >${esc(savedOb)}</textarea>
+          <div style="font-size:10px;color:#4a5568;margin-top:3px">Saved per account. Fills into email automatically.</div>
+        </div>
+
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070;margin-bottom:5px">💬 KAM Notes</div>
+          <textarea id="inp-kam" rows="2" oninput="_refreshSmartEmail()"
+            placeholder="Key account observations, team context, escalations"
+            style="width:100%;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:7px 9px;font-size:11.5px;outline:none;resize:vertical;min-height:56px;line-height:1.55;font-family:inherit"
+          >${esc(savedKam)}</textarea>
+        </div>
+
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070;margin-bottom:5px">📸 Weekly Snap Highlights</div>
+          <textarea id="inp-snap" rows="3" oninput="_refreshSmartEmail()"
+            placeholder="Paste key lines from this week's snap — e.g. 'Godrej Industries silent (was 6)' / 'STT Jaipur material stopped'"
+            style="width:100%;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:7px 9px;font-size:11.5px;outline:none;resize:vertical;min-height:70px;line-height:1.55;font-family:inherit"
+          >${esc(savedSnap)}</textarea>
+        </div>
+
+        <div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070;margin-bottom:5px">📧 Send to</div>
+          <input id="send-to" type="email" placeholder="owner@company.com" value="${esc(savedEmail)}"
+            style="width:100%;background:#0f1420;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:7px 9px;font-size:12px;outline:none">
+        </div>
+
+      </div>
+
+      <div style="padding:14px 16px;overflow-y:auto;max-height:calc(90vh - 130px);display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#3a5070">Generated Email — auto-updates as you fill data</div>
+        <div style="background:#0f1420;border:1px solid #2d3748;border-radius:6px;padding:10px 13px">
+          <div style="font-size:10px;color:#3a5070;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Subject</div>
+          <div id="prev-subj" style="font-size:13px;color:#7eb8e0;font-weight:600;line-height:1.4"></div>
+        </div>
+        <div style="background:#0f1420;border:1px solid #2d3748;border-radius:6px;padding:10px 13px;flex:1">
+          <div style="font-size:10px;color:#3a5070;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Body</div>
+          <div id="prev-body" style="font-size:12px;color:#a0aec0;line-height:1.75;white-space:pre-wrap;font-family:inherit"></div>
+        </div>
+      </div>
+
+    </div>`;
+
+  _refreshSmartEmail();
+  document.getElementById('send-modal').classList.add('open');
+}
+
+function _refreshSmartEmail() {
+  if (!pendingAcc) return;
+  const { acc, trainer } = pendingAcc;
+  const inputs = {
+    obNotes:  document.getElementById('inp-ob')?.value   || '',
+    kamNotes: document.getElementById('inp-kam')?.value  || '',
+    snapData: document.getElementById('inp-snap')?.value || ''
+  };
+  const { subject, body } = generateSmartEmail(acc, trainer, inputs);
+  const se = document.getElementById('prev-subj');
+  const be = document.getElementById('prev-body');
+  if (se) se.textContent = subject;
+  if (be) be.textContent = body;
+}
+
+function doSendEmail() {
+  const to      = (document.getElementById('send-to')?.value  || '').trim();
+  const subject = document.getElementById('prev-subj')?.textContent || '';
+  const body    = document.getElementById('prev-body')?.textContent || '';
+  const ob      = document.getElementById('inp-ob')?.value   || '';
+  const kam     = document.getElementById('inp-kam')?.value  || '';
+  const snap    = document.getElementById('inp-snap')?.value || '';
+
+  if (!to)               { alert('Please enter a recipient email address.'); return; }
+  if (!to.includes('@')) { alert('Please enter a valid email address.'); return; }
+
+  if (pendingAcc) {
+    const n = pendingAcc.acc.name;
+    emailMap[n] = to;
+    if (ob)   obNotesMap[n]  = ob;
+    if (kam)  kamNotesMap[n] = kam;
+    if (snap) snapDataMap[n] = snap;
+    localStorage.setItem('pp_email_map',      JSON.stringify(emailMap));
+    localStorage.setItem('pp_ob_notes_map',   JSON.stringify(obNotesMap));
+    localStorage.setItem('pp_kam_notes_map',  JSON.stringify(kamNotesMap));
+    localStorage.setItem('pp_snap_data_map',  JSON.stringify(snapDataMap));
+  }
+
+  window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  closeSendModal();
+}
+
+function closeSendModal() {
+  document.getElementById('send-modal').classList.remove('open');
+  pendingAcc = null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SNAP REPORT MODAL — Powerplay branded card with download
+// ─────────────────────────────────────────────────────────────
+let snapAcc = null;
+let snapTrainer = null;
+
+// Module colors (matching screenshot exactly)
+const MOD_COLORS = {
+  'attendance' : '#22c55e',
+  'staff'      : '#a855f7',
+  'task'       : '#3b82f6',
+  'material'   : '#f97316',
+  'petty_cash' : '#ec4899',
+};
+function modColor(name) {
+  const n = (name||'').toLowerCase().replace(/[\s_]+/g,'');
+  for (const [k,v] of Object.entries(MOD_COLORS)) {
+    if (n === k.replace(/_/g,'') || n.includes(k.replace(/_/g,''))) return v;
+  }
+  return '#6b7280';
+}
+
+// Week-ending string (next Sunday from today)
+function getWeekEndingStr() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = day === 0 ? 0 : 7 - day;
+  const sun = new Date(d.getTime() + diff * 86400000);
+  return sun.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+}
+
+// Compute rich per-project/module/user snap data from acc.projects
+function computeSnapData(acc) {
+  const snapProjects = [];
+  const silentProjects = [], stoppedModules = [], biggestDrops = [];
+  let topMover = null, topMoverScore = -Infinity;
+  let watchOut = null, watchOutScore = 0;
+
+  for (const proj of (acc.projects || [])) {
+    const snapModules = [];
+
+    for (const mod of (proj.modules || [])) {
+      // aggregate per user
+      const userMap = {};
+      for (const evt of (mod.events || [])) {
+        const uk = evt.user || 'Unknown';
+        if (!userMap[uk]) userMap[uk] = { user: evt.user||'', mobile: evt.mobile||'', wk0:0, wk1:0 };
+        userMap[uk].wk0 += evt.wk0;
+        userMap[uk].wk1 += evt.wk1;
+      }
+      const users = Object.values(userMap)
+        .filter(u => u.wk0>0 || u.wk1>0)
+        .sort((a,b) => b.wk0 - a.wk0);
+
+      const modWk0 = users.reduce((s,u)=>s+u.wk0,0);
+      const modWk1 = users.reduce((s,u)=>s+u.wk1,0);
+      const isStopped = modWk0===0 && modWk1>0;
+      const isNewMod  = modWk0>0  && modWk1===0;
+      const modPct    = modWk1>0 ? Math.round((modWk0-modWk1)/modWk1*100) : null;
+
+      users.forEach(u => {
+        u.isNew = u.wk0>0 && u.wk1===0;
+        u.diff  = u.wk0 - u.wk1;
+      });
+
+      if (isStopped) {
+        const byWho = users.filter(u=>u.wk1>0).map(u=>`${u.user} ${u.wk1}`).join(', ');
+        stoppedModules.push({ module:mod.name, project:proj.name, was:modWk1, byWho });
+      }
+
+      // biggest drops per user+module
+      users.filter(u=>u.diff<0).forEach(u => {
+        biggestDrops.push({ user:u.user, drop:Math.abs(u.diff), module:mod.name, project:proj.name });
+      });
+
+      // top mover (biggest absolute gain)
+      users.filter(u=>u.wk1>0 && u.diff>0).forEach(u => {
+        if (u.diff > topMoverScore) {
+          topMoverScore = u.diff;
+          topMover = { user:u.user, diff:u.diff, pct:Math.round(u.diff/u.wk1*100), module:mod.name, project:proj.name };
+        }
+      });
+
+      snapModules.push({ name:mod.name, wk0:modWk0, wk1:modWk1, pct:modPct, isStopped, isNewMod, users });
+    }
+
+    if (proj.wk0===0 && proj.wk1>0) silentProjects.push({ name:proj.name, was:proj.wk1 });
+
+    if (Math.abs(proj.diff||0) > watchOutScore && (proj.wk0<proj.wk1 || proj.wk0===0)) {
+      watchOutScore = Math.abs(proj.diff||0);
+      watchOut = { project:proj.name, issue: proj.wk0===0 ? 'material stopped' : `activity dropped` };
+    }
+
+    snapProjects.push({ name:proj.name, wk0:proj.wk0, wk1:proj.wk1, diff:proj.diff, isDrop:proj.isDrop, modules:snapModules });
+  }
+
+  biggestDrops.sort((a,b)=>b.drop-a.drop);
+  return { snapProjects, silentProjects, stoppedModules, biggestDrops:biggestDrops.slice(0,5), topMover, watchOut };
+}
+
+// Build the branded snap card HTML — matches exact PDF design
+function buildSnapCard(acc, trainer) {
+  const { snapProjects, silentProjects, stoppedModules, biggestDrops, topMover, watchOut } = computeSnapData(acc);
+  const pctChange = acc.wk1>0 ? Math.round((acc.wk0-acc.wk1)/acc.wk1*100) : null;
+  const isDown = pctChange!==null && pctChange<0;
+  const isUp   = pctChange!==null && pctChange>0;
+  const weekStr = getWeekEndingStr();
+  const hasAttention = silentProjects.length>0 || stoppedModules.length>0 || biggestDrops.length>0;
+
+  // ── NEEDS ATTENTION block ────────────────────────────────────
+  let attHtml = '';
+  if (hasAttention) {
+    const silentStr = silentProjects.map(p=>`<b>${p.name}</b> (was ${p.was})`).join(', ');
+    const stopStr   = stoppedModules.slice(0,5).map(m=>`<b>${m.module}</b> on ${m.project} (was ${m.was} by ${m.byWho})`).join(' · ')
+                    + (stoppedModules.length>5 ? ` +${stoppedModules.length-5} more` : '');
+    const dropStr   = biggestDrops.slice(0,3).map(d=>`<b>${d.user}</b> ↓${d.drop} (${d.module} on ${d.project})`).join(' · ');
+    attHtml = `<div style="border-left:3px solid #ef4444;border-radius:0 8px 8px 0;background:#fff7ed;padding:12px 14px;margin:10px 0">
+      <div style="font-weight:700;color:#b45309;font-size:11px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">⚠ NEEDS ATTENTION</div>
+      ${silentProjects.length ? `<div style="font-size:11.5px;color:#374151;margin-bottom:5px"><b style="color:#92400e">Silent projects:</b> ${silentStr}</div>` : ''}
+      ${stoppedModules.length ? `<div style="font-size:11.5px;color:#374151;margin-bottom:5px"><b style="color:#92400e">Modules stopped:</b> ${stopStr}</div>` : ''}
+      ${biggestDrops.length   ? `<div style="font-size:11.5px;color:#374151"><b style="color:#92400e">Biggest drops:</b> ${dropStr}</div>` : ''}
+    </div>`;
+  } else {
+    attHtml = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 14px;margin:10px 0;text-align:center;font-size:11.5px;color:#15803d;font-weight:600">✅ ALL CLEAR — No significant drops this week</div>`;
+  }
+
+  // ── Module legend ────────────────────────────────────────────
+  const legendHtml = `<div style="display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 12px;font-size:11px;color:#374151;align-items:center">
+    ${Object.entries(MOD_COLORS).map(([k,v])=>`<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:${v};border-radius:2px;flex-shrink:0"></span>${k}</span>`).join('')}
+  </div>`;
+
+  // ── Per-project sections — only projects with wk0>0 OR wk1>0 ──
+  let projsHtml = '';
+  // Sort projects: active this week (wk0 desc), then stopped (wk1 desc), skip fully zero
+  const activeProjects = snapProjects
+    .filter(p => p.wk0 > 0 || p.wk1 > 0)
+    .sort((a, b) => {
+      // Stopped projects (wk0=0) go to the bottom, sorted by wk1 desc
+      if (a.wk0 === 0 && b.wk0 > 0) return 1;
+      if (b.wk0 === 0 && a.wk0 > 0) return -1;
+      return b.wk0 - a.wk0;
+    });
+
+  for (const proj of activeProjects) {
+    const pNum = proj.wk1>0 ? Math.round((proj.wk0-proj.wk1)/proj.wk1*100) : null;
+    const pStr = pNum!==null ? (pNum>=0 ? `↑ ${pNum}%` : `↓ ${Math.abs(pNum)}%`) : (proj.wk0>0 ? 'new' : '—');
+    const pCol = pNum===null ? '#6b7280' : pNum>=0 ? '#16a34a' : '#dc2626';
+    const isSilent = proj.wk0===0 && proj.wk1>0;
+
+    // Proportional bar with counts INSIDE segments — sorted by wk0 desc
+    const barMods = proj.modules.filter(m=>m.wk0>0).sort((a,b)=>b.wk0-a.wk0);
+    const totalBarCount = barMods.reduce((s,m)=>s+m.wk0,0);
+    let barHtml;
+    if (barMods.length > 0) {
+      barHtml = `<div style="display:flex;height:28px;border-radius:5px;overflow:hidden;width:100%;margin-bottom:10px">${
+        barMods.map(m => {
+          const pct = totalBarCount>0 ? m.wk0/totalBarCount*100 : 0;
+          return `<div style="flex:${m.wk0};background:${modColor(m.name)};display:flex;align-items:center;justify-content:center;min-width:3px;overflow:hidden;font-size:11px;font-weight:700;color:#fff" title="${m.name}: ${m.wk0}">${pct>=10?m.wk0:''}</div>`;
+        }).join('')
+      }</div>`;
+    } else if (isSilent) {
+      // Stopped project — show "0" in red bar
+      barHtml = `<div style="height:28px;border-radius:5px;background:#fee2e2;display:flex;align-items:center;padding:0 12px;margin-bottom:10px"><span style="font-size:16px;font-weight:800;color:#dc2626;line-height:1">0</span></div>`;
+    } else {
+      barHtml = `<div style="height:28px;border-radius:5px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:11px;color:#9ca3af;margin-bottom:10px">No activity</div>`;
+    }
+
+    // Sort modules: active first (wk0 desc), stopped modules last
+    const sortedMods = [...proj.modules].sort((a,b) => {
+      if (a.isStopped && !b.isStopped) return 1;
+      if (!a.isStopped && b.isStopped) return -1;
+      return b.wk0 - a.wk0;
+    });
+
+    // Module rows + collect stopped modules for chip at bottom
+    let modRowsHtml = '';
+    const stoppedChips = [];
+    for (const mod of sortedMods) {
+      if (mod.wk0===0 && mod.wk1===0) continue;
+      if (mod.isStopped) {
+        // Goes into "Stopped this week" chip, not a regular row
+        const who = mod.users.filter(u=>u.wk1>0).map(u=>`${u.user} ${u.wk1}`).join(', ');
+        stoppedChips.push(`${mod.name} (was ${mod.wk1} by ${who})`);
+        continue;
+      }
+      const mPct = mod.wk1>0 ? Math.round((mod.wk0-mod.wk1)/mod.wk1*100) : null;
+      const mPctHtml = mPct!==null
+        ? `<span style="background:${mPct>=0?'#dcfce7':'#fee2e2'};color:${mPct>=0?'#15803d':'#dc2626'};font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:4px">${mPct>=0?'↑':'↓'}${Math.abs(mPct)}%</span>`
+        : '';
+      const newModBadge = mod.isNewMod ? `<span style="background:#dbeafe;color:#1d4ed8;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:600">new module</span>` : '';
+
+      const visibleUsers = mod.users.filter(u=>u.wk0>0||u.wk1>0);
+      const topUsers = visibleUsers.slice(0,3);
+      let userStr = '';
+      if (topUsers.length>0) {
+        const parts = topUsers.map(u => {
+          const isUnassigned = !u.user || u.user==='' || u.user.toLowerCase()==='unassigned' || u.user.toLowerCase()==='unknown';
+          if (isUnassigned) return `<span style="color:#9ca3af;font-style:italic">unassigned</span>`;
+          const dHtml = u.diff!==0 ? ` <span style="color:${u.diff>0?'#15803d':'#dc2626'};font-size:10px">${u.diff>0?'↑':'↓'}${Math.abs(u.diff)}</span>` : '';
+          const newBadge = u.isNew ? ` <span style="background:#dbeafe;color:#1d4ed8;font-size:9px;padding:0 4px;border-radius:8px">new</span>` : '';
+          return `<b style="color:#374151">${u.user}</b> ${u.wk0}${dHtml}${newBadge}`;
+        });
+        // Users separated by a space (matching original design)
+        userStr = `<span style="color:#9ca3af;margin:0 5px">—</span>` + parts.join(' ');
+        if (visibleUsers.length>3) userStr += ` <span style="color:#9ca3af;font-size:10px">+${visibleUsers.length-3} more</span>`;
+      }
+
+      modRowsHtml += `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:3px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:11.5px">
+        <span style="display:inline-block;width:10px;height:10px;background:${modColor(mod.name)};border-radius:2px;flex-shrink:0;margin-right:2px"></span>
+        <b style="color:#111827">${mod.name}</b>
+        <span style="color:#374151;font-weight:600;margin-left:2px">${mod.wk0}</span>${mPctHtml}${newModBadge}${userStr}
+      </div>`;
+    }
+
+    // ── All-unassigned check: if every visible user is unassigned/empty,
+    //    collapse module rows to "X modules · Y modules" summary (matches original design)
+    const renderedMods = sortedMods.filter(m => !(m.wk0===0 && m.wk1===0) && !m.isStopped);
+    const allUnassigned = renderedMods.length > 0 && renderedMods.every(m =>
+      m.users.filter(u=>u.wk0>0||u.wk1>0).every(u => !u.user || u.user==='' || u.user.toLowerCase()==='unassigned' || u.user.toLowerCase()==='unknown')
+    );
+    if (allUnassigned) {
+      const thisWeekMods = renderedMods.filter(m=>m.wk0>0).length;
+      const lastWeekMods = renderedMods.filter(m=>m.wk1>0).length;
+      modRowsHtml = `<div style="font-size:11px;color:#9ca3af;padding:5px 2px">${thisWeekMods} module${thisWeekMods!==1?'s':''} · ${lastWeekMods} module${lastWeekMods!==1?'s':''}</div>`;
+    }
+
+    // Stopped-this-week chip
+    const stoppedHtml = stoppedChips.length
+      ? `<div style="margin-top:7px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:10.5px">
+          <span style="color:#92400e;font-weight:600">⚠ Stopped this week:</span>
+          ${stoppedChips.map(s=>`<span style="background:#fef3c7;border:1px solid #fde68a;color:#78350f;padding:2px 7px;border-radius:12px">${s}</span>`).join('')}
+         </div>`
+      : '';
+
+    projsHtml += `<div style="background:${isSilent?'#fff5f5':'#fff'};border:1px solid ${isSilent?'#fca5a5':'#e5e7eb'};border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+        <b style="color:${isSilent?'#dc2626':'#111827'};font-size:13px">${isSilent?'⚠ ':''}${proj.name}</b>
+        <span style="font-size:12px;white-space:nowrap;margin-left:10px">${proj.wk1} → <b style="color:${pNum!==null&&pNum<0?'#dc2626':'#111827'}">${proj.wk0}</b> <b style="color:${pCol};margin-left:4px">${pStr}</b></span>
+      </div>
+      ${barHtml}
+      ${modRowsHtml ? `<div style="${allUnassigned?'':'border-top:1px solid #f3f4f6'}">${modRowsHtml}</div>` : ''}
+      ${stoppedHtml}
+    </div>`;
+  }
+
+  // ── Highlights ───────────────────────────────────────────────
+  let hlHtml = '';
+  if (topMover || watchOut) {
+    hlHtml = `<div style="margin:12px 0 8px">
+      <div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">✨ THIS WEEK'S HIGHLIGHTS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${topMover ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px">
+          <div style="font-size:9px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">🏆 TOP MOVER</div>
+          <b style="font-size:12px;color:#111827">${topMover.user}</b>
+          <div style="font-size:10.5px;color:#374151;margin-top:2px">${topMover.project} · ${topMover.module} ↑${topMover.pct}%</div>
+        </div>` : '<div></div>'}
+        ${watchOut ? `<div style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:10px">
+          <div style="font-size:9px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">⚠ WATCH OUT</div>
+          <b style="font-size:12px;color:#111827">${watchOut.project}</b>
+          <div style="font-size:10.5px;color:#374151;margin-top:2px">${watchOut.issue}</div>
+        </div>` : '<div></div>'}
+      </div>
+    </div>`;
+  }
+
+  // ── WhatsApp message ─────────────────────────────────────────
+  const wpMsg = `Hi ${acc.name} Sir, sharing this week's snap — ${acc.wk0} activities logged${pctChange!==null?`, ${isDown?'slight dip':'increase'} of ${Math.abs(pctChange)}% vs last week`:''}.${topMover ? ` ${topMover.user} still active on ${topMover.project}.` : ''}${watchOut ? ` Note: ${watchOut.project} needs attention.` : ''} Want me to do a quick check-in with the team?`;
+
+  return `<div id="snap-card" style="background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:24px 26px;width:700px;max-width:100%;border-radius:12px;color:#111827">
+
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:9px;font-weight:700;color:#3b82f6;letter-spacing:3px;text-transform:uppercase;margin-bottom:6px">POWERPLAY · WEEKLY SNAP</div>
+      <div style="font-size:24px;font-weight:800;color:#111827;letter-spacing:-0.3px;margin-bottom:4px">${acc.name}</div>
+      <div style="font-size:11px;color:#6b7280">Week ending ${weekStr} · vs prior week · ${acc.activeW0} user${acc.activeW0!==1?'s':''} active this week${acc.renewal ? ` · 🗓 Renewal: ${acc.renewal}` : ''}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 44px 1fr;gap:12px;align-items:center;margin-bottom:10px">
+      <div style="text-align:center;padding:14px 8px">
+        <div style="font-size:9px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">LAST WEEK</div>
+        <div style="font-size:48px;font-weight:800;color:#374151;line-height:1">${acc.wk1}</div>
+      </div>
+      <div style="text-align:center;font-size:30px;color:#9ca3af;line-height:1">→</div>
+      <div style="text-align:center;padding:14px 8px">
+        <div style="font-size:9px;font-weight:600;color:${isDown?'#dc2626':isUp?'#16a34a':'#9ca3af'};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">THIS WEEK</div>
+        <div style="font-size:48px;font-weight:800;color:${isDown?'#dc2626':isUp?'#16a34a':'#374151'};line-height:1">${acc.wk0}</div>
+      </div>
+    </div>
+
+    ${pctChange!==null
+      ? `<div style="text-align:center;margin:0 0 14px"><span style="display:inline-block;background:${isDown?'#fee2e2':isUp?'#dcfce7':'#f1f5f9'};color:${isDown?'#dc2626':isUp?'#16a34a':'#374151'};font-weight:700;font-size:13px;padding:5px 22px;border-radius:20px">${isDown?'↓':'↑'} ${Math.abs(pctChange)}% activity</span></div>`
+      : '<div style="height:6px"></div>'}
+
+    ${attHtml}
+    ${legendHtml}
+    ${projsHtml}
+    ${hlHtml}
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;margin-top:12px">
+      <div style="font-size:9px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">💬 READY-TO-SEND MESSAGE</div>
+      <div style="font-size:11.5px;color:#14532d;line-height:1.7">${wpMsg}</div>
+    </div>
+
+  </div>`;
+}
+
+function openSnapModal(aId) {
+  const entry = window.accRegistry[aId];
+  if (!entry) return;
+  snapAcc = entry.acc;
+  snapTrainer = entry.trainer;
+  document.getElementById('snap-modal-title').textContent = '📸 Snap — ' + snapAcc.name;
+  document.getElementById('snap-modal-body').innerHTML = buildSnapCard(snapAcc, snapTrainer);
+  document.getElementById('snap-modal').classList.add('open');
+}
+
+// ── Lazy-load external script ────────────────────────────────
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+// ── Download snap as PNG image ────────────────────────────────
+async function downloadSnapImage() {
+  const card = document.getElementById('snap-card');
+  if (!card || !snapAcc) return;
+  const btn = document.getElementById('snap-img-btn');
+  if (btn) btn.textContent = '⏳ Generating...';
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    const canvas = await html2canvas(card, { scale:3, backgroundColor:'#ffffff', useCORS:true, logging:false });
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    const _d=new Date(),_ds=_d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');
+    a.download = `snap_${snapAcc.name.replace(/[^a-z0-9]/gi,'_')}_${_ds}.png`;
+    a.click();
+  } finally {
+    if (btn) btn.textContent = '📷 Image';
+  }
+}
+
+// ── Download snap as PDF — light theme matching reference design ──
+async function downloadSnapPDF() {
+  if (!snapAcc) return;
+  const btn = document.getElementById('snap-pdf-btn');
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const { jsPDF } = window.jspdf;
+
+    const acc     = snapAcc;
+    const trainer = snapTrainer;
+    const { snapProjects, silentProjects, stoppedModules, biggestDrops, topMover, watchOut } = computeSnapData(acc);
+    const pctChange = acc.wk1 > 0 ? Math.round((acc.wk0 - acc.wk1) / acc.wk1 * 100) : null;
+    const weekStr   = getWeekEndingStr();
+    const renewal   = acc.renewal ? String(acc.renewal).slice(0,10) : '';
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const PW = 210, PH = 297, M = 14, CW = PW - M * 2;
+    let y = M, pageNum = 1;
+
+    // ── Helpers ───────────────────────────────────────────────────
+    function hr(hex){ const h=hex.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+    function fr(x,yy,w,h,hex){ const [r,g,b]=hr(hex); pdf.setFillColor(r,g,b); pdf.rect(x,yy,w,h,'F'); }
+    function sr(x,yy,w,h,hex,lw=0.3){ const [r,g,b]=hr(hex); pdf.setDrawColor(r,g,b); pdf.setLineWidth(lw); pdf.rect(x,yy,w,h,'S'); }
+    function rr(x,yy,w,h,rx,hex,style='F'){ const [r,g,b]=hr(hex); if(style.includes('F'))pdf.setFillColor(r,g,b); if(style.includes('S'))pdf.setDrawColor(r,g,b); pdf.roundedRect(x,yy,w,h,rx,rx,style); }
+    function safe(s){ return String(s||'').replace(/[^\x00-\xFF]/g,'').replace(/↑/g,'+').replace(/↓/g,'-').replace(/→/g,'->').replace(/⚠/g,'[!]').replace(/·/g,'.'); }
+    function tx(str,x,yy,{sz=9,bold=false,col='#111827',align='left',mw=0}={}){
+      const [r,g,b]=hr(col); pdf.setFontSize(sz); pdf.setFont('helvetica',bold?'bold':'normal'); pdf.setTextColor(r,g,b);
+      const s=safe(str);
+      if(mw>0){ const lines=pdf.splitTextToSize(s,mw); pdf.text(lines[0]+(lines.length>1?'...':''),x,yy,{align}); }
+      else { pdf.text(s,x,yy,{align}); }
+    }
+    function strW(s,sz){ pdf.setFontSize(sz); return pdf.getStringUnitWidth(safe(s))*sz/pdf.internal.scaleFactor; }
+    function pill(label,x,yy,bgHex,txtHex,sz=7){ const pw=strW(label,sz)+5,ph=5; rr(x,yy,pw,ph,2,bgHex); tx(label,x+pw/2,yy+3.7,{sz,bold:true,col:txtHex,align:'center'}); return pw; }
+    function addFooter(){ fr(M,PH-10,CW,0.2,'#e5e7eb'); tx(safe(acc.name)+' . Weekly Snap . '+weekStr+' . Page '+pageNum,M+CW/2,PH-5,{sz:6.5,col:'#9ca3af',align:'center'}); }
+    function chk(need){ if(y+need>PH-15){ addFooter(); pdf.addPage(); pageNum++; y=M; } }
+    const MC={'attendance':'#3b82f6','task':'#f97316','material':'#a855f7','staff':'#ec4899','expense':'#84cc16','petty_cash':'#f59e0b','boq':'#06b6d4','material payable':'#8b5cf6','drive':'#10b981'};
+    function mCol(n){ return MC[(n||'').toLowerCase()]||'#64748b'; }
+
+    // ══ HEADER (light, bordered card) ════════════════════════════
+    sr(M,y,CW,48,'#e5e7eb',0.4);
+    tx('POWERPLAY  .  WEEKLY SNAP',M+CW/2,y+7,{sz:7.5,bold:true,col:'#3b82f6',align:'center'});
+    tx(acc.name,M+CW/2,y+16,{sz:16,bold:true,col:'#111827',align:'center',mw:CW-8});
+    const sub=['Week ending '+weekStr,'vs prior week'];
+    if(acc.activeW0>0) sub.push(acc.activeW0+' users active this week');
+    if(renewal) sub.push('Renewal: '+renewal);
+    tx(sub.join('  .  '),M+CW/2,y+23,{sz:7.5,col:'#6b7280',align:'center',mw:CW-8});
+    tx('LAST WEEK',M+38,y+30,{sz:7,col:'#9ca3af',align:'center'});
+    tx(String(acc.wk1||0),M+38,y+43,{sz:24,bold:false,col:'#9ca3af',align:'center'});
+    tx('->',M+CW/2,y+40,{sz:14,col:'#d1d5db',align:'center'});
+    const twCol=pctChange!==null?(pctChange>=0?'#16a34a':'#dc2626'):'#111827';
+    tx('THIS WEEK',PW-M-38,y+30,{sz:7,bold:true,col:'#f97316',align:'center'});
+    tx(String(acc.wk0),PW-M-38,y+43,{sz:24,bold:true,col:twCol,align:'center'});
+    y+=51;
+    if(pctChange!==null){
+      const pStr=(pctChange>=0?'+':'')+pctChange+'% activity';
+      const pw=strW(pStr,9)+12,ph=7,px=M+CW/2-pw/2;
+      rr(px,y,pw,ph,3,pctChange>=0?'#dcfce7':'#fee2e2');
+      tx(pStr,M+CW/2,y+5,{sz:9,bold:true,col:pctChange>=0?'#16a34a':'#dc2626',align:'center'});
+      y+=12;
+    }
+    y+=5;
+
+    // ══ NEEDS ATTENTION ═══════════════════════════════════════════
+    const hasAtt=silentProjects.length>0||stoppedModules.length>0||biggestDrops.length>0;
+    if(hasAtt){
+      const blocks=[];
+      if(silentProjects.length) blocks.push({label:'Silent projects: ',text:silentProjects.slice(0,4).map(p=>p.name+' (was '+p.was+')').join(', ')+(silentProjects.length>4?' +'+(silentProjects.length-4)+' more':''),col:'#ea580c'});
+      if(stoppedModules.length) blocks.push({label:'Modules stopped: ',text:stoppedModules.slice(0,3).map(m=>m.module+' on '+m.project+(m.byWho?' (was '+m.was+' by '+m.byWho+')':'(was '+m.was+')')).join('  .  ')+(stoppedModules.length>3?' +'+(stoppedModules.length-3)+' more':''),col:'#92400e'});
+      if(biggestDrops.length)  blocks.push({label:'Biggest drops: ',text:biggestDrops.slice(0,3).map(d=>d.user+' -'+d.drop+' ('+d.module+' on '+d.project+')').join('  .  '),col:'#b91c1c'});
+      let attH=9; blocks.forEach(b=>{ attH+=pdf.splitTextToSize(safe(b.label+b.text),CW-10).length*4.5+2; }); attH+=4;
+      chk(attH);
+      fr(M,y,3,attH,'#f59e0b'); fr(M+3,y,CW-3,attH,'#fff7ed'); sr(M,y,CW,attH,'#fed7aa',0.3);
+      tx('[!] NEEDS ATTENTION',M+6,y+6,{sz:8,bold:true,col:'#d97706'});
+      let ay=y+11;
+      for(const b of blocks){
+        const lw=strW(b.label,8);
+        const [r1,g1,b1]=hr(b.col); pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(r1,g1,b1); pdf.text(safe(b.label),M+6,ay);
+        const bodyLines=pdf.splitTextToSize(safe(b.text),CW-14-lw);
+        pdf.setFont('helvetica','normal'); pdf.setTextColor(30,30,30); pdf.text(bodyLines,M+6+lw,ay);
+        ay+=bodyLines.length*4.5+2;
+      }
+      y+=attH+6;
+    }
+
+    // ══ MODULE LEGEND ════════════════════════════════════════════
+    chk(8);
+    const legendMods=[...new Set(snapProjects.flatMap(p=>(p.modules||[]).map(m=>m.name)))];
+    let lx=M; y+=1;
+    for(const k of legendMods.slice(0,8)){ rr(lx,y+1,3.5,3.5,1.5,mCol(k)); tx(k,lx+5,y+4.5,{sz:7.5,col:'#374151'}); lx+=5+strW(k,7.5)+5; if(lx>PW-M-20){y+=6;lx=M;} }
+    y+=8;
+
+    // ══ PROJECTS ════════════════════════════════════════════════
+    const sortedProj=snapProjects.filter(p=>p.wk0>0||p.wk1>0).sort((a,b)=>{ if(a.wk0===0&&b.wk0>0)return 1; if(b.wk0===0&&a.wk0>0)return -1; return b.wk0-a.wk0; });
+    for(const proj of sortedProj){
+      const pNum=proj.wk1>0?Math.round((proj.wk0-proj.wk1)/proj.wk1*100):null;
+      const pStr=pNum!==null?(pNum>=0?'+'+pNum+'%':''+pNum+'%'):(proj.wk0>0&&proj.wk1===0?'new':'--');
+      const pCol=pNum===null?'#6b7280':pNum>=0?'#16a34a':'#dc2626';
+      const isSilent=proj.wk0===0&&proj.wk1>0;
+      const sortedMods=[...(proj.modules||[])].sort((a,b)=>b.wk0-a.wk0);
+      const visRows=sortedMods.filter(m=>!(m.wk0===0&&m.wk1===0)).length;
+      chk(10+6+visRows*5.5+8);
+      tx((isSilent?'[!] ':'')+proj.name,M,y+6,{sz:10,bold:true,col:isSilent?'#ea580c':'#111827',mw:CW*0.60});
+      tx(proj.wk1+' -> '+proj.wk0,PW-M-3,y+6,{sz:8.5,col:'#374151',align:'right'});
+      if(pNum!==null){ const pw=strW(pStr,8)+6; rr(PW-M-3-strW(proj.wk1+' -> '+proj.wk0,8.5)-pw-4,y+1.5,pw,5.5,2,pNum>=0?'#dcfce7':'#fee2e2'); tx(pStr,PW-M-3-strW(proj.wk1+' -> '+proj.wk0,8.5)-pw/2-4,y+5.2,{sz:8,bold:true,col:pCol,align:'center'}); }
+      else if(proj.wk0>0&&proj.wk1===0){ const pw=strW('new',7.5)+6; rr(PW-M-3-pw-4,y+1.5,pw,5.5,2,'#dbeafe'); tx('new',PW-M-3-pw/2-4,y+5.2,{sz:7.5,bold:true,col:'#1d4ed8',align:'center'}); }
+      y+=8;
+      const barMods=sortedMods.filter(m=>m.wk0>0); const totalBar=barMods.reduce((s,m)=>s+m.wk0,0); const BH=5.5;
+      if(barMods.length>0){ let bx=M; for(const bm of barMods){ const bw=(bm.wk0/totalBar)*CW; fr(bx,y,bw,BH,mCol(bm.name)); if(bw>10)tx(String(bm.wk0),bx+bw/2,y+4,{sz:7,bold:true,col:'#ffffff',align:'center'}); bx+=bw; } }
+      else if(isSilent){ rr(M,y,16,BH,2,'#fee2e2'); tx('0',M+8,y+4,{sz:7.5,bold:true,col:'#dc2626',align:'center'}); }
+      y+=BH+1.5;
+      const stoppedChips=[];
+      for(const mod of sortedMods){
+        if(mod.wk0===0&&mod.wk1===0) continue;
+        chk(6);
+        fr(M+1,y+1.5,2.5,2.5,mCol(mod.name));
+        tx(mod.name+'  '+mod.wk0,M+5.5,y+4.5,{sz:8.5,bold:true,col:'#111827'});
+        let cx=M+44;
+        if(mod.wk0===0&&mod.wk1>0){
+          stoppedChips.push(mod);
+          const who=(mod.users||[]).filter(u=>u.wk1>0).slice(0,2).map(u=>(u.user||'unassigned')+' '+u.wk1).join(', ');
+          if(who){ const cw=strW('was '+who,7)+8; rr(cx,y,cw,5.5,2,'#fff7ed'); const [rd,gd,bd]=hr('#fed7aa'); pdf.setDrawColor(rd,gd,bd); pdf.setLineWidth(0.2); pdf.roundedRect(cx,y,cw,5.5,2,2,'S'); tx('was '+who,cx+4,y+4.2,{sz:7,col:'#ea580c',mw:CW-cx}); }
+        } else {
+          if(mod.wk1>0){ const mp=Math.round((mod.wk0-mod.wk1)/mod.wk1*100); const pw=pill((mp>=0?'+':'')+mp+'%',cx,y,mp>=0?'#dcfce7':'#fee2e2',mp>=0?'#16a34a':'#dc2626'); cx+=pw+3; }
+          else if(mod.wk0>0&&mod.wk1===0){ const pw=pill('new module',cx,y,'#dbeafe','#1d4ed8',6.5); cx+=pw+3; }
+          const visU=(mod.users||[]).filter(u=>u.wk0>0||u.wk1>0).slice(0,2);
+          if(visU.length){ tx('--',cx,y+4.5,{sz:7.5,col:'#9ca3af'}); cx+=5; for(const u of visU){ const uN=safe(u.user||'unassigned'); const ud=u.wk1>0?Math.round((u.wk0-u.wk1)/u.wk1*100):null; const uStr=uN+'  '+u.wk0+(ud!==null?'  '+(ud>=0?'+':'')+ud:''); tx(uStr,cx,y+4.5,{sz:7.5,col:'#374151',bold:ud!==null&&ud<0,mw:PW-M-3-cx}); cx+=strW(uStr,7.5)+5; } }
+        }
+        y+=5.5;
+      }
+      if(stoppedChips.length>0){
+        chk(8); let scx=M+3;
+        tx('[!] Stopped this week:',scx,y+4,{sz:7.5,col:'#92400e'}); scx+=37;
+        for(const sc of stoppedChips){
+          const who=(sc.users||[]).filter(u=>u.wk1>0).slice(0,1).map(u=>'was '+u.wk1+' by '+safe(u.user||'?')).join('');
+          const chip=safe(sc.name)+(who?' ('+who+')':'');
+          const cpw=Math.min(65,strW(chip,7)+8);
+          rr(scx,y,cpw,6,2,'#fff7ed'); const [rd,gd,bd]=hr('#fed7aa'); pdf.setDrawColor(rd,gd,bd); pdf.setLineWidth(0.2); pdf.roundedRect(scx,y,cpw,6,2,2,'S');
+          tx(chip,scx+cpw/2,y+4.2,{sz:7,col:'#ea580c',align:'center',mw:cpw-4}); scx+=cpw+3;
+        }
+        y+=8;
+      }
+      y+=4;
+    }
+
+    // ══ HIGHLIGHTS ═══════════════════════════════════════════════
+    if(topMover||watchOut){
+      chk(34); y+=2;
+      tx('THIS WEEK\'S HIGHLIGHTS',M,y+4,{sz:8,bold:true,col:'#6b7280'}); y+=8;
+      const hw=(CW-4)/2, hh=24;
+      if(topMover){ rr(M,y,hw,hh,3,'#f0fdf4'); sr(M,y,hw,hh,'#bbf7d0',0.3); tx('TOP MOVER',M+4,y+6,{sz:7.5,bold:true,col:'#15803d'}); tx(safe(topMover.user||''),M+4,y+13,{sz:10,bold:true,col:'#111827',mw:hw-8}); tx(safe(topMover.project)+' . '+safe(topMover.module)+'  +'+(topMover.pct||0)+'%',M+4,y+20,{sz:7.5,col:'#374151',mw:hw-8}); }
+      if(watchOut){ const wx=M+hw+4; rr(wx,y,hw,hh,3,'#fff5f5'); sr(wx,y,hw,hh,'#fca5a5',0.3); tx('[!] WATCH OUT',wx+4,y+6,{sz:7.5,bold:true,col:'#dc2626'}); tx(safe(watchOut.project||''),wx+4,y+13,{sz:10,bold:true,col:'#111827',mw:hw-8}); tx(safe(watchOut.issue||''),wx+4,y+20,{sz:7.5,col:'#374151',mw:hw-8}); }
+      y+=hh+6;
+    }
+
+    // ══ READY-TO-SEND MESSAGE ════════════════════════════════════
+    const msgParts=['[!] Hi '+safe(acc.name.split(' ')[0]||acc.name)+' Sir,'];
+    if(pctChange!==null&&pctChange<0) msgParts.push(' activity dropped to '+acc.wk0+' this week (down '+Math.abs(pctChange)+'%).');
+    else if(pctChange!==null) msgParts.push(' activity increased to '+acc.wk0+' this week (up '+pctChange+'%).');
+    if(watchOut) msgParts.push(' '+safe(watchOut.project)+' needs attention -- '+safe(watchOut.issue||'')+'.');
+    if(silentProjects.length>0) msgParts.push(' Note: '+silentProjects.slice(0,2).map(p=>safe(p.name)+' went silent (was '+p.was+')').join(', ')+'.');
+    msgParts.push(' Want me to set up a 15-min refresher next week?');
+    const msgText=msgParts.join('');
+    const msgLines=pdf.splitTextToSize(msgText,CW-14);
+    const msgH=msgLines.length*4.8+14;
+    chk(msgH+6); y+=2;
+    fr(M,y,3,msgH,'#f59e0b'); fr(M+3,y,CW-3,msgH,'#fffbeb'); sr(M,y,CW,msgH,'#fed7aa',0.3);
+    const [rm,gm,bm]=hr('#78350f'); pdf.setFontSize(8.5); pdf.setFont('helvetica','normal'); pdf.setTextColor(rm,gm,bm);
+    pdf.text(msgLines,M+7,y+8);
+    y+=msgH+8;
+
+    // ══ FOOTER ═══════════════════════════════════════════════════
+    addFooter();
+
+    const _today = new Date();
+    const _dateStr = _today.getFullYear()+'-'+String(_today.getMonth()+1).padStart(2,'0')+'-'+String(_today.getDate()).padStart(2,'0');
+    pdf.save('snap_'+acc.name.replace(/[^a-z0-9]/gi,'_')+'_'+_dateStr+'.pdf');
+  } finally {
+    if (btn) { btn.textContent = 'PDF'; btn.disabled = false; }
+  }
+}
+
+
 function closeSnapModal() {
-  document.getElementById('snapModal').classList.remove('show');
+  document.getElementById('snap-modal').classList.remove('open');
+  snapAcc = null;
 }
-function toggleFullDetail(){}
-function copyCaption(){
-  const txt = document.getElementById('captionText').value;
-  navigator.clipboard.writeText(txt).then(function(){showSnapToast('Copied');});
+
+// ── User list inline expansion — opens BELOW the account row ────
+let _dropExpand = null; // { row: HTMLElement, aId, type }
+
+function showDropPopup(aId, type, evt) {
+  if (evt) evt.stopPropagation();
+
+  // Toggle: clicking the same button again closes the panel
+  if (_dropExpand && _dropExpand.aId === aId && _dropExpand.type === type) {
+    closeDropPopup();
+    return;
+  }
+  closeDropPopup();
+
+  const entry = window.accRegistry[aId];
+  if (!entry) return;
+  const acc = entry.acc;
+
+  // Config per type
+  const cfg = {
+    dropx:  { list: acc.droppedXList||[],  count: acc.dropX,    title:'↓ Newly dropped this week (Active W1 → Silent W0)', color:'#ed8936', label:'newly dropped' },
+    dropy:  { list: acc.coldPoolList||[],   count: acc.dropY,    title:'❄ Full cold pool (Silent W0, active any prior week)',  color:'#4a9edd', label:'in cold pool' },
+    active: { list: acc.activeW0List||[],   count: acc.activeW0, title:'✅ Active users this week (W0)',                        color:'#48bb78', label:'active this week' },
+    conn:   { list: acc.connW0List||[],     count: acc.connW0,   title:'📞 Connected drop users (called this week)',            color:'#68d391', label:'connected' },
+    // legacy aliases
+    x:      { list: acc.droppedXList||[],   count: acc.dropX,    title:'↓ Newly dropped this week (Active W1 → Silent W0)', color:'#ed8936', label:'newly dropped' },
+    y:      { list: acc.coldPoolList||[],   count: acc.dropY,    title:'❄ Full cold pool (Silent W0, active any prior week)',  color:'#4a9edd', label:'in cold pool' },
+  };
+  const c = cfg[type] || cfg.dropy;
+  const users = c.list;
+  const accentColor = c.color;
+
+  // Fallback: raw count available but no individual rows
+  let userRowsHtml;
+  if (users.length === 0) {
+    const cnt = c.count;
+    if (!cnt || cnt === 0 || cnt === '—') return;
+    userRowsHtml = `<div style="color:#718096;font-style:italic;font-size:12px;padding:8px 0">${cnt} user${cnt>1?'s':''} ${c.label} — individual details not available in query data</div>`;
+  } else {
+    userRowsHtml = users.map(u =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;gap:20px;padding:5px 0;border-bottom:1px solid #1a2535">
+        <span style="color:#c8d8e8;font-size:12px">👤 ${u.user||'—'}</span>
+        <span style="color:${accentColor};font-family:monospace;font-size:12px;white-space:nowrap">${u.mobile||''}</span>
+      </div>`
+    ).join('');
+  }
+
+  const countStr = users.length
+    ? `${users.length} user${users.length!==1?'s':''} ${c.label}`
+    : `${c.count||0} ${c.label}`;
+
+  // Find account row
+  const tr = document.querySelector(`tr.row-account[data-aid="${aId}"]`);
+  if (!tr) return;
+
+  const newTr = document.createElement('tr');
+  newTr.id = 'drop-expand-row';
+  newTr.style.cssText = `border-bottom:2px solid ${accentColor}`;
+  newTr.innerHTML = `<td colspan="20" style="padding:0;background:#0d1220">
+    <div style="padding:12px 24px 14px;background:#111827;border-top:2px solid ${accentColor};border-bottom:1px solid #1e2535">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:10px;color:${accentColor};text-transform:uppercase;letter-spacing:.6px;font-weight:700">${c.title}</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:10px;color:#4a5568">${countStr}</span>
+          <button onclick="closeDropPopup()" style="background:#1e2535;border:1px solid #2d3748;border-radius:5px;color:#a0aec0;cursor:pointer;font-size:11px;padding:3px 10px;transition:all .15s" onmouseover="this.style.background='#2d3748'" onmouseout="this.style.background='#1e2535'">✕ Close</button>
+        </div>
+      </div>
+      <div style="columns:${users.length>10?2:1};column-gap:32px">${userRowsHtml}</div>
+    </div>
+  </td>`;
+
+  tr.after(newTr);
+  _dropExpand = { row: newTr, aId, type };
+  newTr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
-function downloadSnapPNG(){ showSnapToast('PNG export — wire in snap module'); }
-function downloadSnapPDF(){ showSnapToast('PDF export — wire in snap module'); }
-function showSnapToast(msg) {
-  const t = document.getElementById('snapToast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(function(){t.classList.remove('show');}, 1800);
+
+function closeDropPopup() {
+  if (_dropExpand) { _dropExpand.row.remove(); _dropExpand = null; }
 }
-document.getElementById('snapModal').addEventListener('click', function(e) {
-  if (e.target.id === 'snapModal') closeSnapModal();
+</script>
+
+<!-- ── Template Settings Modal ── -->
+<div class="modal-bg" id="tmpl-modal" onclick="if(event.target===this)closeTemplateModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>✉ Email Templates</h2>
+      <button class="modal-close" onclick="closeTemplateModal()">✕</button>
+    </div>
+    <div class="modal-body" id="tmpl-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="resetTmpl()">Reset to Default</button>
+      <button class="btn-primary" id="tmpl-save-btn" onclick="saveTmplCurrent()">Save Template</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Snap Report Modal ── -->
+<div class="modal-bg" id="snap-modal" onclick="if(event.target===this)closeSnapModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="snap-modal-title">📸 Snap Report</h2>
+      <button class="modal-close" onclick="closeSnapModal()">✕</button>
+    </div>
+    <div class="modal-body" id="snap-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="closeSnapModal()">Close</button>
+      <button id="snap-img-btn" class="btn-secondary" onclick="downloadSnapImage()" style="background:#1a3050;border-color:#2d5080;color:#7eb8f0">📷 Image</button>
+      <button id="snap-pdf-btn" class="btn-primary" onclick="downloadSnapPDF()">📄 PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Progress Email Modal ── -->
+<div class="email-modal-bg" id="progressEmailModal" onclick="if(event.target===this)closeProgressEmail()">
+  <div class="email-modal">
+    <div class="email-modal-head">
+      <h2>📧 Progress Email Generator</h2>
+      <button class="email-close-btn" onclick="closeProgressEmail()">✕</button>
+    </div>
+    <div class="email-subj-row">
+      <span class="email-subj-lbl">Subject:</span>
+      <span class="email-subj-txt" id="progEmailSubjText">—</span>
+      <button class="email-subj-copy" onclick="copyProgSubject()">📋 Copy</button>
+    </div>
+    <input type="hidden" id="progEmailSubjVal" value="">
+    <div class="email-status-pill-wrap" id="progEmailPill"></div>
+    <div class="email-body-box" id="progEmailBody"></div>
+    <textarea id="progEmailPlain" style="display:none"></textarea>
+    <div class="email-actions-row">
+      <button class="email-copy-body-btn" onclick="copyProgEmail()">📋 Copy Email Body</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Send Email Modal ── -->
+<div class="modal-bg" id="send-modal" onclick="if(event.target===this)closeSendModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="send-modal-title">✉ Send Email</h2>
+      <button class="modal-close" onclick="closeSendModal()">✕</button>
+    </div>
+    <div class="modal-body" id="send-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn-secondary" onclick="closeSendModal()">Cancel</button>
+      <button class="btn-primary" onclick="doSendEmail()">📤 Open in Mail App</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Drop users floating popup ── -->
+<div id="dropFloatPopup" style="display:none;position:fixed;z-index:3000;background:#0d1424;border:1px solid #2a3550;border-radius:8px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.75);max-width:720px" onclick="event.stopPropagation()">
+  <div id="dropFloatTitle" style="font-size:9px;color:#7C8AA3;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:7px">Users</div>
+  <div id="dropFloatPills" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+</div>
+
+<script>
+// ── Show user popup (active / dropx / dropy / conn) ──────────
+function showUserPopup(aId, type, evt) {
+  const popup = document.getElementById('dropFloatPopup');
+  if (!popup) return;
+  const key = aId + ':' + type;
+  if (popup.dataset.key === key && popup.style.display !== 'none') {
+    popup.style.display = 'none'; popup.dataset.key = ''; return;
+  }
+  const entry = window.accRegistry && window.accRegistry[aId];
+  if (!entry) return;
+  const acc = entry.acc;
+  const listMap = {
+    dropx: acc.droppedXList || [],
+    dropy: acc.coldPoolList || [],
+    active: acc.activeW0List || [],
+    conn:   acc.connW0List  || []
+  };
+  const titleMap = {
+    dropx:  '↓ Newly dropped this week (W1→W0)',
+    dropy:  '❄ Full cold pool (silent this week)',
+    active: '✅ Active users this week (W0)',
+    conn:   '📞 Connected drop users (called this week)'
+  };
+  const colorMap = { dropx:'#F0997B', dropy:'#4a9edd', active:'#68d391', conn:'#68d391' };
+  const bgMap    = { dropx:'#2A1810', dropy:'#0d1f2d', active:'#0d2210', conn:'#0d2210' };
+  const users = listMap[type] || [];
+  // Count fallback for when raw metrics are used (no individual user rows)
+  const countFallback = { active: entry.acc.activeW0, conn: entry.acc.connW0, dropx: entry.acc.dropX, dropy: entry.acc.dropY };
+  if (!users.length) {
+    const cnt = countFallback[type];
+    if (!cnt || cnt === 0 || cnt === '—') return;
+    document.getElementById('dropFloatTitle').textContent = titleMap[type] || 'Users';
+    document.getElementById('dropFloatPills').innerHTML = `<span style="font-size:11px;color:#7C8AA3;font-style:italic">${cnt} user${cnt>1?'s':''} active — individual user details not available in query data</span>`;
+    popup.dataset.key = key;
+    popup.style.display = 'block';
+    const el2 = (evt||event).target;
+    const rect2 = el2.getBoundingClientRect();
+    popup.style.top = (rect2.bottom + 6) + 'px';
+    popup.style.left = Math.max(10, Math.min(rect2.left - 10, window.innerWidth - 660)) + 'px';
+    return;
+  }
+  const pills = users.map(u => {
+    const userId = (typeof u === 'object' ? (u.user || '') : u) || '';
+    const mobile = typeof u === 'object' ? (u.mobile || '') : '';
+    const nameDisplay = /^USR[a-zA-Z0-9]{6,}$/.test(userId) ? `User ${userId.substring(3,9).toUpperCase()}` : (userId || '—');
+    const mobDisplay = mobile ? ` · ${mobile}` : '';
+    return `<span style="font-size:11px;background:${bgMap[type]};color:${colorMap[type]};padding:4px 10px;border-radius:4px;white-space:nowrap">${nameDisplay}${mobDisplay}</span>`;
+  }).join('');
+  document.getElementById('dropFloatTitle').textContent = titleMap[type] || 'Users';
+  document.getElementById('dropFloatPills').innerHTML = pills;
+  popup.dataset.key = key;
+  popup.style.display = 'block';
+  const el = (evt||event).target;
+  const rect = el.getBoundingClientRect();
+  popup.style.top = (rect.bottom + 6) + 'px';
+  popup.style.left = Math.max(10, Math.min(rect.left - 10, window.innerWidth - 660)) + 'px';
+}
+// keep old name as alias so any existing calls still work
+function toggleDropRow(aId){ showUserPopup(aId,'dropy',event); }
+document.addEventListener('click', function() {
+  const p = document.getElementById('dropFloatPopup');
+  if (p) { p.style.display = 'none'; p.dataset.key = ''; }
 });
-fetchAndRender();
+
+// ── Progress Email Generator ─────────────────────────────────
+function openProgressEmail(aId) {
+  const entry = window.accRegistry[aId];
+  if (!entry) { return; }
+  const acc = entry.acc;
+  const tName = entry.trainer || '';
+  const TRAINER_NAMES = {'digvijay':'Digvijay','farid':'S Farid','sfarid':'S Farid','divya':'Divya','ipsita':'Ipsita Tripathy','ipsitatripathy':'Ipsita Tripathy','maima':'Maima','manas':'Manas','manas.c':'Manas'};
+  const trainerKey = tName.toLowerCase().replace(/[@.].*$/,'').replace(/\./g,'').trim();
+  const trainerName = TRAINER_NAMES[trainerKey] || tName.split('.').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+  const orgFirst = acc.name.split(' ')[0];
+  const orgShort = acc.name.length>28 ? acc.name.substring(0,26)+'…' : acc.name;
+  const projCount = (acc.projects||[]).length;
+
+  const MOD_NAMES = {'material':'Material Module','task':'Task Module','attendance':'Attendance Module','expense':'Expense Module','drive':'Drive Module','boq':'BOQ/Cost Module','material payable':'Vendor Payables','material payable payment':'Payment Module'};
+  function modDisp(n){return MOD_NAMES[(n||'').toLowerCase()]||((n||'').charAt(0).toUpperCase()+(n||'').slice(1));}
+  function entr(n){return `${n} entr${n===1?'y':'ies'}`;}
+
+  const allMods={};
+  (acc.projects||[]).forEach(p=>{
+    (p.modules||[]).forEach(m=>{
+      if(!allMods[m.name]) allMods[m.name]={wk0:0,wk1:0,projs:[]};
+      allMods[m.name].wk0+=(m.wk0||0); allMods[m.name].wk1+=(m.wk1||0);
+      if((m.wk0||0)>0) allMods[m.name].projs.push(p.name);
+    });
+  });
+  const activeModules=[],dropModules=[],zeroModules=[];
+  Object.entries(allMods).forEach(([name,d])=>{
+    if(d.wk0>0) activeModules.push({name,wk0:d.wk0,wk1:d.wk1,projs:[...new Set(d.projs)]});
+    else if(d.wk1>0) dropModules.push({name,wk0:0,wk1:d.wk1});
+    else zeroModules.push({name});
+  });
+
+  const obPlanned=[];
+  function addOB(v,d){if(!v)return;const s=String(v).trim();if(!s)return;const isInd=['y','yes','1','true'].includes(s.toLowerCase());obPlanned.push({display:d,plan:isInd?'':s});}
+  addOB(acc.ob?.mat,'Material Module'); addOB(acc.ob?.tsk,'Task Module');
+  addOB(acc.ob?.att,'Attendance Module'); addOB(acc.ob?.exp,'Expense/BOQ Module');
+  addOB(acc.mat_plan,'Material Module'); addOB(acc.tsk_plan,'Task Module');
+  addOB(acc.att_plan,'Attendance Module'); addOB(acc.exp_plan,'Expense/BOQ Module');
+
+  const activeSet=new Set(activeModules.map(m=>modDisp(m.name)));
+  const obGaps=obPlanned.filter(pm=>!activeSet.has(pm.display));
+  const gapModules=obGaps.length>0?obGaps:zeroModules.map(m=>({display:modDisp(m.name),plan:''}));
+  const dropProj=(acc.projects||[]).filter(p=>(p.wk0||0)<(p.wk1||0)).sort((a,b)=>((b.wk1||0)-(b.wk0||0))-((a.wk1||0)-(a.wk0||0)))[0];
+
+  const isInactive = acc.priority === 'INACTIVE';
+  const projActive=(acc.projects||[]).filter(p=>(p.wk0||0)>0).map(p=>p.name).join(', ')||'—';
+  const obNotes = acc.ob_notes||acc.ob?.notes||'';
+  const isSetupNote = obNotes.toLowerCase().includes('configuration')||obNotes.toLowerCase().includes('finalized')||obNotes.toLowerCase().includes('setup');
+  const obIntro = obNotes.length>5&&!isSetupNote ? `At the time of onboarding, the core problem discussed was: ${obNotes.substring(0,200)}${obNotes.length>200?'…':''}` : 'At the time of onboarding, the core challenge discussed was real-time visibility into site activities — material consumption, labour, and task progress — all tracked in one place instead of WhatsApp/Excel.';
+
+  const matFamily=activeModules.filter(m=>['material','material payable','material payable payment'].includes(m.name.toLowerCase()));
+  const otherMods=activeModules.filter(m=>!['material','material payable','material payable payment'].includes(m.name.toLowerCase()));
+  const orderedMods=[...matFamily,...otherMods.sort((a,b)=>Math.max(b.wk0,b.wk1)-Math.max(a.wk0,a.wk1))];
+  const primaryMod=orderedMods[0];
+
+  let wellNarrative='';
+  if(primaryMod){
+    if(matFamily.length>0){
+      const matMod=matFamily.find(m=>m.name.toLowerCase()==='material');
+      const payMods=matFamily.filter(m=>m.name.toLowerCase()!=='material');
+      const matProjs=matMod?[...new Set(matMod.projs)]:[];
+      const payProjs=[...new Set(payMods.flatMap(m=>m.projs))];
+      const matLine=matMod?`The Material Module is now live and active across ${matProjs.length>0?matProjs.join(', '):projActive}. The team has logged ${entr(matMod.wk0)} this week${matMod.wk1>0?' ('+matMod.wk1+' last week)':''} — this is exactly the visibility we aimed for — material consumption mapped per project, in real time.`:'';
+      const payLine=payMods.length>0?` Vendor payables are also being tracked${payProjs.length>0?' in '+payProjs.join(', '):''}.`:'';
+      wellNarrative+=matLine+payLine;
+      otherMods.forEach(m=>{const mProjs=m.projs.length>0?m.projs.join(', '):projActive; wellNarrative+=`\n\nThe ${modDisp(m.name)} is also active in ${mProjs} with ${entr(m.wk0)} this week${m.wk1>0?' ('+m.wk1+' last week)':''}.`;});
+    } else {
+      const allProjNames=[...new Set(activeModules.flatMap(m=>m.projs))];
+      const projStr=allProjNames.length>0?`all ${allProjNames.length} project${allProjNames.length>1?'s':''} — ${allProjNames.join(', ')}`:projActive;
+      wellNarrative+=`The ${modDisp(primaryMod.name)} is now live and active across ${projStr}. The team has logged ${entr(primaryMod.wk0)} this week${primaryMod.wk1>0?' ('+primaryMod.wk1+' last week)':''} — this is exactly the visibility we aimed for.`;
+      orderedMods.slice(1).forEach(m=>{const mProjs=m.projs.length>0?m.projs.join(', '):projActive; wellNarrative+=`\n\nThe ${modDisp(m.name)} is also active in ${mProjs} with ${entr(m.wk0)} this week${m.wk1>0?' ('+m.wk1+' last week)':''}.`;});
+    }
+  } else { wellNarrative=`${acc.wk0||0} actions recorded this week across ${projActive}.`; }
+
+  let gapBlock='';
+  if(gapModules.length>0){
+    const gapNames=gapModules.map(g=>g.display).join(' & ');
+    const gapLines=gapModules.map(gm=>{const p=gm.plan&&gm.plan.length>2?` — ${gm.plan}`:''; return `• ${gm.display}${p}`;}).join('\n');
+    gapBlock=`\n❗ Not Yet Started — ${gapNames}\nThese were part of the original plan from your onboarding discussion but haven't been set up yet:\n${gapLines}\n\nStarting even one of these this week will directly address the original challenges you signed up to solve.\n`;
+  }
+  let attBlock='';
+  if(dropProj){
+    const dropMods=(dropProj.modules||[]).filter(m=>(m.wk0||0)<(m.wk1||0)).sort((a,b)=>((b.wk1||0)-(b.wk0||0))-((a.wk1||0)-(a.wk0||0)));
+    const dm=dropMods[0];
+    const dropDesc=dm?`${modDisp(dm.name)} entries dropped from ${dm.wk1} → ${dm.wk0} this week`:`activity dropped from ${dropProj.wk1} → ${dropProj.wk0} this week`;
+    attBlock=`\n⚠️ One Area Needs Attention — ${dropProj.name}\n${dropProj.name}: ${dropDesc}. A quick 15-min call with the site team will fix this.\n`;
+  }
+
+  const greeting=acc.poc_name&&acc.poc_name.length>2?`Hi ${acc.poc_name} & Team,`:`Hi ${orgFirst} Sir & Team,`;
+  const s1=gapModules.length>0?`Share the required data with ${trainerName} to complete ${gapModules[0].display} setup — this week`:dropProj?`Quick connect with the ${dropProj.name} site team to restart daily entries`:`Expand usage to all ${projCount} project${projCount!==1?'s':''}`;
+  const s2=dropProj?`Schedule a 15-min call with ${trainerName} to review the ${dropProj.name} drop`:gapModules.length>1?`Schedule a 15-min walkthrough with ${trainerName} for ${gapModules[1].display}`:`Keep modules consistent across all ${projCount} project${projCount!==1?'s':''}`;
+  const s3=gapModules.length>0?`Schedule a walkthrough with ${trainerName} for ${gapModules[0].display} — 15 mins is all it takes`:`Schedule a review call with ${trainerName}`;
+  const s4=gapModules.length>0?`Once ${gapModules[0].display} is live → Phase 2: full cost vs. actual visibility across all your projects`:'';
+
+  let plain,html;
+  if(isInactive){
+    plain=`Hi ${orgFirst} Sir & Team,\n\nHope you're doing well. We noticed that Powerplay hasn't been active since our onboarding session. We genuinely want to make sure the problems you came to us with actually get solved.\n\n💡 Why You Signed Up\n${obIntro}\n\n📋 What's Ready For You\n• System is configured and waiting\n• ${trainerName} is ready to resume right where we left off\n• All ${projCount} project(s) are set up on Powerplay\n\n⚡ One Ask — Let's Restart\nCan we schedule a 30-minute session this week?\n\nPlease share a convenient time and we'll take it from there immediately.\n\nWarm regards,\n${trainerName} & Monika\nPowerplay — Customer Success`;
+  } else {
+    plain=`${greeting}\n\nHope everyone is doing well! It's been a few weeks since we went live on Powerplay, and we wanted to share a quick progress update.\n\n✅ What's Going Well\n${obIntro}\n\n${wellNarrative}\n${gapBlock}${attBlock}\n📋 Suggested Next Steps\n1. ${s1}\n2. ${s2}\n3. ${s3}${s4?'\n4. '+s4:''}\n\nWe're excited about the progress. Please share a convenient time this week — ${trainerName} will take it from there!\n\nWarm regards,\n${trainerName} & Monika\nPowerplay — Customer Success`;
+  }
+  html=plain.replace(/✅ What's Going Well/,'<b>✅ What\'s Going Well</b>').replace(/❗ Not Yet Started[^\n]*/,m=>'<b>'+m+'</b>').replace(/⚠️ One Area[^\n]*/,m=>'<b>'+m+'</b>').replace(/📋 Suggested Next Steps/,'<b>📋 Suggested Next Steps</b>').replace(/\n/g,'<br>');
+
+  const subject=isInactive?`Action Required: Your Powerplay Onboarding | ${orgShort}`:`Powerplay Progress Update — Your Active Projects | ${orgShort}`;
+  const pillMap={INACTIVE:['pill-inactive','⚫ INACTIVE'],CRITICAL:['pill-drop','🔴 CRITICAL'],HIGH:['pill-drop','🟠 HIGH'],MEDIUM:['pill-active','🟡 MEDIUM'],LOW:['pill-active','🟢 LOW'],STABLE:['pill-stable','✅ STABLE'],STABLE_DROP:['pill-drop','📉 STABLE DROP']};
+  const [cls,lbl]=pillMap[acc.priority]||['pill-stable',acc.priority];
+  document.getElementById('progEmailPill').innerHTML=`<span class="email-status-pill ${cls}">${lbl}</span>`;
+  document.getElementById('progEmailSubjText').textContent=subject;
+  document.getElementById('progEmailSubjVal').value=subject;
+  document.getElementById('progEmailBody').innerHTML=html;
+  document.getElementById('progEmailPlain').value=plain;
+  document.getElementById('progressEmailModal').classList.add('show');
+}
+function closeProgressEmail(){document.getElementById('progressEmailModal').classList.remove('show');}
+function copyProgEmail(){navigator.clipboard.writeText(document.getElementById('progEmailPlain').value).then(()=>{const t=document.querySelector('.snap-toast');if(t){t.textContent='Email copied ✓';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}});}
+function copyProgSubject(){navigator.clipboard.writeText(document.getElementById('progEmailSubjVal').value).then(()=>{const t=document.querySelector('.snap-toast');if(t){t.textContent='Subject copied ✓';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}});}
 </script>
 </body>
 </html>
