@@ -2223,8 +2223,12 @@ function openProgressEmail(aId) {
         'vendor payables':{p:sv||'vendor payable tracking was being done manually with no real-time visibility into what was owed to each vendor',c:'setting up Vendor Payables so amounts are auto-calculated from material entries',x:"The vendor list hasn't been shared yet, so setup is pending",b:'all vendor dues will be auto-calculated from material entries — no manual reconciliation needed'},
         'material payable':{p:sv||'vendor payable tracking was being done manually with no real-time visibility into what was owed to each vendor',c:'setting up Vendor Payables so amounts are auto-calculated from material entries',x:"The vendor list hasn't been shared yet, so setup is pending",b:'all vendor dues will be auto-calculated from material entries — no manual reconciliation needed'},
         'payment module':{p:sv||'there was no structured way to release and track vendor payments linked to material deliveries',c:'setting up the Payment Module to release vendor payments directly from Powerplay',x:"This hasn't been started yet",b:'vendor payments can be released and tracked against each delivery — full payment history in one place'}
-      }[n]||{p:sv||'this was discussed as a core need during onboarding',c:`completing the ${gm.display} setup`,x:"This hasn't been started yet",b:`${trainerName} can complete the setup in one focused session`};
-      return `• ${gm.display} — At onboarding, the challenge discussed was that ${d.p}. We had committed to ${d.c}. ${d.x}. Once live, ${d.b}.`;
+      }[n]||{p:sv,c:`completing the ${gm.display} setup`,x:"This hasn't been started yet",b:`${trainerName} can complete the setup in one focused session`};
+      // If specific pain point exists → use it. Otherwise → use onboarding reference sentence.
+      const sentence = d.p
+        ? `At onboarding, the challenge discussed was that ${d.p}. We had committed to ${d.c}. ${d.x}. Once live, ${d.b}.`
+        : `This was discussed as a core need during our onboarding session. We had committed to ${d.c}. ${d.x}. Once live, ${d.b}.`;
+      return `• ${gm.display} — ${sentence}`;
     }).join('\n');
     const pl=gapModules.length>1?'These were both core':'This was a core';
     gapBlock=`\n❗ Not Yet Started — ${gapNames}\n${pl} Phase 1 commitment${gapModules.length>1?'s':''} from our onboarding discussion and directly tied to problem${gapModules.length>1?'s':''} you raised:\n${gapLines}\n`;
