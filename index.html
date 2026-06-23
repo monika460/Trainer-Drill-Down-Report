@@ -2167,8 +2167,13 @@ function openProgressEmail(aId) {
   const isSetupNote = obNotes.toLowerCase().includes('configuration')||obNotes.toLowerCase().includes('finalized')||obNotes.toLowerCase().includes('setup');
   const obIntro = obNotes.length>5&&!isSetupNote ? `At the time of onboarding, the core problem we discussed was ${obNotes.substring(0,200)}${obNotes.length>200?'…':''}` : 'no real-time visibility into site activities — material consumption, labour, and task progress were all tracked on WhatsApp and Excel with no consolidated view.';
 
-  const matFamily=activeModules.filter(m=>['material','material payable','material payable payment'].includes(m.name.toLowerCase()));
-  const otherMods=activeModules.filter(m=>!['material','material payable','material payable payment'].includes(m.name.toLowerCase()));
+  // ── Split active modules by threshold (20 = going well) ──
+  const WELL_THRESHOLD = 20;
+  const healthyMods = activeModules.filter(m => m.wk0 >= WELL_THRESHOLD);
+  const lowMods     = activeModules.filter(m => m.wk0 > 0 && m.wk0 < WELL_THRESHOLD);
+
+  const matFamily=healthyMods.filter(m=>['material','material payable','material payable payment'].includes(m.name.toLowerCase()));
+  const otherMods=healthyMods.filter(m=>!['material','material payable','material payable payment'].includes(m.name.toLowerCase()));
   const orderedMods=[...matFamily,...otherMods.sort((a,b)=>Math.max(b.wk0,b.wk1)-Math.max(a.wk0,a.wk1))];
   const primaryMod=orderedMods[0];
 
@@ -2184,12 +2189,22 @@ function openProgressEmail(aId) {
       wellNarrative+=matLine+payLine;
       otherMods.forEach(m=>{const mProjs=m.projs.length>0?m.projs.join(', '):projActive; wellNarrative+=`\n\nThe ${modDisp(m.name)} is also active in ${mProjs} with ${entr(m.wk0)} this week${m.wk1>0?' ('+m.wk1+' last week)':''}.`;});
     } else {
-      const allProjNames=[...new Set(activeModules.flatMap(m=>m.projs))];
+      const allProjNames=[...new Set(healthyMods.flatMap(m=>m.projs))];
       const projStr=allProjNames.length>0?`all ${allProjNames.length} project${allProjNames.length>1?'s':''} — ${allProjNames.join(', ')}`:projActive;
       wellNarrative+=`The ${modDisp(primaryMod.name)} is now live and active across ${projStr}. The team has logged ${entr(primaryMod.wk0)} this week${primaryMod.wk1>0?' ('+primaryMod.wk1+' last week)':''} — this is exactly the visibility we aimed for.`;
       orderedMods.slice(1).forEach(m=>{const mProjs=m.projs.length>0?m.projs.join(', '):projActive; wellNarrative+=`\n\nThe ${modDisp(m.name)} is also active in ${mProjs} with ${entr(m.wk0)} this week${m.wk1>0?' ('+m.wk1+' last week)':''}.`;});
     }
-  } else { wellNarrative=`${acc.wk0||0} actions recorded this week across ${projActive}.`; }
+  }
+
+  // ── Low activity narrative (1–19 entries) ────────────────
+  let lowNarrative='';
+  if(lowMods.length>0){
+    const lowLines=lowMods.map(m=>{
+      const mProjs=m.projs.length>0?m.projs.join(', '):projActive;
+      return `• ${modDisp(m.name)} in ${mProjs} — ${entr(m.wk0)} this week${m.wk1>0?' ('+m.wk1+' last week)':''}. The foundation is there, but the team needs to log consistently for this to be truly useful.`;
+    }).join('\n');
+    lowNarrative=`📊 Activity Started — Needs Consistency\n${lowLines}\nA quick 15-min check-in with ${trainerName} to establish the daily logging habit will make all the difference.\n`;
+  }
 
   let gapBlock='';
   if(gapModules.length>0){
@@ -2238,9 +2253,15 @@ function openProgressEmail(aId) {
   if(isInactive){
     plain=`${greeting}\n\nHope you're doing well. We noticed that Powerplay hasn't been active since our onboarding session, and we wanted to check in — because we genuinely want to make sure the problems you came to us with actually get solved.\n\n💡 Why you signed up — a quick reminder\nWhen we spoke during onboarding, these were the core challenges hurting the business:\n${obBullets}\n\nThese problems don't go away on their own. The risk of repeating the same challenges at a larger scale is very real.\n\n📋 What's already ready for you\nAs discussed in our onboarding, the plan was clear:\n• For your ${projCount} current project${projCount!==1?'s':''}: ${modulesPlan} — fully configured and ready to go\nEverything is configured and waiting. ${trainerName} is ready to resume right where we left off.\n\n⚡ One ask — before the new projects start\nCan we schedule a 30-minute session this week? The goal is simple — get the site team logging daily updates on Powerplay before the new projects kick off.\n\nOnce the habit is built from Day 1, adoption happens naturally.\n\nPlease share a convenient time and we'll take it from there immediately.\n\nWarm regards,\n${trainerName} & Monika\nPowerplay — Customer Success`;
   } else {
-    plain=`${greeting}\n\nHope everyone is doing well! It's been a few weeks since we went live on Powerplay, and we wanted to share a quick progress update — what's working well and where we can unlock more value together.\n\n✅ What's Going Well\nAt the time of onboarding, the core problem we discussed was ${obIntro}\n\n${wellNarrative}\n${gapBlock}${attBlock}\n📋 Suggested Next Steps\n1. ${s1}\n2. ${s2}\n3. ${s3}${s4?'\n4. '+s4:''}\n\nWe're excited about the progress and want to make sure you're at full value before your renewal.\nPlease share a convenient time this week — ${trainerName} will take it from there!\n\nWarm regards,\n${trainerName} & Monika\nPowerplay — Customer Success`;
+    const goingWellBlock = healthyMods.length>0
+      ? `✅ What's Going Well\nAt the time of onboarding, the core problem we discussed was ${obIntro}\n\n${wellNarrative}\n`
+      : '';
+    const lowBlock = lowMods.length>0
+      ? `${lowNarrative}`
+      : '';
+    plain=`${greeting}\n\nHope everyone is doing well! It's been a few weeks since we went live on Powerplay, and we wanted to share a quick progress update — what's working well and where we can unlock more value together.\n\n${goingWellBlock}${lowBlock}${gapBlock}${attBlock}\n📋 Suggested Next Steps\n1. ${s1}\n2. ${s2}\n3. ${s3}${s4?'\n4. '+s4:''}\n\nWe're excited about the progress and want to make sure you're at full value before your renewal.\nPlease share a convenient time this week — ${trainerName} will take it from there!\n\nWarm regards,\n${trainerName} & Monika\nPowerplay — Customer Success`;
   }
-  html=plain.replace(/✅ What's Going Well/,'<b>✅ What\'s Going Well</b>').replace(/❗ Not Yet Started[^\n]*/,m=>'<b>'+m+'</b>').replace(/⚠️ One Area[^\n]*/,m=>'<b>'+m+'</b>').replace(/📋 Suggested Next Steps/,'<b>📋 Suggested Next Steps</b>').replace(/💡 Why you signed up[^\n]*/,m=>'<b>'+m+'</b>').replace(/📋 What's already ready[^\n]*/,m=>'<b>'+m+'</b>').replace(/⚡ One ask[^\n]*/,m=>'<b>'+m+'</b>').replace(/\n/g,'<br>');
+  html=plain.replace(/✅ What's Going Well/,'<b>✅ What\'s Going Well</b>').replace(/📊 Activity Started[^\n]*/,m=>'<b>'+m+'</b>').replace(/❗ Not Yet Started[^\n]*/,m=>'<b>'+m+'</b>').replace(/⚠️ One Area[^\n]*/,m=>'<b>'+m+'</b>').replace(/📋 Suggested Next Steps/,'<b>📋 Suggested Next Steps</b>').replace(/💡 Why you signed up[^\n]*/,m=>'<b>'+m+'</b>').replace(/📋 What's already ready[^\n]*/,m=>'<b>'+m+'</b>').replace(/⚡ One ask[^\n]*/,m=>'<b>'+m+'</b>').replace(/\n/g,'<br>');
 
   const subject=isInactive?`Action Required: Your Powerplay Onboarding | ${orgShort}`:`Powerplay Progress Update — Your Active Projects | ${orgShort}`;
   const pillMap={INACTIVE:['pill-inactive','⚫ INACTIVE'],CRITICAL:['pill-drop','🔴 CRITICAL'],HIGH:['pill-drop','🟠 HIGH'],MEDIUM:['pill-active','🟡 MEDIUM'],LOW:['pill-active','🟢 LOW'],STABLE:['pill-stable','✅ STABLE'],STABLE_DROP:['pill-drop','📉 STABLE DROP']};
