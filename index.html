@@ -2170,7 +2170,8 @@ function openProgressEmail(aId) {
   // ── Split active modules by threshold (20 = going well) ──
   const WELL_THRESHOLD = 20;
   const healthyMods = activeModules.filter(m => m.wk0 >= WELL_THRESHOLD);
-  const lowMods     = activeModules.filter(m => m.wk0 > 0 && m.wk0 < WELL_THRESHOLD);
+  // lowMods: started but low — exclude dropping ones (they appear in ⚠️ Attention instead)
+  const lowMods     = activeModules.filter(m => m.wk0 > 0 && m.wk0 < WELL_THRESHOLD && m.wk0 >= m.wk1);
 
   const matFamily=healthyMods.filter(m=>['material','material payable','material payable payment'].includes(m.name.toLowerCase()));
   const otherMods=healthyMods.filter(m=>!['material','material payable','material payable payment'].includes(m.name.toLowerCase()));
@@ -2218,8 +2219,11 @@ function openProgressEmail(aId) {
         'task module':{p:sv||'there was no real-time visibility into project progress, delays, and bottlenecks across sites',c:'setting up the Task Module for end-to-end project progress and delay tracking',x:"This hasn't been started yet",b:`you'll have a complete view of what's on track, what's delayed, and why — across all ${projCount} project${projCount!==1?'s':''}`},
         'boq/cost module':{p:sv||'there was no way to track estimated project cost against actual spends at any point in time',c:'setting up the BOQ Module for planned vs. actual cost tracking',x:"This hasn't been set up yet",b:'at any point, you can see estimated quantity and cost against what has actually been spent — both quantity-wise and value-wise'},
         'expense module':{p:sv||'petty cash and local purchases at site had no structured tracking — everything was done manually',c:'setting up the Expense Module for petty cash and local purchase tracking at site level',x:"This hasn't been started yet",b:'all site-level expenditure will be tracked in one place — what was spent, by whom, and for what purpose'},
-        'material module':{p:sv||'material consumption was tracked on WhatsApp and Excel with no real-time visibility into what was used and where',c:'setting up the Material Module for end-to-end procurement and consumption tracking',x:"Setup hasn't started yet",b:'material consumption will be mapped task-wise — so you always know which task consumed how much, in real time'}
-      }[n]||{p:sv||'this was discussed as a core need during onboarding',c:`completing the ${gm.display} setup`,x:"This hasn't been started yet",b:`${trainerName} can get this live in one focused session`};
+        'material module':{p:sv||'material consumption was tracked on WhatsApp and Excel with no real-time visibility into what was used and where',c:'setting up the Material Module for end-to-end procurement and consumption tracking',x:"Setup hasn't started yet",b:'material consumption will be mapped task-wise — so you always know which task consumed how much, in real time'},
+        'vendor payables':{p:sv||'vendor payable tracking was being done manually with no real-time visibility into what was owed to each vendor',c:'setting up Vendor Payables so amounts are auto-calculated from material entries',x:"The vendor list hasn't been shared yet, so setup is pending",b:'all vendor dues will be auto-calculated from material entries — no manual reconciliation needed'},
+        'material payable':{p:sv||'vendor payable tracking was being done manually with no real-time visibility into what was owed to each vendor',c:'setting up Vendor Payables so amounts are auto-calculated from material entries',x:"The vendor list hasn't been shared yet, so setup is pending",b:'all vendor dues will be auto-calculated from material entries — no manual reconciliation needed'},
+        'payment module':{p:sv||'there was no structured way to release and track vendor payments linked to material deliveries',c:'setting up the Payment Module to release vendor payments directly from Powerplay',x:"This hasn't been started yet",b:'vendor payments can be released and tracked against each delivery — full payment history in one place'}
+      }[n]||{p:sv||'this was discussed as a core need during onboarding',c:`completing the ${gm.display} setup`,x:"This hasn't been started yet",b:`${trainerName} can complete the setup in one focused session`};
       return `• ${gm.display} — At onboarding, the challenge discussed was that ${d.p}. We had committed to ${d.c}. ${d.x}. Once live, ${d.b}.`;
     }).join('\n');
     const pl=gapModules.length>1?'These were both core':'This was a core';
@@ -2230,14 +2234,18 @@ function openProgressEmail(aId) {
     const dropMods=(dropProj.modules||[]).filter(m=>(m.wk0||0)<(m.wk1||0)).sort((a,b)=>((b.wk1||0)-(b.wk0||0))-((a.wk1||0)-(a.wk0||0)));
     const dm=dropMods[0];
     const dropDesc=dm?`${modDisp(dm.name)} entries that were at ${dm.wk1} in Week 1 have come down to ${dm.wk0} this week`:`activity that was at ${dropProj.wk1} in Week 1 has come down to ${dropProj.wk0} this week`;
-    attBlock=`\n⚠️ One Area Needs Attention — ${dropProj.name}\n${dropProj.name} is showing a drop — ${dropDesc}. This usually means the team has shifted back to WhatsApp/Excel in parallel, or there's a small process gap to close. A quick 20-minute call with ${trainerName} and the site team will fix this.\n`;
+    const dpShort=dropProj.name.length>25?dropProj.name.substring(0,23)+'…':dropProj.name;
+    attBlock=`\n⚠️ One Area Needs Attention — ${dpShort}\n${dpShort} is showing a drop — ${dropDesc}. This usually means the team has shifted back to WhatsApp/Excel in parallel, or there's a small process gap to close. A quick 20-minute call with ${trainerName} and the site team will fix this.\n`;
   }
 
   const pocStr=acc.ob?.poc_name||acc.ob_poc_name||acc.poc_name||'';
   const greeting=pocStr&&pocStr.length>2?`Hi ${pocStr} & Team,`:`Hi ${orgFirst} Sir & Team,`;
-  const s1=gapModules.length>0?`Share the required data with ${trainerName} to complete ${gapModules[0].display} setup — this week`:dropProj?`Quick connect with the ${dropProj.name} site team to restart daily entries`:`Expand usage to all ${projCount} project${projCount!==1?'s':''}`;
-  const s2=dropProj?`Schedule a 20-min call with ${trainerName} to review the ${dropProj.name} drop`:gapModules.length>1?`Schedule a 15-min walkthrough with ${trainerName} for ${gapModules[1].display}`:`Keep modules consistent across all ${projCount} project${projCount!==1?'s':''}`;
-  const s3=gapModules.length>0?`Schedule a 15-min walkthrough with ${trainerName} for ${gapModules[0].display}`:`Schedule a review call with ${trainerName}`;
+  // Short project name for use in mid-sentence (max 25 chars)
+  const dropProjShort=dropProj?(dropProj.name.length>25?dropProj.name.substring(0,23)+'…':dropProj.name):'';
+  const s1=gapModules.length>0?`Share the required data with ${trainerName} to complete ${gapModules[0].display} setup — this week`:dropProj?`Quick connect with the ${dropProjShort} site team to restart daily entries`:`Expand usage to all ${projCount} project${projCount!==1?'s':''}`;
+  const s2=dropProj?`Schedule a 20-min call with ${trainerName} and the site team to fix the ${dropProjShort} drop`:gapModules.length>1?`Schedule a 15-min walkthrough with ${trainerName} for ${gapModules[1].display}`:`Keep modules consistent across all ${projCount} project${projCount!==1?'s':''}`;
+  // s3: never repeat what s1 already covers — pick something different
+  const s3=gapModules.length>1?`Schedule a 15-min walkthrough with ${trainerName} for ${gapModules[1].display}`:dropProj&&gapModules.length>0?`Quick connect with the ${dropProjShort} site team to understand the drop and restart daily entries`:`Schedule a review call with ${trainerName} this week`;
   const s4=gapModules.length>0?`Once ${gapModules[0].display} is live → Phase 2: full cost vs. actual visibility across all your ${projCount} project${projCount!==1?'s':''} — estimated vs. actual spend tracked at every stage of completion`:'';
 
   let obBullets='';
