@@ -249,7 +249,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="sync-dot" id="sync-dot"></div>
       <span class="sync-label" id="sync-label">Ready</span>
     </div>
-    <button class="tmpl-btn" onclick="openTemplateModal()">✉ Email Templates</button>
     <button id="sync-btn" onclick="manualSync()" style="display:flex;align-items:center;gap:7px;padding:7px 16px;background:#4299e1;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">
       🔄 Sync Now
     </button>
@@ -2166,7 +2165,7 @@ function openProgressEmail(aId) {
   const projActive=(acc.projects||[]).filter(p=>(p.wk0||0)>0).map(p=>p.name).join(', ')||'—';
   const obNotes = acc.ob_notes||acc.ob?.notes||'';
   const isSetupNote = obNotes.toLowerCase().includes('configuration')||obNotes.toLowerCase().includes('finalized')||obNotes.toLowerCase().includes('setup');
-  const obIntro = obNotes.length>5&&!isSetupNote ? `At the time of onboarding, the core problem discussed was: ${obNotes.substring(0,200)}${obNotes.length>200?'…':''}` : 'At the time of onboarding, the core challenge discussed was real-time visibility into site activities — material consumption, labour, and task progress — all tracked in one place instead of WhatsApp/Excel.';
+  const obIntro = obNotes.length>5&&!isSetupNote ? `At the time of onboarding, the core problem we discussed was ${obNotes.substring(0,200)}${obNotes.length>200?'…':''}` : 'no real-time visibility into site activities — material consumption, labour, and task progress were all tracked on WhatsApp and Excel with no consolidated view.';
 
   const matFamily=activeModules.filter(m=>['material','material payable','material payable payment'].includes(m.name.toLowerCase()));
   const otherMods=activeModules.filter(m=>!['material','material payable','material payable payment'].includes(m.name.toLowerCase()));
@@ -2195,30 +2194,53 @@ function openProgressEmail(aId) {
   let gapBlock='';
   if(gapModules.length>0){
     const gapNames=gapModules.map(g=>g.display).join(' & ');
-    const gapLines=gapModules.map(gm=>{const p=gm.plan&&gm.plan.length>2?` — ${gm.plan}`:''; return `• ${gm.display}${p}`;}).join('\n');
-    gapBlock=`\n❗ Not Yet Started — ${gapNames}\nThese were part of the original plan from your onboarding discussion but haven't been set up yet:\n${gapLines}\n\nStarting even one of these this week will directly address the original challenges you signed up to solve.\n`;
+    const gapLines=gapModules.map(gm=>{
+      const n=(gm.display||'').toLowerCase();
+      const sv=gm.plan&&gm.plan.length>2?gm.plan:'';
+      const d={
+        'attendance module':{p:sv||'daily labour reports were coming in over WhatsApp with no way to get a consolidated monthly view',c:'setting up the Attendance Module with a labour list from your team',x:"The labour list hasn't been shared yet, so setup is pending",b:'the DPR (Daily Progress Report) automatically pulls daily attendance data — making your weekly review meetings far more structured and data-backed'},
+        'drive module':{p:sv||'drawings were not accessible at site, leading to supervisors working from outdated versions and causing rework and delays',c:'uploading all project drawings and pre-construction documents to the Drive Module so the site team always has the latest version',x:"This hasn't been set up yet",b:`${trainerName} can complete the full upload walkthrough in just 15 minutes`},
+        'task module':{p:sv||'there was no real-time visibility into project progress, delays, and bottlenecks across sites',c:'setting up the Task Module for end-to-end project progress and delay tracking',x:"This hasn't been started yet",b:`you'll have a complete view of what's on track, what's delayed, and why — across all ${projCount} project${projCount!==1?'s':''}`},
+        'boq/cost module':{p:sv||'there was no way to track estimated project cost against actual spends at any point in time',c:'setting up the BOQ Module for planned vs. actual cost tracking',x:"This hasn't been set up yet",b:'at any point, you can see estimated quantity and cost against what has actually been spent — both quantity-wise and value-wise'},
+        'expense module':{p:sv||'petty cash and local purchases at site had no structured tracking — everything was done manually',c:'setting up the Expense Module for petty cash and local purchase tracking at site level',x:"This hasn't been started yet",b:'all site-level expenditure will be tracked in one place — what was spent, by whom, and for what purpose'},
+        'material module':{p:sv||'material consumption was tracked on WhatsApp and Excel with no real-time visibility into what was used and where',c:'setting up the Material Module for end-to-end procurement and consumption tracking',x:"Setup hasn't started yet",b:'material consumption will be mapped task-wise — so you always know which task consumed how much, in real time'}
+      }[n]||{p:sv||'this was discussed as a core need during onboarding',c:`completing the ${gm.display} setup`,x:"This hasn't been started yet",b:`${trainerName} can get this live in one focused session`};
+      return `• ${gm.display} — At onboarding, the challenge discussed was that ${d.p}. We had committed to ${d.c}. ${d.x}. Once live, ${d.b}.`;
+    }).join('\n');
+    const pl=gapModules.length>1?'These were both core':'This was a core';
+    gapBlock=`\n❗ Not Yet Started — ${gapNames}\n${pl} Phase 1 commitment${gapModules.length>1?'s':''} from our onboarding discussion and directly tied to problem${gapModules.length>1?'s':''} you raised:\n${gapLines}\n`;
   }
   let attBlock='';
   if(dropProj){
     const dropMods=(dropProj.modules||[]).filter(m=>(m.wk0||0)<(m.wk1||0)).sort((a,b)=>((b.wk1||0)-(b.wk0||0))-((a.wk1||0)-(a.wk0||0)));
     const dm=dropMods[0];
-    const dropDesc=dm?`${modDisp(dm.name)} entries dropped from ${dm.wk1} → ${dm.wk0} this week`:`activity dropped from ${dropProj.wk1} → ${dropProj.wk0} this week`;
-    attBlock=`\n⚠️ One Area Needs Attention — ${dropProj.name}\n${dropProj.name}: ${dropDesc}. A quick 15-min call with the site team will fix this.\n`;
+    const dropDesc=dm?`${modDisp(dm.name)} entries that were at ${dm.wk1} in Week 1 have come down to ${dm.wk0} this week`:`activity that was at ${dropProj.wk1} in Week 1 has come down to ${dropProj.wk0} this week`;
+    attBlock=`\n⚠️ One Area Needs Attention — ${dropProj.name}\n${dropProj.name} is showing a drop — ${dropDesc}. This usually means the team has shifted back to WhatsApp/Excel in parallel, or there's a small process gap to close. A quick 20-minute call with ${trainerName} and the site team will fix this.\n`;
   }
 
-  const greeting=acc.poc_name&&acc.poc_name.length>2?`Hi ${acc.poc_name} & Team,`:`Hi ${orgFirst} Sir & Team,`;
+  const pocStr=acc.ob?.poc_name||acc.ob_poc_name||acc.poc_name||'';
+  const greeting=pocStr&&pocStr.length>2?`Hi ${pocStr} & Team,`:`Hi ${orgFirst} Sir & Team,`;
   const s1=gapModules.length>0?`Share the required data with ${trainerName} to complete ${gapModules[0].display} setup — this week`:dropProj?`Quick connect with the ${dropProj.name} site team to restart daily entries`:`Expand usage to all ${projCount} project${projCount!==1?'s':''}`;
-  const s2=dropProj?`Schedule a 15-min call with ${trainerName} to review the ${dropProj.name} drop`:gapModules.length>1?`Schedule a 15-min walkthrough with ${trainerName} for ${gapModules[1].display}`:`Keep modules consistent across all ${projCount} project${projCount!==1?'s':''}`;
-  const s3=gapModules.length>0?`Schedule a walkthrough with ${trainerName} for ${gapModules[0].display} — 15 mins is all it takes`:`Schedule a review call with ${trainerName}`;
-  const s4=gapModules.length>0?`Once ${gapModules[0].display} is live → Phase 2: full cost vs. actual visibility across all your projects`:'';
+  const s2=dropProj?`Schedule a 20-min call with ${trainerName} to review the ${dropProj.name} drop`:gapModules.length>1?`Schedule a 15-min walkthrough with ${trainerName} for ${gapModules[1].display}`:`Keep modules consistent across all ${projCount} project${projCount!==1?'s':''}`;
+  const s3=gapModules.length>0?`Schedule a 15-min walkthrough with ${trainerName} for ${gapModules[0].display}`:`Schedule a review call with ${trainerName}`;
+  const s4=gapModules.length>0?`Once ${gapModules[0].display} is live → Phase 2: full cost vs. actual visibility across all your ${projCount} project${projCount!==1?'s':''} — estimated vs. actual spend tracked at every stage of completion`:'';
+
+  let obBullets='';
+  if(obNotes.length>5&&!isSetupNote){
+    obBullets=obNotes.split('\n').filter(l=>l.trim()).map(l=>`• ${l.trim()}`).join('\n');
+  } else {
+    obBullets=`• No real-time visibility into site activities — everything tracked on WhatsApp and Excel with no consolidated view\n• Management blind to delays and costs — no way to track progress or spending in real time\n• No uniformity across projects — different formats used at different sites, making any meaningful analysis impossible`;
+  }
+  const mpParts=[acc.ob?.mat&&'material tracking',acc.ob?.att&&'labour attendance',acc.ob?.tsk&&'task scheduling',acc.ob?.exp&&'expense/BOQ tracking'].filter(Boolean);
+  const modulesPlan=mpParts.length?mpParts.join(', '):'all planned modules';
 
   let plain,html;
   if(isInactive){
-    plain=`Hi ${orgFirst} Sir & Team,\n\nHope you're doing well. We noticed that Powerplay hasn't been active since our onboarding session. We genuinely want to make sure the problems you came to us with actually get solved.\n\n💡 Why You Signed Up\n${obIntro}\n\n📋 What's Ready For You\n• System is configured and waiting\n• ${trainerName} is ready to resume right where we left off\n• All ${projCount} project(s) are set up on Powerplay\n\n⚡ One Ask — Let's Restart\nCan we schedule a 30-minute session this week?\n\nPlease share a convenient time and we'll take it from there immediately.\n\nWarm regards,\n${trainerName} & Monika\nPowerplay — Customer Success`;
+    plain=`${greeting}\n\nHope you're doing well. We noticed that Powerplay hasn't been active since our onboarding session, and we wanted to check in — because we genuinely want to make sure the problems you came to us with actually get solved.\n\n💡 Why you signed up — a quick reminder\nWhen we spoke during onboarding, these were the core challenges hurting the business:\n${obBullets}\n\nThese problems don't go away on their own. The risk of repeating the same challenges at a larger scale is very real.\n\n📋 What's already ready for you\nAs discussed in our onboarding, the plan was clear:\n• For your ${projCount} current project${projCount!==1?'s':''}: ${modulesPlan} — fully configured and ready to go\nEverything is configured and waiting. ${trainerName} is ready to resume right where we left off.\n\n⚡ One ask — before the new projects start\nCan we schedule a 30-minute session this week? The goal is simple — get the site team logging daily updates on Powerplay before the new projects kick off.\n\nOnce the habit is built from Day 1, adoption happens naturally.\n\nPlease share a convenient time and we'll take it from there immediately.\n\nWarm regards,\n${trainerName} & Monika\nPowerplay — Customer Success`;
   } else {
-    plain=`${greeting}\n\nHope everyone is doing well! It's been a few weeks since we went live on Powerplay, and we wanted to share a quick progress update.\n\n✅ What's Going Well\n${obIntro}\n\n${wellNarrative}\n${gapBlock}${attBlock}\n📋 Suggested Next Steps\n1. ${s1}\n2. ${s2}\n3. ${s3}${s4?'\n4. '+s4:''}\n\nWe're excited about the progress. Please share a convenient time this week — ${trainerName} will take it from there!\n\nWarm regards,\n${trainerName} & Monika\nPowerplay — Customer Success`;
+    plain=`${greeting}\n\nHope everyone is doing well! It's been a few weeks since we went live on Powerplay, and we wanted to share a quick progress update — what's working well and where we can unlock more value together.\n\n✅ What's Going Well\nAt the time of onboarding, the core problem we discussed was ${obIntro}\n\n${wellNarrative}\n${gapBlock}${attBlock}\n📋 Suggested Next Steps\n1. ${s1}\n2. ${s2}\n3. ${s3}${s4?'\n4. '+s4:''}\n\nWe're excited about the progress and want to make sure you're at full value before your renewal.\nPlease share a convenient time this week — ${trainerName} will take it from there!\n\nWarm regards,\n${trainerName} & Monika\nPowerplay — Customer Success`;
   }
-  html=plain.replace(/✅ What's Going Well/,'<b>✅ What\'s Going Well</b>').replace(/❗ Not Yet Started[^\n]*/,m=>'<b>'+m+'</b>').replace(/⚠️ One Area[^\n]*/,m=>'<b>'+m+'</b>').replace(/📋 Suggested Next Steps/,'<b>📋 Suggested Next Steps</b>').replace(/\n/g,'<br>');
+  html=plain.replace(/✅ What's Going Well/,'<b>✅ What\'s Going Well</b>').replace(/❗ Not Yet Started[^\n]*/,m=>'<b>'+m+'</b>').replace(/⚠️ One Area[^\n]*/,m=>'<b>'+m+'</b>').replace(/📋 Suggested Next Steps/,'<b>📋 Suggested Next Steps</b>').replace(/💡 Why you signed up[^\n]*/,m=>'<b>'+m+'</b>').replace(/📋 What's already ready[^\n]*/,m=>'<b>'+m+'</b>').replace(/⚡ One ask[^\n]*/,m=>'<b>'+m+'</b>').replace(/\n/g,'<br>');
 
   const subject=isInactive?`Action Required: Your Powerplay Onboarding | ${orgShort}`:`Powerplay Progress Update — Your Active Projects | ${orgShort}`;
   const pillMap={INACTIVE:['pill-inactive','⚫ INACTIVE'],CRITICAL:['pill-drop','🔴 CRITICAL'],HIGH:['pill-drop','🟠 HIGH'],MEDIUM:['pill-active','🟡 MEDIUM'],LOW:['pill-active','🟢 LOW'],STABLE:['pill-stable','✅ STABLE'],STABLE_DROP:['pill-drop','📉 STABLE DROP']};
